@@ -7,52 +7,47 @@ pub enum SideEnum {
     Left,
     Right,
     Front,
-    Back
+    Back,
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct HitRecord {
-    pub hitpoint        : Vec3f,
-    pub key             : Vec3i,
-    pub tile_key        : Vec3i,
-    pub distance        : f32,
-    pub normal          : Vec3f,
-    pub uv              : Vec3f,
-    pub value           : (u8, u8),
-    pub side            : SideEnum,
+    pub hitpoint: Vec3f,
+    pub key: Vec3i,
+    pub tile_key: Vec3i,
+    pub distance: f32,
+    pub normal: Vec3f,
+    pub uv: Vec3f,
+    pub value: (u8, u8),
+    pub side: SideEnum,
 }
 
 impl HitRecord {
     pub fn new() -> Self {
         Self {
-            hitpoint    : Vec3f::zero(),
-            key         : Vec3i::zero(),
-            tile_key    : Vec3i::zero(),
-            distance    : 0.0,
-            normal      : Vec3f::zero(),
-            uv          : Vec3f::zero(),
-            value       : (0, 0),
-            side        : SideEnum::Top,
+            hitpoint: Vec3f::zero(),
+            key: Vec3i::zero(),
+            tile_key: Vec3i::zero(),
+            distance: 0.0,
+            normal: Vec3f::zero(),
+            uv: Vec3f::zero(),
+            value: (0, 0),
+            side: SideEnum::Top,
         }
     }
 
     pub fn compute_side(&mut self) {
         if self.normal.y > 0.5 {
             self.side = SideEnum::Bottom;
-        } else
-        if self.normal.y < -0.5 {
+        } else if self.normal.y < -0.5 {
             self.side = SideEnum::Top;
-        } else
-        if self.normal.x > 0.5 {
+        } else if self.normal.x > 0.5 {
             self.side = SideEnum::Left;
-        } else
-        if self.normal.x < -0.5 {
+        } else if self.normal.x < -0.5 {
             self.side = SideEnum::Right;
-        } else
-        if self.normal.z > 0.5 {
+        } else if self.normal.z > 0.5 {
             self.side = SideEnum::Back;
-        } else
-        if self.normal.z < -0.5 {
+        } else if self.normal.z < -0.5 {
             self.side = SideEnum::Front;
         }
     }

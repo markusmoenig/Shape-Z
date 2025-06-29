@@ -9,8 +9,6 @@ pub enum NodeContext {
     Shape(usize),
 }
 
-use NodeContext::*;
-
 pub struct NodeEditor {
     pub context: NodeContext,
     pub graph: NodeFXGraph,

@@ -129,10 +129,39 @@ impl NodeFX {
     /// Evaluate the node in a shape context
     pub fn evaluate_shape(
         &self,
-        grid: &mut VoxelGrid,
+        preview: &mut VoxelGrid,
         hit: &HitRecord,
         _graph_node: (&NodeFXGraph, usize),
         context: &Context,
     ) {
+        let hit_point: Option<Vec3<f32>> = match hit.hit {
+            HitType::Outside => None,
+            HitType::BBox((_t_near, _t_far)) => None, //Some(ray.at(t_far)),
+            HitType::Voxel(_) => Some(hit.hitpoint),
+        };
+
+        if let Some(hit_point) = hit_point {
+            // let mut preview = VoxelGrid::new([1.0, 1.0, 1.0], grid.density);
+            let step = 1.0 / preview.density_f;
+
+            let r_vox = 20;
+            let r_sq = (r_vox as F + 0.5).powi(2);
+
+            for dx in -r_vox..=r_vox {
+                for dy in -r_vox..=r_vox {
+                    for dz in -r_vox..=r_vox {
+                        let dist_sq = (dx * dx + dy * dy + dz * dz) as F;
+                        if dist_sq > r_sq {
+                            continue; // outside sphere
+                        }
+
+                        let offset = Vec3::new(dx as F, dy as F, dz as F) * step;
+                        let pos = hit_point + offset;
+
+                        preview.set_create(pos, context.palette_index);
+                    }
+                }
+            }
+        }
     }
 }

@@ -5,9 +5,6 @@ use vek::{Vec2, Vec3};
 pub struct Iso {
     pub center: Vec3<f32>,
 
-    iso_dir: Vec3<f32>,
-    tilt_dir: Vec3<f32>,
-
     scale: f32,
     yaw: f32,
     pitch: f32,
@@ -17,9 +14,6 @@ impl Camera for Iso {
     fn new() -> Self {
         Self {
             center: Vec3::zero(),
-
-            iso_dir: Vec3::new(-1.0, -1.0, -1.0).normalized(),
-            tilt_dir: Vec3::new(-0.5, -1.0, -0.5).normalized(),
 
             scale: 50.0,
             yaw: std::f32::consts::FRAC_PI_4,

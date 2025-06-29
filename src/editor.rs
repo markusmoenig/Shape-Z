@@ -29,51 +29,9 @@ pub static NODEEDITOR: LazyLock<RwLock<NodeEditor>> =
 pub static TOOLLIST: LazyLock<RwLock<ToolList>> =
     LazyLock::new(|| RwLock::new(ToolList::default()));
 
-/*
-pub static TILEPICKER: LazyLock<RwLock<TilePicker>> =
-    LazyLock::new(|| RwLock::new(TilePicker::new("Main Tile Picker".to_string())));
-pub static MATERIALPICKER: LazyLock<RwLock<MaterialPicker>> =
-    LazyLock::new(|| RwLock::new(MaterialPicker::new("Main Material Picker".to_string())));
-pub static EFFECTPICKER: LazyLock<RwLock<EffectPicker>> =
-    LazyLock::new(|| RwLock::new(EffectPicker::new("Main Effect Picker".to_string())));
-pub static SHAPEPICKER: LazyLock<RwLock<ShapePicker>> =
-    LazyLock::new(|| RwLock::new(ShapePicker::new("Main Shape Picker".to_string())));
-pub static TILEMAPEDITOR: LazyLock<RwLock<TilemapEditor>> =
-    LazyLock::new(|| RwLock::new(TilemapEditor::new()));
-pub static SIDEBARMODE: LazyLock<RwLock<SidebarMode>> =
-    LazyLock::new(|| RwLock::new(SidebarMode::Region));
-pub static UNDOMANAGER: LazyLock<RwLock<UndoManager>> =
-    LazyLock::new(|| RwLock::new(UndoManager::default()));
-pub static TOOLLIST: LazyLock<RwLock<ToolList>> =
-    LazyLock::new(|| RwLock::new(ToolList::default()));
-pub static PANELS: LazyLock<RwLock<Panels>> = LazyLock::new(|| RwLock::new(Panels::new()));
-pub static CODEEDITOR: LazyLock<RwLock<CodeEditor>> =
-    LazyLock::new(|| RwLock::new(CodeEditor::new()));
-pub static PALETTE: LazyLock<RwLock<ThePalette>> =
-    LazyLock::new(|| RwLock::new(ThePalette::default()));
-pub static RUSTERIX: LazyLock<RwLock<Rusterix>> =
-    LazyLock::new(|| RwLock::new(Rusterix::default()));
-pub static CONFIGEDITOR: LazyLock<RwLock<ConfigEditor>> =
-    LazyLock::new(|| RwLock::new(ConfigEditor::new()));
-pub static INFOVIEWER: LazyLock<RwLock<InfoViewer>> =
-    LazyLock::new(|| RwLock::new(InfoViewer::new()));
-pub static CONFIG: LazyLock<RwLock<toml::Table>> =
-    LazyLock::new(|| RwLock::new(toml::Table::default()));
-pub static NODEEDITOR: LazyLock<RwLock<NodeEditor>> =
-    LazyLock::new(|| RwLock::new(NodeEditor::new()));
-pub static WORLDEDITOR: LazyLock<RwLock<WorldEditor>> =
-    LazyLock::new(|| RwLock::new(WorldEditor::new()));
-pub static RENDEREDITOR: LazyLock<RwLock<RenderEditor>> =
-    LazyLock::new(|| RwLock::new(RenderEditor::new()));
-pub static CUSTOMCAMERA: LazyLock<RwLock<CustomCamera>> =
-    LazyLock::new(|| RwLock::new(CustomCamera::new()));
-pub static SCENEMANAGER: LazyLock<RwLock<SceneManager>> =
-    LazyLock::new(|| RwLock::new(SceneManager::default()));
-*/
 pub struct Editor {
     event_receiver: Option<Receiver<TheEvent>>,
 
-    project: Project,
     context: Context,
     update_tracker: UpdateTracker,
     /*
@@ -102,7 +60,6 @@ impl TheTrait for Editor {
     where
         Self: Sized,
     {
-        let project = Project::default();
         let context = Context::default();
 
         //let (self_update_tx, self_update_rx) = channel();
@@ -122,7 +79,6 @@ impl TheTrait for Editor {
         */
         Self {
             event_receiver: None,
-            project,
             context,
             update_tracker: UpdateTracker::new(),
             /*
@@ -617,6 +573,9 @@ impl TheTrait for Editor {
                                 0,
                             ));
                         }
+                    }
+                    TheEvent::PaletteIndexChanged(_, index) => {
+                        self.context.palette_index = *index as u8;
                     }
                     TheEvent::StateChanged(id, _) => {
                         if id.name == "Palette Mode" {

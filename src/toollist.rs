@@ -2,10 +2,15 @@ use crate::prelude::*;
 use crate::tools::brush::BrushTool;
 use crate::tools::edit::EditTool;
 
+use crate::editor::{CAMERA, VOXELGRID};
+use std::sync::Arc;
+
 pub struct ToolList {
     pub tools: Vec<Box<dyn Tool>>,
 
     pub curr_tool: String,
+
+    drag_coord: Vec2<i32>,
 }
 
 impl Default for ToolList {
@@ -20,6 +25,7 @@ impl ToolList {
         Self {
             tools,
             curr_tool: "Edit Tool".into(),
+            drag_coord: Vec2::zero(),
         }
     }
 
@@ -39,6 +45,36 @@ impl ToolList {
         }
     }
 
+    pub fn get_hit(&self, ui: &mut TheUI, coord: Vec2<i32>) -> Option<HitRecord> {
+        if let Some(render_view) = ui.get_render_view("ModelView") {
+            let dim = *render_view.dim();
+
+            let uv = Vec2::new(
+                coord.x as f32 / dim.width as f32,
+                1.0 - (coord.y as f32 / dim.height as f32),
+            );
+            let camera = Arc::clone(&CAMERA);
+            let camera = camera.write().unwrap();
+            let ray = camera.create_ray(
+                uv,
+                Vec2::new(dim.width as f32, dim.height as f32),
+                Vec2::zero(),
+            );
+
+            // --
+
+            let grid = Arc::clone(&VOXELGRID);
+            let mut grid = grid.write().unwrap();
+
+            grid.preview = None;
+            let hit = grid.dda(&ray);
+
+            Some(hit)
+        } else {
+            None
+        }
+    }
+
     pub fn handle_event(
         &mut self,
         event: &TheEvent,
@@ -53,12 +89,79 @@ impl ToolList {
                     redraw = self.set_tool(id.uuid, ui, ctx, context);
                 }
             }
+            TheEvent::RenderViewHoverChanged(id, coord) => {
+                if id.name == "ModelView" {
+                    if let Some(render_view) = ui.get_render_view("ModelView") {
+                        let dim = *render_view.dim();
+
+                        let uv = Vec2::new(
+                            coord.x as f32 / dim.width as f32,
+                            1.0 - (coord.y as f32 / dim.height as f32),
+                        );
+                        let camera = Arc::clone(&CAMERA);
+                        let mut camera = camera.write().unwrap();
+                        let ray = camera.create_ray(
+                            uv,
+                            Vec2::new(dim.width as f32, dim.height as f32),
+                            Vec2::zero(),
+                        );
+
+                        // --
+
+                        if ui.alt {
+                            camera.zoom((*coord - self.drag_coord).y as f32);
+                        } else if ui.logo || ui.ctrl {
+                            camera.rotate((*coord - self.drag_coord).map(|v| -v as f32 * 2.0));
+                            self.drag_coord = *coord;
+                        } else {
+                            let hit;
+
+                            {
+                                let grid = Arc::clone(&VOXELGRID);
+                                let mut grid = grid.write().unwrap();
+
+                                grid.preview = None;
+                                hit = grid.dda(&ray);
+                            }
+
+                            self.get_current_tool().tool_event(
+                                ToolEvent::HitHover(hit),
+                                ui,
+                                ctx,
+                                context,
+                            );
+                        }
+                        crate::utils::reset_render();
+                    }
+                }
+            }
+            TheEvent::RenderViewClicked(id, _) => {
+                if id.name == "ModelView" {
+                    self.get_current_tool()
+                        .tool_event(ToolEvent::HitClick, ui, ctx, context);
+                }
+            }
+            TheEvent::RenderViewDragged(id, coord) => {
+                if id.name == "ModelView" {
+                    if let Some(hit) = self.get_hit(ui, *coord) {
+                        self.get_current_tool().tool_event(
+                            ToolEvent::HitDrag(hit),
+                            ui,
+                            ctx,
+                            context,
+                        );
+                        crate::utils::reset_render();
+                    }
+                }
+            }
             _ => {}
         }
 
-        redraw = self
-            .get_current_tool()
-            .handle_event(event, ui, ctx, context);
+        if !redraw {
+            redraw = self
+                .get_current_tool()
+                .handle_event(event, ui, ctx, context);
+        }
 
         redraw
     }
@@ -74,12 +177,10 @@ impl ToolList {
         let mut redraw = false;
         let mut switched_tool = false;
         let layout_name = "Tool Params";
-        let mut old_tool_name = "".to_string();
         let mut old_tool_index = 0;
         for (index, tool) in self.tools.iter().enumerate() {
             if tool.id().uuid == tool_id && tool.id().name != self.curr_tool {
                 switched_tool = true;
-                old_tool_name = self.curr_tool.clone();
                 old_tool_index = index;
                 self.curr_tool = tool.id().name.clone();
                 redraw = true;

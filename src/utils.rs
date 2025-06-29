@@ -8,7 +8,7 @@ pub fn reset_render() {
     buffer.accum = 1;
 }
 
-pub fn update_palette_ui(ui: &mut TheUI, ctx: &mut TheContext) {
+pub fn update_palette_ui(ui: &mut TheUI, _ctx: &mut TheContext) {
     if let Some(picker) = ui.get_palette_picker("PalettePicker") {
         let mut palette = ThePalette::default();
         let mats = PALETTE.write().unwrap();

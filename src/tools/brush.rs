@@ -1,7 +1,8 @@
 use crate::{
-    editor::{NODEEDITOR, PALETTE},
+    editor::{NODEEDITOR, PALETTE, SHAPES, VOXELGRID},
     prelude::*,
 };
+use std::sync::Arc;
 
 pub struct BrushTool {
     id: TheId,
@@ -27,6 +28,52 @@ impl Tool for BrushTool {
     }
     fn accel(&self) -> Option<char> {
         Some('b')
+    }
+
+    fn tool_event(
+        &mut self,
+        tool_event: ToolEvent,
+        ui: &mut TheUI,
+        ctx: &mut TheContext,
+        context: &mut Context,
+    ) -> bool {
+        match tool_event {
+            ToolEvent::Activate => {
+                let shapes = SHAPES.read().unwrap();
+                let mut editor = NODEEDITOR.write().unwrap();
+                editor.set_graph(
+                    NodeContext::Shape(context.shape_index),
+                    shapes[context.shape_index].clone(),
+                    ui,
+                    ctx,
+                );
+            }
+            ToolEvent::HitClick => {
+                let grid = Arc::clone(&VOXELGRID);
+                let mut grid = grid.write().unwrap();
+                grid.merge_preview();
+            }
+            ToolEvent::HitHover(hit) => {
+                let shapes = SHAPES.read().unwrap();
+                let preview = shapes[context.shape_index].evaluate_shape(&hit, context);
+
+                let grid = Arc::clone(&VOXELGRID);
+                let mut grid = grid.write().unwrap();
+                grid.preview = Some(Box::new(preview));
+            }
+            ToolEvent::HitDrag(hit) => {
+                let shapes = SHAPES.read().unwrap();
+                let preview = shapes[context.shape_index].evaluate_shape(&hit, context);
+
+                let grid = Arc::clone(&VOXELGRID);
+                let mut grid = grid.write().unwrap();
+                grid.preview = Some(Box::new(preview));
+                grid.merge_preview();
+            }
+            _ => {}
+        }
+
+        false
     }
 
     fn handle_event(

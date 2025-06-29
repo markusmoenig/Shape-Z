@@ -63,12 +63,12 @@ impl NodeFXGraph {
 
     /// Evaluate a shape graph
     pub fn evaluate_shape(&self, hit: &HitRecord, context: &Context) -> VoxelGrid {
-        let mut grid = VoxelGrid::default();
+        let mut preview = VoxelGrid::new([0.0, 0.0, 0.0], context.density);
 
         let mut curr_index = 0_usize;
         let mut curr_terminal = 0_usize;
 
-        self.nodes[0].evaluate_shape(&mut grid, hit, (self, 0), context);
+        self.nodes[0].evaluate_shape(&mut preview, hit, (self, 0), context);
 
         let mut steps = 0;
         while steps < 16 {
@@ -76,7 +76,7 @@ impl NodeFXGraph {
                 self.find_connected_input_node(curr_index, curr_terminal)
             {
                 self.nodes[next_node as usize].evaluate_shape(
-                    &mut grid,
+                    &mut preview,
                     hit,
                     (self, next_node as usize),
                     context,
@@ -89,7 +89,8 @@ impl NodeFXGraph {
             }
         }
 
-        grid
+        preview.update_bboxes();
+        preview
     }
 
     /// Returns the connected input node and terminal for the given output node and terminal.

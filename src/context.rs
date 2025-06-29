@@ -11,6 +11,9 @@ pub enum ToolMode {
 pub struct Context {
     pub mode: ToolMode,
 
+    pub density: usize,
+
+    pub palette_index: u8,
     pub shape_index: usize,
 }
 
@@ -25,6 +28,9 @@ impl Context {
         Self {
             mode: ToolMode::Palette,
 
+            density: 96,
+
+            palette_index: 0,
             shape_index: 0,
         }
     }

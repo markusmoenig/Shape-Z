@@ -163,145 +163,20 @@ impl ModelEditor {
     pub fn handle_event(
         &mut self,
         event: &TheEvent,
-        ui: &mut TheUI,
-        _ui_ctx: &mut TheContext,
-        _ctx: &mut Context,
+        _ui: &mut TheUI,
+        _ctx: &mut TheContext,
+        _context: &mut Context,
     ) -> bool {
         let mut redraw = false;
         match event {
             TheEvent::Copy => {}
-            TheEvent::RenderViewClicked(id, _) => {
-                if id.name == "ModelView" {
-                    let grid = Arc::clone(&VOXELGRID);
-                    let mut grid = grid.write().unwrap();
-                    grid.merge_preview();
-                }
-            }
-            TheEvent::RenderViewHoverChanged(id, coord) => {
-                if id.name == "ModelView" {
-                    if let Some(render_view) = ui.get_render_view("ModelView") {
-                        let dim = *render_view.dim();
-
-                        let uv = Vec2::new(
-                            coord.x as f32 / dim.width as f32,
-                            1.0 - (coord.y as f32 / dim.height as f32),
-                        );
-                        let camera = Arc::clone(&CAMERA);
-                        let mut camera = camera.write().unwrap();
-                        let ray = camera.create_ray(
-                            uv,
-                            Vec2::new(dim.width as f32, dim.height as f32),
-                            Vec2::zero(),
-                        );
-
-                        // --
-
-                        if ui.alt {
-                            camera.zoom((*coord - self.drag_coord).y as f32);
-                        } else if ui.logo || ui.ctrl {
-                            camera.rotate((*coord - self.drag_coord).map(|v| -v as f32 * 2.0));
-                            self.drag_coord = *coord;
-                        } else {
-                            let grid = Arc::clone(&VOXELGRID);
-                            let mut grid = grid.write().unwrap();
-
-                            grid.preview = None;
-                            let hit = grid.dda(&ray);
-
-                            let hit_point: Option<Vec3<f32>> = match hit.hit {
-                                HitType::Outside => None,
-                                HitType::BBox((_t_near, _t_far)) => None, //Some(ray.at(t_far)),
-                                HitType::Voxel(_) => Some(hit.hitpoint),
-                            };
-
-                            if let Some(hit_point) = hit_point {
-                                let mut preview = VoxelGrid::new([1.0, 1.0, 1.0], grid.density);
-                                let step = 1.0 / grid.density_f;
-
-                                let r_vox = 20;
-                                let r_sq = (r_vox as F + 0.5).powi(2);
-
-                                for dx in -r_vox..=r_vox {
-                                    for dy in -r_vox..=r_vox {
-                                        for dz in -r_vox..=r_vox {
-                                            let dist_sq = (dx * dx + dy * dy + dz * dz) as F;
-                                            if dist_sq > r_sq {
-                                                continue; // outside sphere
-                                            }
-
-                                            let offset =
-                                                Vec3::new(dx as F, dy as F, dz as F) * step;
-                                            let pos = hit_point + offset;
-
-                                            preview.set_create(pos, 100);
-                                        }
-                                    }
-                                }
-                                preview.update_bboxes();
-                                grid.preview = Some(Box::new(preview));
-                            }
-
-                            // println!("{:?}", hit_point);
-                        }
-                        reset_render();
-
-                        /*
-                        grid.clear_preview();
-                        let hit = grid.dda(&ray);
-
-                        let hit_point: Option<Vec3<i32>> = match hit.hit {
-                            HitType::Outside => None,
-                            HitType::BBox((_t_near, t_far)) => {
-                                let eps = 0.5 * grid.voxel_size.x;
-                                let p_in = ray.at(&(t_far - eps));
-
-                                grid.world_to_index(p_in)
-                                    .map(|(x, y, z)| Vec3::new(x, y, z))
-                            }
-                            HitType::Voxel(_) => Some(hit.hit_point_local),
-                        };
-
-                        else {
-                            if let Some(hit) = hit_point {
-                                let radius = 40;
-                                let r2 = (radius as i32).pow(2);
-                                for dz in -radius..=radius {
-                                    for dy in -radius..=radius {
-                                        for dx in -radius..=radius {
-                                            if dx * dx + dy * dy + dz * dz <= r2 {
-                                                let key = (hit.x + dx, hit.y + dy, hit.z + dz);
-                                                grid.preview_add(key.0, key.1, key.2, 200);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }*/
-                    }
-                }
-            }
             TheEvent::RenderViewScrollBy(id, coord) => {
                 if id.name == "ModelView" {
-                    // if ui.alt {
                     let camera = Arc::clone(&CAMERA);
                     let mut camera = camera.write().unwrap();
-                    camera.zoom(coord.y as f32); //*coord - self.drag_coord).y as f32);
+                    camera.zoom(coord.y as f32);
                     self.drag_coord = *coord;
                     reset_render();
-                    // }
-                    /*
-                    if ui.ctrl || ui.logo {
-                        let old_grid_size = project.map.grid_size;
-
-                        project.map.grid_size += coord.y as f32;
-                        project.map.grid_size = project.map.grid_size.clamp(5.0, 100.0);
-
-                        let scale = project.map.grid_size / old_grid_size;
-                        project.map.offset *= scale;
-                    } else {
-                        project.map.offset += Vec2::new(-coord.x as f32, coord.y as f32);
-                    }
-                    project.map.curr_rectangle = None;*/
                 }
                 redraw = true
             }

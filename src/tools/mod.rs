@@ -3,10 +3,15 @@ pub mod edit;
 
 pub use crate::prelude::*;
 
-#[derive(PartialEq, Clone, Debug, Copy)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum ToolEvent {
     Activate,
     DeActivate,
+
+    HitHover(HitRecord),
+    HitClick,
+    HitDrag(HitRecord),
+    HitUp(),
 }
 
 #[allow(unused)]

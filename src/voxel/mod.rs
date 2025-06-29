@@ -10,7 +10,7 @@ use crate::F;
 use vek::Vec3;
 
 /// Face
-#[derive(Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub enum Face {
     PX,
     NX,
@@ -32,7 +32,7 @@ pub enum HitType {
 }
 
 /// HitRecord
-#[derive(Debug, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct HitRecord {
     pub hitpoint: Vec3<F>,
     pub normal: Vec3<F>,
