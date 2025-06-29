@@ -146,7 +146,7 @@ impl Tile {
                     hit: HitType::Voxel(material),
                     hitpoint: ray.at(t),
                     distance: t_min + t,
-                    normal,
+                    normal: -normal,
                     local_key: (key.x, key.y, key.z),
                     ..Default::default()
                 });

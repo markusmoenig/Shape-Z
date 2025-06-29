@@ -89,6 +89,27 @@ impl ToolList {
                     redraw = self.set_tool(id.uuid, ui, ctx, context);
                 }
             }
+            TheEvent::KeyDown(TheValue::Char(c)) => {
+                let acc = !ui.focus_widget_supports_text_input(ctx);
+
+                if acc {
+                    let mut tool_uuid = None;
+                    for (index, tool) in self.tools.iter().enumerate() {
+                        if tool.accel() == Some(*c) {
+                            tool_uuid = Some(tool.id().uuid);
+                            // ctx.ui.set_widget_state(
+                            //     self.tools[index].id().name,
+                            //     TheWidgetState::None,
+                            // );
+                            ctx.ui
+                                .set_widget_state(tool.id().name, TheWidgetState::Selected);
+                        }
+                    }
+                    if let Some(uuid) = tool_uuid {
+                        self.set_tool(uuid, ui, ctx, context);
+                    }
+                }
+            }
             TheEvent::RenderViewHoverChanged(id, coord) => {
                 if id.name == "ModelView" {
                     if let Some(render_view) = ui.get_render_view("ModelView") {
