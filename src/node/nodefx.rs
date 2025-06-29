@@ -20,6 +20,7 @@ pub enum NodeFXParam {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum NodeFXRole {
     Color,
+    Shape,
 }
 
 use NodeFXRole::*;
@@ -30,6 +31,7 @@ impl FromStr for NodeFXRole {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "Color" => Ok(NodeFXRole::Color),
+            "Brush" => Ok(NodeFXRole::Shape),
             _ => Err(()),
         }
     }
@@ -50,6 +52,9 @@ impl NodeFX {
             Color => {
                 vec![0.5, 0.5, 0.5]
             }
+            Shape => {
+                vec![0.0]
+            }
         };
 
         Self {
@@ -63,6 +68,7 @@ impl NodeFX {
     pub fn name(&self) -> String {
         match self.role {
             Color => "Color".into(),
+            Shape => "Shape".into(),
         }
     }
 
@@ -103,6 +109,7 @@ impl NodeFX {
                     TheColor::from(Vec3::new(self.values[0], self.values[1], self.values[2])),
                 ));
             }
+            _ => {}
         }
         params
     }
@@ -115,6 +122,17 @@ impl NodeFX {
                 material.base_color[1] = self.values[1];
                 material.base_color[2] = self.values[2];
             }
+            _ => {}
         }
+    }
+
+    /// Evaluate the node in a shape context
+    pub fn evaluate_shape(
+        &self,
+        grid: &mut VoxelGrid,
+        hit: &HitRecord,
+        _graph_node: (&NodeFXGraph, usize),
+        context: &Context,
+    ) {
     }
 }

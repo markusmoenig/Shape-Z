@@ -10,6 +10,8 @@ pub enum ToolMode {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Context {
     pub mode: ToolMode,
+
+    pub shape_index: usize,
 }
 
 impl Default for Context {
@@ -22,6 +24,8 @@ impl Context {
     pub fn new() -> Self {
         Self {
             mode: ToolMode::Palette,
+
+            shape_index: 0,
         }
     }
 }

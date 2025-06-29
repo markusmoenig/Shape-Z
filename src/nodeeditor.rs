@@ -6,6 +6,7 @@ use NodeFXParam::*;
 pub enum NodeContext {
     Empty,
     Color(u8),
+    Shape(usize),
 }
 
 use NodeContext::*;

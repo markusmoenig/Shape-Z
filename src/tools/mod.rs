@@ -1,3 +1,4 @@
+pub mod brush;
 pub mod edit;
 
 pub use crate::prelude::*;

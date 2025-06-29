@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use crate::tools::brush::BrushTool;
 use crate::tools::edit::EditTool;
 
 pub struct ToolList {
@@ -15,7 +16,7 @@ impl Default for ToolList {
 
 impl ToolList {
     pub fn new() -> Self {
-        let tools: Vec<Box<dyn Tool>> = vec![Box::new(EditTool::new())];
+        let tools: Vec<Box<dyn Tool>> = vec![Box::new(EditTool::new()), Box::new(BrushTool::new())];
         Self {
             tools,
             curr_tool: "Edit Tool".into(),

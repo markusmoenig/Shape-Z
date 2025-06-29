@@ -9,6 +9,10 @@ use std::sync::{Arc, Mutex, mpsc::Receiver};
 
 pub static CAMERA: LazyLock<Arc<RwLock<Box<dyn Camera>>>> =
     LazyLock::new(|| Arc::new(RwLock::new(Box::new(Orbit::new()))));
+
+pub static SHAPES: LazyLock<Arc<RwLock<Vec<NodeFXGraph>>>> =
+    LazyLock::new(|| Arc::new(RwLock::new(vec![])));
+
 pub static RENDERBUFFER: LazyLock<Arc<Mutex<RenderBuffer>>> =
     LazyLock::new(|| Arc::new(Mutex::new(RenderBuffer::new(100, 100))));
 pub static RENDERER: LazyLock<Arc<Box<dyn Renderer>>> =
@@ -153,7 +157,14 @@ impl TheTrait for Editor {
             }
         }
 
-        // grid.add_sphere(Vec3::new(0.0, 0.0, 0.0), 0.5, 2);
+        let mut shapes = SHAPES.write().unwrap();
+        for _ in 0..10 {
+            let mut graph = NodeFXGraph::default();
+            let mut node = NodeFX::new(NodeFXRole::Color);
+            node.position = Vec2::new(10, 10);
+            graph.nodes.push(node);
+            shapes.push(graph);
+        }
 
         for file in Embedded::iter() {
             let name = file.as_ref();

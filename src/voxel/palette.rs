@@ -157,14 +157,6 @@ impl Palette {
     }
 
     /// Fill this palette from the text of a Paint-NET “.txt” palette file.
-    ///
-    /// * Existing materials (0-based) are overwritten with the parsed colours.
-    /// * Any remaining slots keep whatever was there before.
-    ///
-    /// ```
-    /// let mut pal = Palette::default();
-    /// pal.load_paintnet(include_str!("Aurora.txt"))?;
-    /// ```
     pub fn load_paintnet(&mut self, src: &str) -> std::io::Result<()> {
         use std::io::{Error, ErrorKind};
 
@@ -183,7 +175,7 @@ impl Palette {
             if line.len() != 8 || !line.chars().all(|c| c.is_ascii_hexdigit()) {
                 return Err(Error::new(
                     ErrorKind::InvalidData,
-                    format!("invalid colour: {}", line),
+                    format!("invalid colour: {line}"),
                 ));
             }
             let argb = u32::from_str_radix(line, 16)

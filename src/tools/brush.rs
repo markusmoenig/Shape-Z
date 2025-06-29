@@ -1,53 +1,32 @@
 use crate::{
-    editor::{NODEEDITOR, PALETTE, SHAPES},
+    editor::{NODEEDITOR, PALETTE},
     prelude::*,
 };
 
-pub struct EditTool {
+pub struct BrushTool {
     id: TheId,
 }
 
-impl Tool for EditTool {
+impl Tool for BrushTool {
     fn new() -> Self
     where
         Self: Sized,
     {
         Self {
-            id: TheId::named("Edit Tool"),
+            id: TheId::named("Brush Tool"),
         }
     }
     fn id(&self) -> TheId {
         self.id.clone()
     }
     fn info(&self) -> String {
-        str!("Edit Tool.")
+        str!("Brush Tool.")
     }
     fn icon_name(&self) -> String {
         str!("move")
     }
     fn accel(&self) -> Option<char> {
-        Some('e')
-    }
-
-    fn tool_event(
-        &mut self,
-        tool_event: ToolEvent,
-        ui: &mut TheUI,
-        ctx: &mut TheContext,
-        context: &mut Context,
-    ) -> bool {
-        if tool_event == ToolEvent::Activate {
-            let shapes = SHAPES.read().unwrap();
-            let mut editor = NODEEDITOR.write().unwrap();
-            editor.set_graph(
-                NodeContext::Shape(context.shape_index),
-                shapes[context.shape_index].clone(),
-                ui,
-                ctx,
-            );
-        }
-
-        false
+        Some('b')
     }
 
     fn handle_event(
