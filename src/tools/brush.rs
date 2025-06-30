@@ -46,6 +46,7 @@ impl Tool for BrushTool {
                     shapes[context.shape_index].clone(),
                     ui,
                     ctx,
+                    context,
                 );
             }
             ToolEvent::HitClick => {

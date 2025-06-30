@@ -558,8 +558,10 @@ impl TheTrait for Editor {
                             ));
                         }
                     }
-                    TheEvent::PaletteIndexChanged(_, index) => {
-                        self.context.palette_index = *index as u8;
+                    TheEvent::PaletteIndexChanged(id, index) => {
+                        if id.name == "PalettePicker" {
+                            self.context.palette_index = *index as u8;
+                        }
                     }
                     TheEvent::StateChanged(id, _) => {
                         if id.name == "Palette Mode" {

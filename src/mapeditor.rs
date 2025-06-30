@@ -790,7 +790,7 @@ impl MapEditor {
                     }
                 } else if id.name == "ModelFX RGBA Layout View" {
                     UNDOMANAGER.write().unwrap().context = UndoManagerContext::Material;
-                } else if id.name == "Palette Picker" {
+                } else if id.name == "PalettePicker" {
                     UNDOMANAGER.write().unwrap().context = UndoManagerContext::Palette;
                 }
             }

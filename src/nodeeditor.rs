@@ -39,12 +39,13 @@ impl NodeEditor {
     /// Set the context and graph.
     pub fn set_graph(
         &mut self,
-        context: NodeContext,
+        node_context: NodeContext,
         graph: NodeFXGraph,
         ui: &mut TheUI,
         ctx: &mut TheContext,
+        context: &mut Context,
     ) {
-        self.context = context;
+        self.context = node_context;
         self.graph = graph;
 
         if self.graph.selected_node.is_none() {
@@ -52,7 +53,7 @@ impl NodeEditor {
         }
 
         self.set_node_ui(ui, ctx);
-        let canvas = self.to_canvas();
+        let canvas = self.to_canvas(context);
         ui.set_node_canvas("NodeView", canvas);
     }
 
@@ -80,7 +81,7 @@ impl NodeEditor {
     }
 
     /// Create the NodeCanvas for display
-    pub fn to_canvas(&mut self) -> TheNodeCanvas {
+    pub fn to_canvas(&mut self, context: &mut Context) -> TheNodeCanvas {
         let mut canvas = TheNodeCanvas {
             node_width: 136,
             selected_node: self.graph.selected_node,
@@ -90,18 +91,22 @@ impl NodeEditor {
             ..Default::default()
         };
 
-        // let width = 111;
-        // let height = 104;
+        let width = 111;
+        let height = 104;
 
         // let mut buffer = TheRGBABuffer::new(TheDim::sized(width as i32, height));
 
         for (index, node) in self.graph.nodes.iter().enumerate() {
+            let mut buffer = TheRGBABuffer::new(TheDim::sized(width, height));
+
+            node.preview(&mut buffer, context);
+
             let n = TheNode {
                 name: node.name(),
                 position: node.position,
                 inputs: node.inputs(),
                 outputs: node.outputs(),
-                preview: TheRGBABuffer::default(),
+                preview: buffer, //TheRGBABuffer::default(),
                 supports_preview: true,
                 preview_is_open: true,
                 can_be_deleted: index != 0,

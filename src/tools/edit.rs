@@ -46,6 +46,7 @@ impl Tool for EditTool {
                     palette.graphs[context.palette_index as usize].clone(),
                     ui,
                     ctx,
+                    context,
                 );
                 redraw = true;
             }
@@ -64,17 +65,20 @@ impl Tool for EditTool {
         let mut redraw = false;
         #[allow(clippy::single_match)]
         match event {
-            TheEvent::PaletteIndexChanged(_, index) => {
-                if ToolMode::Palette == context.mode {
-                    let palette = PALETTE.read().unwrap();
-                    let mut editor = NODEEDITOR.write().unwrap();
-                    editor.set_graph(
-                        NodeContext::Color(*index as u8),
-                        palette.graphs[*index as usize].clone(),
-                        ui,
-                        ctx,
-                    );
-                    redraw = true;
+            TheEvent::PaletteIndexChanged(id, index) => {
+                if id.name == "PalettePicker" {
+                    if ToolMode::Palette == context.mode {
+                        let palette = PALETTE.read().unwrap();
+                        let mut editor = NODEEDITOR.write().unwrap();
+                        editor.set_graph(
+                            NodeContext::Color(*index as u8),
+                            palette.graphs[*index as usize].clone(),
+                            ui,
+                            ctx,
+                            context,
+                        );
+                        redraw = true
+                    };
                 }
             }
             _ => {}

@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use rayon::prelude::*;
 use std::str::FromStr;
 use theframework::prelude::*;
 use vek::Vec2;
@@ -273,5 +274,91 @@ impl NodeFX {
                 }
             }*/
         }
+    }
+
+    /// Evaluate the node in a shape context
+    pub fn preview(&self, buffer: &mut TheRGBABuffer, context: &mut Context) {
+        let width = buffer.dim().width as usize;
+        let height = buffer.dim().height;
+
+        let r_vox = 50;
+        let px_per_voxel = 1.0; // UI scale – tweak as you like
+        // let r_px = (r_vox as f32 * px_per_voxel).ceil() as i32;
+        let cx = (width as i32) / 2; // window centre
+        let cy = (height) / 2;
+
+        #[inline(always)]
+        fn rim_thickness(r_vox: i32, border_frac: f32) -> i32 {
+            let f = border_frac.clamp(0.0, 1.0);
+            ((f * r_vox as f32).round()) as i32 // 0 → 0  …  1 → r_vox
+        }
+
+        #[inline(always)]
+        fn stamp_circle(local: Vec3<F>, r_vox: i32, border_frac: f32) -> bool {
+            let dist2 = local.x.powi(2) + local.z.powi(2);
+            let outer2 = (r_vox as F + 0.5).powi(2);
+            if dist2 > outer2 {
+                return false;
+            } // outside brush
+
+            let rim = rim_thickness(r_vox, border_frac);
+            if rim == 0 {
+                return true;
+            } // solid
+
+            let inner_r = (r_vox - rim).max(0);
+            let inner2 = (inner_r as F + 0.5).powi(2);
+            dist2 > inner2 // true only for rim
+        }
+
+        #[inline(always)]
+        fn stamp_rect(local: Vec3<F>, half_vox: i32, border_frac: f32) -> bool {
+            let ax = local.x.abs() as i32;
+            let az = local.z.abs() as i32;
+            if ax > half_vox || az > half_vox {
+                return false;
+            }
+
+            let rim = rim_thickness(half_vox, border_frac);
+            if rim == 0 {
+                return true;
+            }
+
+            ax >= half_vox - rim + 1 || az >= half_vox - rim + 1
+        }
+
+        let fc = 0.5;
+
+        buffer
+            .pixels_mut()
+            .par_rchunks_exact_mut(width * 4)
+            .enumerate()
+            .for_each(|(j, line)| {
+                for (i, pixel) in line.chunks_exact_mut(4).enumerate() {
+                    let i = j * width + i;
+
+                    let x = (i % width) as f32;
+                    let y = (i / width) as f32;
+
+                    let mut color = Vec4::zero();
+                    #[allow(clippy::single_match)]
+                    match self.role {
+                        Brush => {
+                            let dx = ((x as i32) - cx) as f32 / px_per_voxel;
+                            let dz = ((y as i32) - cy) as f32 / px_per_voxel;
+
+                            let inside = stamp_circle(Vec3::new(dx, 0.0, dz), r_vox, 1.0);
+                            if inside {
+                                color.x = fc;
+                                color.y = fc;
+                                color.z = fc;
+                                color.w = 1.0;
+                            }
+                        }
+                        _ => {}
+                    }
+                    pixel.copy_from_slice(&TheColor::from_vec4f(color).to_u8_array());
+                }
+            });
     }
 }
