@@ -20,7 +20,7 @@ pub enum NodeFXParam {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum NodeFXRole {
     Color,
-    Shape,
+    Brush,
 }
 
 use NodeFXRole::*;
@@ -31,7 +31,7 @@ impl FromStr for NodeFXRole {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "Color" => Ok(NodeFXRole::Color),
-            "Brush" => Ok(NodeFXRole::Shape),
+            "Brush" => Ok(NodeFXRole::Brush),
             _ => Err(()),
         }
     }
@@ -52,7 +52,7 @@ impl NodeFX {
             Color => {
                 vec![0.5, 0.5, 0.5]
             }
-            Shape => {
+            Brush => {
                 vec![0.0]
             }
         };
@@ -68,7 +68,7 @@ impl NodeFX {
     pub fn name(&self) -> String {
         match self.role {
             Color => "Color".into(),
-            Shape => "Shape".into(),
+            Brush => "Brush".into(),
         }
     }
 
@@ -127,7 +127,7 @@ impl NodeFX {
     }
 
     /// Evaluate the node in a shape context
-    pub fn evaluate_shape(
+    pub fn evaluate_brush(
         &self,
         preview: &mut VoxelGrid,
         hit: &HitRecord,
@@ -190,27 +190,73 @@ impl NodeFX {
         }
 
         if let Some(hit_point) = hit_point {
-            let step = 1.0 / preview.density_f;
-            let depth = 1;
+            let depth = 10;
             let normal = hit.normal;
-            let outside = hit.normal * 0.5 * step;
 
-            let r_tile: F = 1.0;
-            let r_vox: i32 = (r_tile * preview.density_f / 2.0).round() as i32;
+            // ---------------------------------------------------------------------------
+            // 1. exact voxel-size constants
+            // ---------------------------------------------------------------------------
+            let vox_size = 1.0 / preview.density_f; // = step
+            let density_i = preview.density as i32; // e.g. 96
+
+            // ---------------------------------------------------------------------------
+            // 2. integer origin: which tile and which voxel inside that tile
+            //    (snapped is already the centre of the hit voxel)
+            // ---------------------------------------------------------------------------
+            let snapped = hit_point; // already snapped + ½-voxel push
+            let (tile0, loc0) = preview.to_tile_coord(snapped);
+
+            // ---------------------------------------------------------------------------
+            // 3. integer basis vectors (in *local voxel units*):
+            //    rot.columns are always ±1/0 because rotation_from_y only rotates 90°
+            // ---------------------------------------------------------------------------
             let rot = rotation_from_y(normal);
+            let tan_vox = rot.cols[0].map(|v| v.round() as i32); // (±1,0,0) / (0,0,±1)
+            let bit_vox = rot.cols[2].map(|v| v.round() as i32);
+            let nor_vox = normal.map(|v| v.round() as i32); // (0,±1,0) etc.
 
-            // Extrude in slices
+            let r_vox = (1.0 * preview.density_f / 2.0).round() as i32;
+
+            // ---------------------------------------------------------------------------
+            // 4. helper: carry overflow/underflow between local and tile coordinates
+            // ---------------------------------------------------------------------------
+            let carry = |mut tile: Coord, mut loc: Coord| -> (Coord, Coord) {
+                for (t, l) in [
+                    (&mut tile.0, &mut loc.0),
+                    (&mut tile.1, &mut loc.1),
+                    (&mut tile.2, &mut loc.2),
+                ] {
+                    if *l >= density_i {
+                        *t += *l / density_i;
+                        *l %= density_i;
+                    } else if *l < 0 {
+                        *t += (*l - (density_i - 1)) / density_i;
+                        *l = ((*l % density_i) + density_i) % density_i;
+                    }
+                }
+                (tile, loc)
+            };
+
+            // ---------------------------------------------------------------------------
+            // 5. pure-integer brush stamping
+            // ---------------------------------------------------------------------------
             for dx in -r_vox..=r_vox {
                 for dz in -r_vox..=r_vox {
-                    let local = Vec3::new(dx as F, 0.0, dz as F);
-                    if !stamp_rect(local, r_vox) {
+                    if !stamp_circle(Vec3::new(dx as F, 0.0, dz as F), r_vox) {
                         continue;
                     }
 
-                    let base = rot * local;
-
                     for d in 0..depth {
-                        let pos = hit_point + outside + normal * (d as F) * step + base * step;
+                        // offset in local voxel space
+                        let off = tan_vox * dx + bit_vox * dz + nor_vox * d;
+
+                        let loc = (loc0.0 + off.x, loc0.1 + off.y, loc0.2 + off.z);
+                        let (tile, loc) = carry(tile0, loc);
+
+                        // exact world centre of that voxel
+                        let mut pos = preview.to_world_coord(tile, loc);
+                        pos += Vec3::broadcast(vox_size * 0.5);
+
                         preview.set_create(pos, context.palette_index);
                     }
                 }

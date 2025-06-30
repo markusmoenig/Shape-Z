@@ -36,18 +36,22 @@ impl Tool for EditTool {
         ctx: &mut TheContext,
         context: &mut Context,
     ) -> bool {
+        let mut redraw = false;
         if tool_event == ToolEvent::Activate {
-            let shapes = SHAPES.read().unwrap();
-            let mut editor = NODEEDITOR.write().unwrap();
-            editor.set_graph(
-                NodeContext::Shape(context.shape_index),
-                shapes[context.shape_index].clone(),
-                ui,
-                ctx,
-            );
+            if ToolMode::Palette == context.mode {
+                let palette = PALETTE.read().unwrap();
+                let mut editor = NODEEDITOR.write().unwrap();
+                editor.set_graph(
+                    NodeContext::Color(context.palette_index),
+                    palette.graphs[context.palette_index as usize].clone(),
+                    ui,
+                    ctx,
+                );
+                redraw = true;
+            }
         }
 
-        false
+        redraw
     }
 
     fn handle_event(

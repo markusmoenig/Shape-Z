@@ -163,9 +163,9 @@ impl ModelEditor {
     pub fn handle_event(
         &mut self,
         event: &TheEvent,
-        _ui: &mut TheUI,
+        ui: &mut TheUI,
         _ctx: &mut TheContext,
-        _context: &mut Context,
+        context: &mut Context,
     ) -> bool {
         let mut redraw = false;
         match event {
@@ -174,7 +174,15 @@ impl ModelEditor {
                 if id.name == "ModelView" {
                     let camera = Arc::clone(&CAMERA);
                     let mut camera = camera.write().unwrap();
-                    camera.zoom(coord.y as f32);
+
+                    if let Some(hover_hp) = context.hover_hitpoint
+                        && !ui.alt
+                    {
+                        camera.zoom_towards(hover_hp, coord.y as f32);
+                    } else {
+                        camera.zoom(coord.y as f32);
+                    }
+
                     self.drag_coord = *coord;
                     reset_render();
                 }

@@ -75,6 +75,35 @@ impl Camera for Orbit {
         self.distance = self.distance.clamp(0.1, 100.0);
     }
 
+    /// Get the current eye position from orbit params
+    fn origin(&self) -> Vec3<F> {
+        let x = self.distance * self.azimuth.cos() * self.elevation.cos();
+        let y = self.distance * self.elevation.sin();
+        let z = self.distance * self.azimuth.sin() * self.elevation.cos();
+        Vec3::new(x, y, z) + self.center
+    }
+
+    /// Zoom toward a given world-space point (e.g. voxel under the mouse)
+    fn zoom_towards(&mut self, target: Vec3<F>, delta: f32) {
+        let zoom_sensitivity = 0.05;
+
+        // Clamp zoom factor
+        let zoom_factor = (1.0 - delta * zoom_sensitivity).clamp(0.5, 2.0);
+
+        // Current camera position
+        let eye = self.origin();
+
+        // Move camera closer to the target
+        let new_eye = target + (eye - target) * zoom_factor;
+
+        // Update distance and center accordingly
+        self.distance = (self.center - new_eye).magnitude();
+        self.center = target;
+
+        // Clamp distance to safe values
+        self.distance = self.distance.clamp(0.1, 100.0);
+    }
+
     /// Create a camera ray.
     fn create_ray(&self, uv: Vec2<F>, screen_size: Vec2<F>, offset: Vec2<F>) -> Ray {
         let aspect = screen_size.x / screen_size.y;

@@ -1,4 +1,4 @@
-// pub mod editshader;
+pub mod model;
 pub mod pbr;
 
 use crate::prelude::*;
@@ -13,6 +13,7 @@ pub trait Renderer: Send + Sync {
     /// Returns the name of the renderer.
     fn name(&self) -> &str;
 
+    #[allow(clippy::borrowed_box)]
     /// Render the pixel at the given screen position.
     fn render(
         &self,

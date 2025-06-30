@@ -68,14 +68,14 @@ impl NodeFXGraph {
         let mut curr_index = 0_usize;
         let mut curr_terminal = 0_usize;
 
-        self.nodes[0].evaluate_shape(&mut preview, hit, (self, 0), context);
+        self.nodes[0].evaluate_brush(&mut preview, hit, (self, 0), context);
 
         let mut steps = 0;
         while steps < 16 {
             if let Some((next_node, next_terminal)) =
                 self.find_connected_input_node(curr_index, curr_terminal)
             {
-                self.nodes[next_node as usize].evaluate_shape(
+                self.nodes[next_node as usize].evaluate_brush(
                     &mut preview,
                     hit,
                     (self, next_node as usize),

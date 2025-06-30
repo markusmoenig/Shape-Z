@@ -45,7 +45,12 @@ impl ToolList {
         }
     }
 
-    pub fn get_hit(&self, ui: &mut TheUI, coord: Vec2<i32>) -> Option<HitRecord> {
+    pub fn get_hit(
+        &self,
+        ui: &mut TheUI,
+        coord: Vec2<i32>,
+        context: &mut Context,
+    ) -> Option<HitRecord> {
         if let Some(render_view) = ui.get_render_view("ModelView") {
             let dim = *render_view.dim();
 
@@ -67,7 +72,18 @@ impl ToolList {
             let mut grid = grid.write().unwrap();
 
             grid.preview = None;
-            let hit = grid.dda(&ray);
+            let mut hit = grid.dda(&ray);
+
+            if let HitType::Voxel(_) = hit.hit {
+                let snap = context.snap;
+                let vox_size = 1.0 / grid.density as f32;
+                let mut snapped = self.snap_on_grid(hit.hitpoint, hit.normal, snap);
+                snapped = (snapped / vox_size).round() * vox_size;
+                snapped += hit.normal * (vox_size * 0.5);
+
+                context.hover_hitpoint = Some(snapped);
+                hit.hitpoint = snapped;
+            }
 
             Some(hit)
         } else {
@@ -135,7 +151,7 @@ impl ToolList {
                             camera.rotate((*coord - self.drag_coord).map(|v| -v as f32 * 2.0));
                             self.drag_coord = *coord;
                         } else {
-                            let hit;
+                            let mut hit;
 
                             {
                                 let grid = Arc::clone(&VOXELGRID);
@@ -143,6 +159,19 @@ impl ToolList {
 
                                 grid.preview = None;
                                 hit = grid.dda(&ray);
+                            }
+
+                            if let HitType::Voxel(_) = hit.hit {
+                                let snap = context.snap;
+                                let vox_size = 1.0 / context.density as f32;
+                                let mut snapped = self.snap_on_grid(hit.hitpoint, hit.normal, snap);
+                                snapped = (snapped / vox_size).round() * vox_size;
+                                snapped += hit.normal * (vox_size * 0.5);
+
+                                context.hover_hitpoint = Some(snapped);
+                                hit.hitpoint = snapped;
+                            } else {
+                                context.hover_hitpoint = None;
                             }
 
                             self.get_current_tool().tool_event(
@@ -160,11 +189,12 @@ impl ToolList {
                 if id.name == "ModelView" {
                     self.get_current_tool()
                         .tool_event(ToolEvent::HitClick, ui, ctx, context);
+                    crate::utils::reset_render();
                 }
             }
             TheEvent::RenderViewDragged(id, coord) => {
                 if id.name == "ModelView" {
-                    if let Some(hit) = self.get_hit(ui, *coord) {
+                    if let Some(hit) = self.get_hit(ui, *coord, context) {
                         self.get_current_tool().tool_event(
                             ToolEvent::HitDrag(hit),
                             ui,
@@ -244,5 +274,28 @@ impl ToolList {
 
         // fallback
         &mut self.tools[0]
+    }
+
+    #[inline(always)]
+    fn snap_on_grid(&self, p: Vec3<f32>, normal: Vec3<f32>, grid: f32) -> Vec3<f32> {
+        debug_assert!(grid > 0.0);
+
+        #[inline(always)]
+        fn snap_axis(v: f32, g: f32) -> f32 {
+            let anchor = 0.5;
+            ((v - anchor) / g).round() * g + anchor
+        }
+
+        let n = normal.map(|x| x.abs());
+        if n.x >= n.y && n.x >= n.z {
+            // ±X-facing surface → keep X, snap Y & Z
+            Vec3::new(p.x, snap_axis(p.y, grid), snap_axis(p.z, grid))
+        } else if n.y >= n.z {
+            // ±Y-facing surface → keep Y, snap X & Z
+            Vec3::new(snap_axis(p.x, grid), p.y, snap_axis(p.z, grid))
+        } else {
+            // ±Z-facing surface → keep Z, snap X & Y
+            Vec3::new(snap_axis(p.x, grid), snap_axis(p.y, grid), p.z)
+        }
     }
 }

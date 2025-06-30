@@ -49,6 +49,12 @@ impl VoxelGrid {
         }
     }
 
+    /// Returns the size of a single voxel in world-space units.
+    #[inline(always)]
+    pub fn voxel_size(&self) -> f32 {
+        1.0 / self.density_f
+    }
+
     /// Update the bounding boxes of the tiles (needed after editing)
     pub fn update_bboxes(&mut self) {
         self.tiles.par_iter_mut().for_each(|(_, tile)| {

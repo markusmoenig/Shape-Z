@@ -3,11 +3,11 @@ use vek::{Vec2, Vec3, Vec4};
 
 use rand::Rng;
 
-pub struct EditShader {
+pub struct Model {
     pub background_color: Vec3<F>,
 }
 
-impl Renderer for EditShader {
+impl Renderer for Model {
     fn new() -> Self
     where
         Self: Sized,
@@ -77,21 +77,39 @@ impl Renderer for EditShader {
                 shade += 0.15 * spec_boost; // up to +15 %
 
                 // -------------- 6-tap ambient-occlusion -----------------------------
-                let p = hit.hit_point_local; // i32 voxel coords
-                let neigh = [
-                    Vec3::new(1, 0, 0),
-                    Vec3::new(-1, 0, 0),
-                    Vec3::new(0, 1, 0),
-                    Vec3::new(0, -1, 0),
-                    Vec3::new(0, 0, 1),
-                    Vec3::new(0, 0, -1),
+                let vs = grid.voxel_size(); // voxel size in world space
+
+                let offsets = [
+                    Vec3::new(vs, 0.0, 0.0),
+                    Vec3::new(-vs, 0.0, 0.0),
+                    Vec3::new(0.0, vs, 0.0),
+                    Vec3::new(0.0, -vs, 0.0),
+                    Vec3::new(0.0, 0.0, vs),
+                    Vec3::new(0.0, 0.0, -vs),
                 ];
-                let empty = neigh
+
+                let p = hit.hitpoint;
+                let empty = offsets
                     .iter()
-                    .filter(|&&d| grid.get(p.x + d.x, p.y + d.y, p.z + d.z).is_none())
-                    .count() as F; // 0‥6
-                let ao = 1.0 + empty * 0.09; // up to +54 %
+                    .filter(|&&o| grid.get(p + o).is_none())
+                    .count() as F;
+
+                let ao = 1.0 + empty * 0.09;
                 shade *= ao;
+
+                let solid_neighbors = offsets
+                    .iter()
+                    .filter(|&&o| grid.get(p + o).is_some())
+                    .count();
+
+                let edge_factor = match solid_neighbors {
+                    6 => 1.0, // fully enclosed → no edge
+                    5 => 0.85,
+                    4 => 0.70,
+                    3 => 0.55,
+                    _ => 0.4, // exposed from multiple sides → stronger edge
+                };
+                shade *= edge_factor;
 
                 // -------------- final colour ----------------------------------------
                 color *= shade.clamp(0.0, 1.5); // keep sane

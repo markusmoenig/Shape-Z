@@ -74,12 +74,12 @@ impl Renderer for PBR {
                 acc += self.srgb_to_linear(self.background_color) * mask;
                 break;
             } else if matches!(hit.hit, HitType::BBox(_)) {
-                if i == 0 {
-                    acc += (self.srgb_to_linear(self.background_color) + Vec3::new(0.2, 0.2, 0.2))
-                        * mask;
-                } else {
-                    acc += self.srgb_to_linear(self.background_color) * mask;
-                }
+                // if i == 0 {
+                //     acc += (self.srgb_to_linear(self.background_color) + Vec3::new(0.2, 0.2, 0.2))
+                //         * mask;
+                // } else {
+                acc += self.srgb_to_linear(self.background_color) * mask;
+                // }
                 break;
             }
 
@@ -185,7 +185,7 @@ impl Renderer for PBR {
 
                         if rng.random::<F>() < reflectance {
                             // GGX
-                            let mut brdf = Vec3::zero();
+                            let brdf = Vec3::zero();
 
                             /*
                             for light in &ft.graph.lights {
@@ -234,7 +234,7 @@ impl Renderer for PBR {
                                 (1.0 - r2).sqrt(),
                             );
 
-                            let mut e = Vec3::zero();
+                            let e = Vec3::zero();
                             /*
                             for light in &ft.graph.lights {
                                 let l0 = light.position() - x;
