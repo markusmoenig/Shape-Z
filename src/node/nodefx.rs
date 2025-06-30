@@ -234,6 +234,9 @@ impl NodeFX {
                         continue;
                     }
 
+                    // let uv = Vec2::new(dx as F, dz as F) * pattern_scale;
+                    // let mat = pattern(uv);
+
                     for d in 0..depth {
                         // offset in local voxel space
                         let off = tan_vox * dx + bit_vox * dz + nor_vox * d;
@@ -362,3 +365,19 @@ impl NodeFX {
             });
     }
 }
+
+// // ------------------------------------------------------------
+// fn sample_pattern(p: &Pattern, uv: Vec2<i32>) -> Option<u8> {
+//     match &p.kind {
+//         PatternKind::None => None,
+//         PatternKind::Checker{size, mat_a, mat_b} => {
+//             let v = ((uv.x / *size) ^ (uv.y / *size)) & 1;
+//             Some(if v == 0 { *mat_a } else { *mat_b })
+//         }
+//         PatternKind::Brick{w, h, mort, mat_brick, mat_mortar} => {
+//             let (bx, by) = (uv.x % (w+*mort), uv.y % (h+*mort));
+//             Some(if bx < *w && by < *h { *mat_brick } else { *mat_mortar })
+//         }
+//         // Noise etc…
+//     }
+// }
