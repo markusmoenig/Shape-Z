@@ -11,7 +11,7 @@ pub enum ToolEvent {
     HitHover(HitRecord),
     HitClick,
     HitDrag(HitRecord),
-    HitUp(),
+    HitUp,
 }
 
 #[allow(unused)]

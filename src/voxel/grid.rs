@@ -2,7 +2,7 @@ use crate::prelude::*;
 use rayon::prelude::*;
 use theframework::prelude::FxHashMap;
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct VoxelGrid {
     pub tiles: FxHashMap<Coord, Tile>,
     pub density: usize,
@@ -124,12 +124,27 @@ impl VoxelGrid {
     }
 
     /// Merge the preview grid into the main grid, then clear the preview.
-    pub fn merge_preview(&mut self) {
+    /// Returns a VoxelGrid with the original tiles for the changes for undo.
+    pub fn merge_preview(&mut self) -> VoxelGrid {
+        let mut originals = VoxelGrid::new([0.0, 0.0, 0.0], self.density);
+
         let preview = match self.preview.take() {
             Some(p) => p,
-            None => return,
+            None => return originals,
         };
 
+        // Create new VoxelGrid containing the changed keys.
+        let changed_keys = preview.tiles.keys();
+
+        for key in changed_keys {
+            if let Some(tile) = self.tiles.get(key) {
+                originals.tiles.insert(*key, tile.clone());
+            } else {
+                originals.tiles.insert(*key, Tile::new(self.density));
+            }
+        }
+
+        // Merge
         for (tile_key, src_tile) in preview.tiles {
             let dst_tile = self
                 .tiles
@@ -153,6 +168,60 @@ impl VoxelGrid {
             }
 
             dst_tile.update_bbox();
+        }
+
+        originals
+    }
+
+    /// Merges this grid with another grid.
+    pub fn merge(&mut self, other: &VoxelGrid) {
+        // Merge
+        for (tile_key, src_tile) in &other.tiles {
+            let dst_tile = self
+                .tiles
+                .entry(*tile_key)
+                .or_insert_with(|| Tile::new(self.density));
+
+            let d = src_tile.density as i32; // side length per axis
+            let area = d * d; // d², pre-compute
+
+            // Iterate over every voxel in the dense array.
+            for (idx, &maybe_mat) in src_tile.voxels.iter().enumerate() {
+                if let Some(mat) = maybe_mat {
+                    // Reconstruct (x,y,z) from flat index.
+                    let idx = idx as i32;
+                    let z = idx / area;
+                    let y = (idx - z * area) / d;
+                    let x = idx - z * area - y * d;
+
+                    dst_tile.set((x, y, z), mat); // overwrite policy
+                }
+            }
+        }
+    }
+
+    // Create new VoxelGrid containing the keys of this grid which are contained in the other grid.
+    // Used for creating a redo grid.
+    pub fn copy_tiles_new(&self, other: &VoxelGrid) -> VoxelGrid {
+        let mut grid = VoxelGrid::new([0.0, 0.0, 0.0], self.density);
+
+        let changed_keys = other.tiles.keys();
+        for key in changed_keys {
+            if let Some(tile) = self.tiles.get(key) {
+                grid.tiles.insert(*key, tile.clone());
+            } else {
+                grid.tiles.insert(*key, Tile::new(self.density));
+            }
+        }
+
+        grid
+    }
+
+    // Copies all tiles of the other grid into this grid.
+    // Used for applying an undo / redo grid.
+    pub fn replace_tiles(&mut self, other: &VoxelGrid) {
+        for (coord, tile) in &other.tiles {
+            self.tiles.insert(*coord, tile.clone());
         }
     }
 

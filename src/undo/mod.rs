@@ -1,38 +1,14 @@
-pub mod character_undo;
-pub mod item_undo;
-pub mod material_undo;
-pub mod palette_undo;
-pub mod region_undo;
-pub mod screen_undo;
+pub mod undo_atom;
+pub mod undo_stack;
 
 use crate::prelude::*;
-use character_undo::*;
-use item_undo::*;
-use material_undo::*;
-use screen_undo::*;
-
-#[derive(PartialEq, Clone, Debug)]
-pub enum UndoManagerContext {
-    None,
-    Region,
-    Material,
-    Screen,
-    Character,
-    Item,
-    Palette,
-}
+use undo_atom::*;
 
 #[derive(Clone, Debug)]
 pub struct UndoManager {
-    pub context: UndoManagerContext,
     pub max_undo: usize,
 
-    regions: FxHashMap<Uuid, RegionUndo>,
-    material: MaterialUndo,
-    screen: ScreenUndo,
-    character: CharacterUndo,
-    item: ItemUndo,
-    palette: PaletteUndo,
+    stack: UndoStack,
 }
 
 impl Default for UndoManager {
@@ -44,287 +20,49 @@ impl Default for UndoManager {
 impl UndoManager {
     pub fn new() -> Self {
         Self {
-            context: UndoManagerContext::None,
             max_undo: 30,
 
-            regions: FxHashMap::default(),
-            material: MaterialUndo::default(),
-            screen: ScreenUndo::default(),
-            character: CharacterUndo::default(),
-            item: ItemUndo::default(),
-            palette: PaletteUndo::default(),
+            stack: UndoStack::default(),
         }
     }
 
-    pub fn set_context(mut self, context: UndoManagerContext, _ctx: &mut TheContext) {
-        self.context = context;
-    }
-
-    pub fn add_region_undo(&mut self, region: &Uuid, atom: RegionUndoAtom, ctx: &mut TheContext) {
-        self.context = UndoManagerContext::Region;
-        let region_undo = self.regions.entry(*region).or_default();
-        region_undo.add(atom);
-        region_undo.truncate_to_limit(self.max_undo);
+    pub fn add_undo(&mut self, atom: UndoAtom, ctx: &mut TheContext) {
+        self.stack.add(atom);
+        self.stack.truncate_to_limit(self.max_undo);
         ctx.ui.set_enabled("Undo");
         self.can_save(ctx);
     }
 
-    pub fn add_material_undo(&mut self, atom: MaterialUndoAtom, ctx: &mut TheContext) {
-        self.context = UndoManagerContext::Material;
-        self.material.add(atom);
-        self.material.truncate_to_limit(self.max_undo);
-        ctx.ui.set_enabled("Undo");
-        self.can_save(ctx);
-    }
+    pub fn undo(&mut self, ui: &mut TheUI, ctx: &mut TheContext, context: &mut Context) {
+        self.stack.undo(ui, ctx, context);
 
-    pub fn add_character_undo(&mut self, atom: CharacterUndoAtom, ctx: &mut TheContext) {
-        self.context = UndoManagerContext::Character;
-        self.character.add(atom);
-        self.character.truncate_to_limit(self.max_undo);
-        ctx.ui.set_enabled("Undo");
-        self.can_save(ctx);
-    }
+        if !self.stack.has_undo() {
+            ctx.ui.set_disabled("Undo");
+        } else {
+            ctx.ui.set_enabled("Undo");
+        }
 
-    pub fn add_item_undo(&mut self, atom: ItemUndoAtom, ctx: &mut TheContext) {
-        self.context = UndoManagerContext::Item;
-        self.item.add(atom);
-        self.item.truncate_to_limit(self.max_undo);
-        ctx.ui.set_enabled("Undo");
-        self.can_save(ctx);
-    }
-
-    pub fn add_screen_undo(&mut self, atom: ScreenUndoAtom, ctx: &mut TheContext) {
-        self.context = UndoManagerContext::Screen;
-        self.screen.add(atom);
-        self.screen.truncate_to_limit(self.max_undo);
-        ctx.ui.set_enabled("Undo");
-        self.can_save(ctx);
-    }
-
-    pub fn add_palette_undo(&mut self, atom: PaletteUndoAtom, ctx: &mut TheContext) {
-        self.context = UndoManagerContext::Palette;
-        self.palette.add(atom);
-        self.palette.truncate_to_limit(self.max_undo);
-        ctx.ui.set_enabled("Undo");
-        self.can_save(ctx);
-    }
-
-    pub fn undo(
-        &mut self,
-        context_id: Uuid,
-        server_ctx: &mut ServerContext,
-        project: &mut Project,
-        ui: &mut TheUI,
-        ctx: &mut TheContext,
-    ) {
-        match &self.context {
-            UndoManagerContext::None => {}
-            UndoManagerContext::Region => {
-                if let Some(region_undo) = self.regions.get_mut(&context_id) {
-                    if let Some(region) = project.get_region_mut(&context_id) {
-                        if region_undo.has_undo() {
-                            region_undo.undo(region, ui, ctx);
-                        }
-
-                        if !region_undo.has_undo() {
-                            ctx.ui.set_disabled("Undo");
-                        } else {
-                            ctx.ui.set_enabled("Undo");
-                        }
-
-                        if !region_undo.has_redo() {
-                            ctx.ui.set_disabled("Redo");
-                        } else {
-                            ctx.ui.set_enabled("Redo");
-                        }
-                    }
-                }
-            }
-            UndoManagerContext::Material => {
-                self.material.undo(project, ui, ctx);
-
-                if !self.material.has_undo() {
-                    ctx.ui.set_disabled("Undo");
-                } else {
-                    ctx.ui.set_enabled("Undo");
-                }
-
-                if !self.material.has_redo() {
-                    ctx.ui.set_disabled("Redo");
-                } else {
-                    ctx.ui.set_enabled("Redo");
-                }
-            }
-            UndoManagerContext::Character => {
-                self.character.undo(project, ui, ctx);
-
-                if !self.character.has_undo() {
-                    ctx.ui.set_disabled("Undo");
-                } else {
-                    ctx.ui.set_enabled("Undo");
-                }
-
-                if !self.character.has_redo() {
-                    ctx.ui.set_disabled("Redo");
-                } else {
-                    ctx.ui.set_enabled("Redo");
-                }
-            }
-            UndoManagerContext::Item => {
-                self.item.undo(project, ui, ctx);
-
-                if !self.item.has_undo() {
-                    ctx.ui.set_disabled("Undo");
-                } else {
-                    ctx.ui.set_enabled("Undo");
-                }
-
-                if !self.item.has_redo() {
-                    ctx.ui.set_disabled("Redo");
-                } else {
-                    ctx.ui.set_enabled("Redo");
-                }
-            }
-            UndoManagerContext::Screen => {
-                self.screen.undo(project, ui, ctx);
-
-                if !self.screen.has_undo() {
-                    ctx.ui.set_disabled("Undo");
-                } else {
-                    ctx.ui.set_enabled("Undo");
-                }
-
-                if !self.screen.has_redo() {
-                    ctx.ui.set_disabled("Redo");
-                } else {
-                    ctx.ui.set_enabled("Redo");
-                }
-            }
-            UndoManagerContext::Palette => {
-                self.palette.undo(server_ctx, project, ui, ctx);
-
-                if !self.palette.has_undo() {
-                    ctx.ui.set_disabled("Undo");
-                } else {
-                    ctx.ui.set_enabled("Undo");
-                }
-
-                if !self.palette.has_redo() {
-                    ctx.ui.set_disabled("Redo");
-                } else {
-                    ctx.ui.set_enabled("Redo");
-                }
-            }
+        if !self.stack.has_redo() {
+            ctx.ui.set_disabled("Redo");
+        } else {
+            ctx.ui.set_enabled("Redo");
         }
         self.can_save(ctx);
     }
 
-    pub fn redo(
-        &mut self,
-        context_id: Uuid,
-        server_ctx: &mut ServerContext,
-        project: &mut Project,
-        ui: &mut TheUI,
-        ctx: &mut TheContext,
-    ) {
-        match &self.context {
-            UndoManagerContext::None => {}
-            UndoManagerContext::Region => {
-                if let Some(region_undo) = self.regions.get_mut(&context_id) {
-                    if let Some(region) = project.get_region_mut(&context_id) {
-                        if region_undo.has_redo() {
-                            region_undo.redo(region, ui, ctx);
-                        }
+    pub fn redo(&mut self, ui: &mut TheUI, ctx: &mut TheContext, context: &mut Context) {
+        self.stack.redo(ui, ctx, context);
 
-                        if !region_undo.has_undo() {
-                            ctx.ui.set_disabled("Undo");
-                        } else {
-                            ctx.ui.set_enabled("Undo");
-                        }
+        if !self.stack.has_undo() {
+            ctx.ui.set_disabled("Undo");
+        } else {
+            ctx.ui.set_enabled("Undo");
+        }
 
-                        if !region_undo.has_redo() {
-                            ctx.ui.set_disabled("Redo");
-                        } else {
-                            ctx.ui.set_enabled("Redo");
-                        }
-                    }
-                }
-            }
-            UndoManagerContext::Material => {
-                self.material.redo(project, ui, ctx);
-
-                if !self.material.has_undo() {
-                    ctx.ui.set_disabled("Undo");
-                } else {
-                    ctx.ui.set_enabled("Undo");
-                }
-
-                if !self.material.has_redo() {
-                    ctx.ui.set_disabled("Redo");
-                } else {
-                    ctx.ui.set_enabled("Redo");
-                }
-            }
-            UndoManagerContext::Character => {
-                self.character.redo(project, ui, ctx);
-
-                if !self.character.has_undo() {
-                    ctx.ui.set_disabled("Undo");
-                } else {
-                    ctx.ui.set_enabled("Undo");
-                }
-
-                if !self.character.has_redo() {
-                    ctx.ui.set_disabled("Redo");
-                } else {
-                    ctx.ui.set_enabled("Redo");
-                }
-            }
-            UndoManagerContext::Item => {
-                self.item.redo(project, ui, ctx);
-
-                if !self.item.has_undo() {
-                    ctx.ui.set_disabled("Undo");
-                } else {
-                    ctx.ui.set_enabled("Undo");
-                }
-
-                if !self.item.has_redo() {
-                    ctx.ui.set_disabled("Redo");
-                } else {
-                    ctx.ui.set_enabled("Redo");
-                }
-            }
-            UndoManagerContext::Screen => {
-                self.screen.redo(project, ui, ctx);
-
-                if !self.screen.has_undo() {
-                    ctx.ui.set_disabled("Undo");
-                } else {
-                    ctx.ui.set_enabled("Undo");
-                }
-
-                if !self.screen.has_redo() {
-                    ctx.ui.set_disabled("Redo");
-                } else {
-                    ctx.ui.set_enabled("Redo");
-                }
-            }
-            UndoManagerContext::Palette => {
-                self.palette.redo(server_ctx, project, ui, ctx);
-
-                if !self.palette.has_undo() {
-                    ctx.ui.set_disabled("Undo");
-                } else {
-                    ctx.ui.set_enabled("Undo");
-                }
-
-                if !self.palette.has_redo() {
-                    ctx.ui.set_disabled("Redo");
-                } else {
-                    ctx.ui.set_enabled("Redo");
-                }
-            }
+        if !self.stack.has_redo() {
+            ctx.ui.set_disabled("Redo");
+        } else {
+            ctx.ui.set_enabled("Redo");
         }
         self.can_save(ctx);
     }
@@ -332,36 +70,16 @@ impl UndoManager {
     /// Checks if the undo manager is empty and disables the save buttons if it is.
     pub fn can_save(&self, ctx: &mut TheContext) {
         if self.has_undo() {
-            // ctx.ui.set_disabled("Save");
-            // ctx.ui.set_disabled("Save As");
-        } else {
             ctx.ui.set_enabled("Save");
             ctx.ui.set_enabled("Save As");
+        } else {
+            ctx.ui.set_disabled("Save");
+            ctx.ui.set_disabled("Save As");
         }
     }
 
     /// Checks if the undo manager has any undoable actions.
     pub fn has_undo(&self) -> bool {
-        for region_undo in self.regions.values() {
-            if region_undo.has_undo() {
-                return true;
-            }
-        }
-        if self.material.has_undo() {
-            return true;
-        }
-        if self.screen.has_undo() {
-            return true;
-        }
-        if self.character.has_undo() {
-            return true;
-        }
-        if self.item.has_undo() {
-            return true;
-        }
-        if self.palette.has_undo() {
-            return true;
-        }
-        false
+        self.stack.has_undo()
     }
 }

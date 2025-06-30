@@ -132,7 +132,7 @@ impl NodeFX {
         preview: &mut VoxelGrid,
         hit: &HitRecord,
         _graph_node: (&NodeFXGraph, usize),
-        context: &Context,
+        context: &mut Context,
     ) {
         let hit_point: Option<Vec3<f32>> = match hit.hit {
             HitType::Outside => None,
@@ -193,23 +193,15 @@ impl NodeFX {
             let depth = 10;
             let normal = hit.normal;
 
-            // ---------------------------------------------------------------------------
-            // 1. exact voxel-size constants
-            // ---------------------------------------------------------------------------
+            // Exact voxel-size constants
             let vox_size = 1.0 / preview.density_f; // = step
             let density_i = preview.density as i32; // e.g. 96
 
-            // ---------------------------------------------------------------------------
-            // 2. integer origin: which tile and which voxel inside that tile
-            //    (snapped is already the centre of the hit voxel)
-            // ---------------------------------------------------------------------------
+            // Integer origin: which tile and which voxel inside that tile
             let snapped = hit_point; // already snapped + ½-voxel push
             let (tile0, loc0) = preview.to_tile_coord(snapped);
 
-            // ---------------------------------------------------------------------------
-            // 3. integer basis vectors (in *local voxel units*):
-            //    rot.columns are always ±1/0 because rotation_from_y only rotates 90°
-            // ---------------------------------------------------------------------------
+            // Integer basis vectors
             let rot = rotation_from_y(normal);
             let tan_vox = rot.cols[0].map(|v| v.round() as i32); // (±1,0,0) / (0,0,±1)
             let bit_vox = rot.cols[2].map(|v| v.round() as i32);
@@ -217,9 +209,7 @@ impl NodeFX {
 
             let r_vox = (1.0 * preview.density_f / 2.0).round() as i32;
 
-            // ---------------------------------------------------------------------------
-            // 4. helper: carry overflow/underflow between local and tile coordinates
-            // ---------------------------------------------------------------------------
+            // Carry overflow/underflow between local and tile coordinates
             let carry = |mut tile: Coord, mut loc: Coord| -> (Coord, Coord) {
                 for (t, l) in [
                     (&mut tile.0, &mut loc.0),
@@ -237,9 +227,6 @@ impl NodeFX {
                 (tile, loc)
             };
 
-            // ---------------------------------------------------------------------------
-            // 5. pure-integer brush stamping
-            // ---------------------------------------------------------------------------
             for dx in -r_vox..=r_vox {
                 for dz in -r_vox..=r_vox {
                     if !stamp_circle(Vec3::new(dx as F, 0.0, dz as F), r_vox) {

@@ -1,5 +1,5 @@
 use crate::{
-    editor::{NODEEDITOR, PALETTE, SHAPES, VOXELGRID},
+    editor::{NODEEDITOR, SHAPES, UNDOMANAGER, VOXELGRID},
     prelude::*,
 };
 use std::sync::Arc;
@@ -51,7 +51,7 @@ impl Tool for BrushTool {
             ToolEvent::HitClick => {
                 let grid = Arc::clone(&VOXELGRID);
                 let mut grid = grid.write().unwrap();
-                grid.merge_preview();
+                context.undo_grid = grid.merge_preview();
             }
             ToolEvent::HitHover(hit) => {
                 let shapes = SHAPES.read().unwrap();
@@ -68,7 +68,20 @@ impl Tool for BrushTool {
                 let grid = Arc::clone(&VOXELGRID);
                 let mut grid = grid.write().unwrap();
                 grid.preview = Some(Box::new(preview));
-                grid.merge_preview();
+                let changes = grid.merge_preview();
+                context.undo_grid.merge(&changes);
+            }
+            ToolEvent::HitUp => {
+                if !context.undo_grid.tiles.is_empty() {
+                    let grid = Arc::clone(&VOXELGRID);
+                    let grid = grid.read().unwrap();
+
+                    let redo = grid.copy_tiles_new(&context.undo_grid);
+
+                    let atom =
+                        UndoAtom::GridEdit(Box::new(context.take_undo_grid()), Box::new(redo));
+                    UNDOMANAGER.write().unwrap().add_undo(atom, ctx);
+                }
             }
             _ => {}
         }

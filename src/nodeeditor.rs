@@ -1,4 +1,7 @@
-use crate::{editor::PALETTE, prelude::*};
+use crate::{
+    editor::{PALETTE, UNDOMANAGER},
+    prelude::*,
+};
 
 use NodeFXParam::*;
 
@@ -60,10 +63,17 @@ impl NodeEditor {
             NodeContext::Color(index) => {
                 {
                     let mut palette = PALETTE.write().unwrap();
+
+                    let prev = palette.graphs[index as usize].clone();
                     palette.graphs[index as usize] = self.graph.clone();
                     palette.materials[index as usize] = self.graph.evaluate_material();
+
+                    let atom =
+                        UndoAtom::PaletteEdit(index, Box::new(prev), Box::new(self.graph.clone()));
+                    UNDOMANAGER.write().unwrap().add_undo(atom, ctx);
                 }
                 crate::utils::update_palette_ui(ui, ctx);
+                crate::utils::reset_render();
             }
             _ => {}
         }

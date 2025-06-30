@@ -205,6 +205,12 @@ impl ToolList {
                     }
                 }
             }
+            TheEvent::RenderViewUp(id, coord) => {
+                if id.name == "ModelView" {
+                    self.get_current_tool()
+                        .tool_event(ToolEvent::HitUp, ui, ctx, context);
+                }
+            }
             _ => {}
         }
 

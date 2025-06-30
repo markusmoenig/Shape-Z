@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Tile {
     pub voxels: Vec<Option<u8>>,
     pub density: usize,

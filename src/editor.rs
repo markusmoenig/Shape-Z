@@ -29,6 +29,8 @@ pub static NODEEDITOR: LazyLock<RwLock<NodeEditor>> =
     LazyLock::new(|| RwLock::new(NodeEditor::new()));
 pub static TOOLLIST: LazyLock<RwLock<ToolList>> =
     LazyLock::new(|| RwLock::new(ToolList::default()));
+pub static UNDOMANAGER: LazyLock<RwLock<UndoManager>> =
+    LazyLock::new(|| RwLock::new(UndoManager::default()));
 
 pub struct Editor {
     event_receiver: Option<Receiver<TheEvent>>,
@@ -261,33 +263,9 @@ impl TheTrait for Editor {
             TheId::named("Paste"),
             TheAccelerator::new(TheAcceleratorKey::CTRLCMD, 'v'),
         ));
-        // let mut view_menu = TheContextMenu::named(str!("View"));
-        // view_menu.add(TheContextMenuItem::new_with_accel(
-        //     str!("2D Map"),
-        //     TheId::named("2DMap"),
-        //     TheAccelerator::new(TheAcceleratorKey::CTRLCMD, '2'),
-        // ));
-        // view_menu.add(TheContextMenuItem::new_with_accel(
-        //     str!("3D Map"),
-        //     TheId::named("3DMap"),
-        //     TheAccelerator::new(TheAcceleratorKey::CTRLCMD, '3'),
-        // ));
-        // view_menu.add(TheContextMenuItem::new_with_accel(
-        //     str!("Shared Map"),
-        //     TheId::named("2D3DMap"),
-        //     TheAccelerator::new(TheAcceleratorKey::CTRLCMD, '0'),
-        // ));
-        // let mut tools_menu = TheContextMenu::named(str!("Tools"));
-        // tools_menu.add(TheContextMenuItem::new_with_accel(
-        //     str!("Rerender 3D Map"),
-        //     TheId::named("Rerender"),
-        //     TheAccelerator::new(TheAcceleratorKey::CTRLCMD, 'r'),
-        // ));
 
         file_menu.register_accel(ctx);
         edit_menu.register_accel(ctx);
-        // view_menu.register_accel(ctx);
-        // tools_menu.register_accel(ctx);
 
         menu.add_context_menu(file_menu);
         menu.add_context_menu(edit_menu);
@@ -516,6 +494,13 @@ impl TheTrait for Editor {
 
         ui.canvas.set_bottom(status_canvas);
 
+        //
+
+        ctx.ui.set_disabled("Save");
+        ctx.ui.set_disabled("Save As");
+        ctx.ui.set_disabled("Undo");
+        ctx.ui.set_disabled("Redo");
+
         self.event_receiver = Some(ui.add_state_listener("Main Receiver".into()));
     }
 
@@ -595,6 +580,24 @@ impl TheTrait for Editor {
                                 .set_widget_state("Palette Mode".into(), TheWidgetState::None);
                             ctx.ui
                                 .set_widget_state("Point Mode".into(), TheWidgetState::None);
+                        }
+
+                        if id.name == "Undo" {
+                            if ui.focus_widget_supports_undo_redo(ctx) {
+                                if id.name == "Undo" {
+                                    ui.undo(ctx);
+                                }
+                            } else {
+                                let mut manager = UNDOMANAGER.write().unwrap();
+                                manager.undo(ui, ctx, &mut self.context);
+                            }
+                        } else if id.name == "Redo" {
+                            if ui.focus_widget_supports_undo_redo(ctx) {
+                                ui.redo(ctx);
+                            } else {
+                                let mut manager = UNDOMANAGER.write().unwrap();
+                                manager.redo(ui, ctx, &mut self.context);
+                            }
                         }
                     }
                     _ => {}

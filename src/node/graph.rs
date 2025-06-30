@@ -62,7 +62,7 @@ impl NodeFXGraph {
     }
 
     /// Evaluate a shape graph
-    pub fn evaluate_shape(&self, hit: &HitRecord, context: &Context) -> VoxelGrid {
+    pub fn evaluate_shape(&self, hit: &HitRecord, context: &mut Context) -> VoxelGrid {
         let mut preview = VoxelGrid::new([0.0, 0.0, 0.0], context.density);
 
         let mut curr_index = 0_usize;

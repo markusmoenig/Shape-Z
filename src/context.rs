@@ -1,5 +1,7 @@
 use theframework::prelude::*;
 
+use crate::tools::VoxelGrid;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum ToolMode {
     Palette,
@@ -7,7 +9,7 @@ pub enum ToolMode {
     History,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct Context {
     pub mode: ToolMode,
 
@@ -18,6 +20,8 @@ pub struct Context {
     pub shape_index: usize,
 
     pub snap: f32,
+
+    pub undo_grid: VoxelGrid,
 }
 
 impl Default for Context {
@@ -37,7 +41,16 @@ impl Context {
             palette_index: 0,
             shape_index: 0,
 
-            snap: 0.5,
+            snap: 0.1,
+
+            undo_grid: VoxelGrid::new([0.0, 0.0, 0.0], 96),
         }
+    }
+
+    /// Take the undo grid and clean up afterwards.
+    pub fn take_undo_grid(&mut self) -> VoxelGrid {
+        let cl = self.undo_grid.clone();
+        self.undo_grid = VoxelGrid::new([0.0, 0.0, 0.0], 96);
+        cl
     }
 }
