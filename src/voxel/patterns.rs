@@ -11,6 +11,7 @@ use vek::Vec3;
 pub struct PatternContext {
     pub result: u8,
 
+    pub cell_scale: f32,
     pub world: Vec3<f32>,
     pub uv: Vec2<i32>,
     pub normal: Vec3<f32>,

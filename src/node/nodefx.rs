@@ -72,7 +72,7 @@ impl NodeFX {
                 vec![0.0]
             }
             PatternUV => {
-                vec![0.0]
+                vec![0.2] // Cell Scale
             }
         };
 
@@ -146,6 +146,12 @@ impl NodeFX {
         false
     }
 
+    /// Set the palette index
+    pub fn set_value(&mut self, name: &str, value: f32) {
+        println!("set_value {}: {}", name, value);
+        self.values[0] = value;
+    }
+
     /// The parameters for the NodeFX
     pub fn params(&self) -> Vec<NodeFXParam> {
         let mut params = vec![];
@@ -156,6 +162,16 @@ impl NodeFX {
                     "".into(),
                     "Base color of the palette index".into(),
                     TheColor::from(Vec3::new(self.values[0], self.values[1], self.values[2])),
+                ));
+            }
+            PatternUV => {
+                params.push(NodeFXParam::Float(
+                    "cell_scale".into(),
+                    "Cell Scale".into(),
+                    "Pattern scale relative to one tile. Values < 1.0 mean smaller, denser pattern, > 1.0 mean larger pattern spanning multiple tiles."
+                        .into(),
+                    self.values[0],
+                    0.001..=5.0,
                 ));
             }
             _ => {}
@@ -170,9 +186,11 @@ impl NodeFX {
         _graph_node: (&NodeFXGraph, usize),
     ) {
         match self.role {
-            PatternUV => {}
+            PatternUV => {
+                pattern_ctx.cell_scale = self.values[0];
+            }
             Checker => {
-                let size = 10;
+                let size = 1;
                 let (ux, uy) = (pattern_ctx.uv.x, pattern_ctx.uv.y);
 
                 let cell_x = ux.div_euclid(size);
@@ -288,6 +306,14 @@ impl NodeFX {
             let bit_vox = rot.cols[2].map(|v| v.round() as i32);
             let nor_vox = normal.map(|v| v.round() as i32); // (0,±1,0) etc.
 
+            let tangent_f = rot.cols[0]; // 3-D vector length 1
+            let bitangent_f = rot.cols[2];
+
+            // The cell_world scales the pattern relative to one tile.
+            let cell_world =
+                patterns.graphs[context.pattern_index as usize].nodes[0].values[0].max(vox_size);
+            let inv_cell = 1.0 / cell_world;
+
             let r_vox = (1.0 * preview.density_f / 2.0).round() as i32;
 
             // Carry overflow/underflow between local and tile coordinates
@@ -314,9 +340,6 @@ impl NodeFX {
                         continue;
                     }
 
-                    // let uv = Vec2::new(dx as F, dz as F) * pattern_scale;
-                    // let mat = pattern(uv);
-
                     for d in 0..depth {
                         // offset in local voxel space
                         let off = tan_vox * dx + bit_vox * dz + nor_vox * d;
@@ -328,11 +351,17 @@ impl NodeFX {
                         let mut pos = preview.to_world_coord(tile, loc);
                         pos += Vec3::broadcast(vox_size * 0.5);
 
-                        // preview.set_create(pos, context.palette_index);
+                        let rel = pos;
+                        let u = (rel.dot(tangent_f) * inv_cell).floor() as i32;
+                        let v = (rel.dot(bitangent_f) * inv_cell).floor() as i32;
+
+                        // Create the material from the pattern
                         let mut pattern_ctx = PatternContext {
                             result: context.palette_index,
+                            cell_scale: 1.0,
                             world: pos,
-                            uv: Vec2::new(dx, dz),
+                            // uv: Vec2::new(dx, dz),
+                            uv: Vec2::new(u, v),
                             normal: hit.normal,
                             layer: d,
                             max_layer: depth,
@@ -457,13 +486,19 @@ impl NodeFX {
                             }
                         }
                         Checker => {
-                            let dx = ((x as i32) - cx);
-                            let dz = ((y as i32) - cy);
+                            let cell_px = 15.0;
+
+                            let rel_px_x = (x - cx as f32);
+                            let rel_px_y = (y - cy as f32);
+
+                            let u = (rel_px_x / cell_px).floor() as i32;
+                            let v = (rel_px_y / cell_px).floor() as i32;
 
                             let mut pattern_ctx = PatternContext {
                                 result: context.palette_index,
+                                cell_scale: 1.0,
                                 world: Vec3::zero(),
-                                uv: Vec2::new(dx, dz),
+                                uv: Vec2::new(u, v),
                                 normal: Vec3::unit_y(),
                                 layer: 0,
                                 max_layer: 1,

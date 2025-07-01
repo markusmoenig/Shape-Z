@@ -280,7 +280,7 @@ impl NodeEditor {
                         if let Some(node) = self.graph.nodes.get_mut(index) {
                             match value {
                                 TheValue::FloatRange(v, _) => {
-                                    // node.values.set(&snake_case, rusterix::Value::Float(*v))
+                                    node.set_value(&snake_case, *v);
                                 }
                                 TheValue::IntRange(v, _) => {
                                     // node.values.set(&snake_case, rusterix::Value::Int(*v))

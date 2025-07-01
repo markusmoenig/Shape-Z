@@ -53,6 +53,17 @@ impl Tool for EditTool {
                     context,
                 );
                 redraw = true;
+            } else if ToolMode::Pattern == context.mode {
+                let patterns = PATTERNS.read().unwrap();
+                let mut editor = NODEEDITOR.write().unwrap();
+                editor.set_graph(
+                    NodeContext::Color(context.palette_index),
+                    patterns.graphs[context.palette_index as usize].clone(),
+                    ui,
+                    ctx,
+                    context,
+                );
+                redraw = true;
             }
         }
 
