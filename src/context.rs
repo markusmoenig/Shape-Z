@@ -6,7 +6,7 @@ use crate::tools::VoxelGrid;
 pub enum ToolMode {
     Palette,
     Point,
-    History,
+    Pattern,
 }
 
 #[derive(Clone, Debug)]
@@ -17,6 +17,7 @@ pub struct Context {
     pub density: usize,
 
     pub palette_index: u8,
+    pub pattern_index: u8,
     pub shape_index: usize,
 
     pub snap: f32,
@@ -39,6 +40,7 @@ impl Context {
             density: 96,
 
             palette_index: 0,
+            pattern_index: 0,
             shape_index: 0,
 
             snap: 0.1,

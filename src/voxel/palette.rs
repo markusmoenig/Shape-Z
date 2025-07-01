@@ -133,7 +133,7 @@ impl Default for Palette {
         let mut graphs = vec![];
         for _ in 0..256 {
             let mut graph = NodeFXGraph::default();
-            let mut node = NodeFX::new(NodeFXRole::Color);
+            let mut node = NodeFX::new(NodeFXRole::BaseColor);
             node.position = Vec2::new(10, 10);
             graph.nodes.push(node);
             graphs.push(graph);

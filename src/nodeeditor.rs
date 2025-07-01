@@ -1,5 +1,5 @@
 use crate::{
-    editor::{PALETTE, UNDOMANAGER},
+    editor::{PALETTE, PATTERNS, UNDOMANAGER},
     prelude::*,
 };
 
@@ -9,6 +9,7 @@ use NodeFXParam::*;
 pub enum NodeContext {
     Empty,
     Color(u8),
+    Pattern(u8),
     Shape(usize),
 }
 
@@ -58,7 +59,7 @@ impl NodeEditor {
     }
 
     /// Graph has been changed, apply it to the current context
-    fn graph_changed(&self, ui: &mut TheUI, ctx: &mut TheContext) {
+    fn graph_changed(&self, ui: &mut TheUI, ctx: &mut TheContext, context: &Context) {
         #[allow(clippy::single_match)]
         match self.context {
             NodeContext::Color(index) => {
@@ -67,7 +68,7 @@ impl NodeEditor {
 
                     let prev = palette.graphs[index as usize].clone();
                     palette.graphs[index as usize] = self.graph.clone();
-                    palette.materials[index as usize] = self.graph.evaluate_material();
+                    palette.materials[index as usize] = self.graph.evaluate_material(context);
 
                     let atom =
                         UndoAtom::PaletteEdit(index, Box::new(prev), Box::new(self.graph.clone()));
@@ -75,6 +76,19 @@ impl NodeEditor {
                 }
                 crate::utils::update_palette_ui(ui, ctx);
                 crate::utils::reset_render();
+            }
+            NodeContext::Pattern(index) => {
+                {
+                    let mut patterns = PATTERNS.write().unwrap();
+
+                    let prev = patterns.graphs[index as usize].clone();
+                    patterns.graphs[index as usize] = self.graph.clone();
+
+                    let atom =
+                        UndoAtom::PatternEdit(index, Box::new(prev), Box::new(self.graph.clone()));
+                    UNDOMANAGER.write().unwrap().add_undo(atom, ctx);
+                }
+                // crate::utils::update_palette_ui(ui, ctx);
             }
             _ => {}
         }
@@ -203,35 +217,26 @@ impl NodeEditor {
                 if id.name == "NodeView" {
                     self.graph.selected_node = *index;
                     self.set_node_ui(ui, ctx);
-                    // if let Some(map) = project.get_map_mut(server_ctx) {
-                    //     map.changed += 1;
-                    //     map.shapefx_graphs.insert(self.graph.id, self.graph.clone());
-                    // }
                 }
             }
             TheEvent::NodeDragged(id, index, position) => {
                 if id.name == "NodeView" {
                     self.graph.nodes[*index].position = *position;
-                    // if let Some(map) = project.get_map_mut(server_ctx) {
-                    //     // let prev = map.clone();
-                    //     map.changed += 1;
-                    //     map.shapefx_graphs.insert(self.graph.id, self.graph.clone());
-                    // }
                 }
             }
             TheEvent::NodeConnectionAdded(id, connections)
             | TheEvent::NodeConnectionRemoved(id, connections) => {
                 if id.name == "NodeView" {
-                    // self.graph.connections.clone_from(connections);
-                    // self.graph_changed(project, ui, ctx, server_ctx);
+                    self.graph.connections.clone_from(connections);
+                    self.graph_changed(ui, ctx, context);
                 }
             }
             TheEvent::NodeDeleted(id, deleted_node_index, connections) => {
                 if id.name == "NodeView" {
-                    // self.graph.nodes.remove(*deleted_node_index);
-                    // self.graph.connections.clone_from(connections);
+                    self.graph.nodes.remove(*deleted_node_index);
+                    self.graph.connections.clone_from(connections);
 
-                    // self.graph_changed(project, ui, ctx, server_ctx);
+                    self.graph_changed(ui, ctx, context);
                 }
             }
             TheEvent::NodeViewScrolled(id, offset) => {
@@ -262,7 +267,7 @@ impl NodeEditor {
                                 _ => {}
                             }
                         }
-                        self.graph_changed(ui, ctx);
+                        self.graph_changed(ui, ctx, context);
                     }
                 }
             }
@@ -275,11 +280,9 @@ impl NodeEditor {
     /// Create the UI for the selected node.
     pub fn set_node_ui(&mut self, ui: &mut TheUI, ctx: &mut TheContext) {
         let mut nodeui = TheNodeUI::default();
-        let mut node_name = "Node".to_string();
 
         if let Some(index) = self.graph.selected_node {
             if let Some(node) = self.graph.nodes.get(index) {
-                node_name = node.name();
                 for param in node.params() {
                     match param {
                         Float(id, name, status, value, range) => {

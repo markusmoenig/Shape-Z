@@ -1,4 +1,7 @@
-use crate::prelude::*;
+use crate::{
+    editor::{PALETTE, PATTERNS},
+    prelude::*,
+};
 use rayon::prelude::*;
 use std::str::FromStr;
 use theframework::prelude::*;
@@ -20,8 +23,10 @@ pub enum NodeFXParam {
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum NodeFXRole {
-    Color,
+    BaseColor,
     Brush,
+    PatternUV,
+    Checker,
 }
 
 use NodeFXRole::*;
@@ -31,8 +36,10 @@ impl FromStr for NodeFXRole {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Color" => Ok(NodeFXRole::Color),
+            "BaseColor" => Ok(NodeFXRole::BaseColor),
             "Brush" => Ok(NodeFXRole::Brush),
+            "Checker" => Ok(NodeFXRole::Checker),
+            "PatternUV" => Ok(NodeFXRole::PatternUV),
             _ => Err(()),
         }
     }
@@ -50,10 +57,16 @@ pub struct NodeFX {
 impl NodeFX {
     pub fn new(role: NodeFXRole) -> Self {
         let values = match role {
-            Color => {
+            BaseColor => {
                 vec![0.5, 0.5, 0.5]
             }
             Brush => {
+                vec![0.0]
+            }
+            Checker => {
+                vec![0.0]
+            }
+            PatternUV => {
                 vec![0.0]
             }
         };
@@ -68,14 +81,16 @@ impl NodeFX {
 
     pub fn name(&self) -> String {
         match self.role {
-            Color => "Color".into(),
+            BaseColor => "Base Color".into(),
             Brush => "Brush".into(),
+            Checker => "Checker".into(),
+            PatternUV => "Pattern UV".into(),
         }
     }
 
     pub fn inputs(&self) -> Vec<TheNodeTerminal> {
         match self.role {
-            Color => {
+            BaseColor => {
                 vec![]
             }
             _ => {
@@ -102,7 +117,7 @@ impl NodeFX {
     pub fn params(&self) -> Vec<NodeFXParam> {
         let mut params = vec![];
         match self.role {
-            Color => {
+            BaseColor => {
                 params.push(NodeFXParam::Color(
                     "color".into(),
                     "".into(),
@@ -115,10 +130,40 @@ impl NodeFX {
         params
     }
 
-    /// Evaluate the node in a material context
-    pub fn evaluate_material(&self, material: &mut Material, _graph_node: (&NodeFXGraph, usize)) {
+    /// Evaluate the node in a pattern context
+    pub fn evaluate_pattern(
+        &self,
+        pattern_ctx: &mut PatternContext,
+        _graph_node: (&NodeFXGraph, usize),
+    ) {
         match self.role {
-            Color => {
+            PatternUV => {}
+            Checker => {
+                let size = 10;
+                let (ux, uy) = (pattern_ctx.uv.x, pattern_ctx.uv.y);
+
+                let cell_x = ux.div_euclid(size);
+                let cell_y = uy.div_euclid(size);
+
+                let v = (cell_x ^ cell_y) & 1;
+                // pattern_ctx.result = if v == 0 { 100 } else { 101 };
+                if v != 0 {
+                    pattern_ctx.result = 100;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Evaluate the node in a material context
+    pub fn evaluate_material(
+        &self,
+        material: &mut Material,
+        _graph_node: (&NodeFXGraph, usize),
+        _context: &Context,
+    ) {
+        match self.role {
+            BaseColor => {
                 material.base_color[0] = self.values[0];
                 material.base_color[1] = self.values[1];
                 material.base_color[2] = self.values[2];
@@ -191,6 +236,8 @@ impl NodeFX {
         }
 
         if let Some(hit_point) = hit_point {
+            let patterns = PATTERNS.read().unwrap();
+
             let depth = 10;
             let normal = hit.normal;
 
@@ -248,7 +295,18 @@ impl NodeFX {
                         let mut pos = preview.to_world_coord(tile, loc);
                         pos += Vec3::broadcast(vox_size * 0.5);
 
-                        preview.set_create(pos, context.palette_index);
+                        // preview.set_create(pos, context.palette_index);
+                        let mut pattern_ctx = PatternContext {
+                            result: context.palette_index,
+                            world: pos,
+                            uv: Vec2::new(dx, dz),
+                            normal: hit.normal,
+                            layer: d,
+                            max_layer: depth,
+                        };
+                        let index = patterns.graphs[context.pattern_index as usize]
+                            .evaluate_pattern(&mut pattern_ctx);
+                        preview.set_create(pos, index);
                     }
                 }
             }

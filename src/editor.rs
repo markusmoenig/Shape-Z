@@ -22,6 +22,8 @@ pub static VOXELGRID: LazyLock<Arc<RwLock<VoxelGrid>>> =
     LazyLock::new(|| Arc::new(RwLock::new(VoxelGrid::default())));
 pub static PALETTE: LazyLock<Arc<RwLock<Palette>>> =
     LazyLock::new(|| Arc::new(RwLock::new(Palette::default())));
+pub static PATTERNS: LazyLock<Arc<RwLock<Patterns>>> =
+    LazyLock::new(|| Arc::new(RwLock::new(Patterns::default())));
 
 pub static MODELEDITOR: LazyLock<RwLock<ModelEditor>> =
     LazyLock::new(|| RwLock::new(ModelEditor::new()));
@@ -365,16 +367,30 @@ impl TheTrait for Editor {
         let model_view = TheRenderView::new(TheId::named("ModelView"));
         model_canvas.set_widget(model_view);
 
+        // Mode Stack
         let mut stack_canvas = TheCanvas::new();
-        let mut stack_layout = TheStackLayout::new(TheId::named("StackLayout"));
+        let mut stack_layout = TheStackLayout::new(TheId::named("ModeStack"));
 
+        // Palette
         let mut palette_canvas = TheCanvas::default();
         let palette_picker = ThePalettePicker::new(TheId::named("PalettePicker"));
         palette_canvas.set_widget(palette_picker);
-
         stack_layout.add_canvas(palette_canvas);
 
+        // Points ?
+        let mut point_canvas = TheCanvas::default();
+        let palette_picker = ThePalettePicker::new(TheId::named("PointPicker"));
+        point_canvas.set_widget(palette_picker);
+        stack_layout.add_canvas(point_canvas);
+
+        // Patterns
+        let mut pattern_canvas = TheCanvas::default();
+        let palette_picker = ThePalettePicker::new(TheId::named("PatternPicker"));
+        pattern_canvas.set_widget(palette_picker);
+        stack_layout.add_canvas(pattern_canvas);
+
         stack_canvas.set_layout(stack_layout);
+        //
 
         let mut hsplitlayout = TheSharedHLayout::new(TheId::named("Shared HLayout"));
         hsplitlayout.add_canvas(stack_canvas);
@@ -445,20 +461,20 @@ impl TheTrait for Editor {
         v_tool_list_layout.set_margin(Vec4::new(2, 2, 2, 2));
         v_tool_list_layout.set_padding(1);
 
-        let mut b = TheToolListButton::new(TheId::named("Palette Mode"));
+        let mut b = TheToolListButton::new(TheId::named("PaletteMode"));
         b.set_icon_name("move".into());
         b.set_status_text("Palette Mode.");
         b.set_state(TheWidgetState::Selected);
         v_tool_list_layout.add_widget(Box::new(b));
 
-        let mut b = TheToolListButton::new(TheId::named("Point Mode"));
+        let mut b = TheToolListButton::new(TheId::named("PointMode"));
         b.set_icon_name("move".into());
         b.set_status_text("Point mode.");
         v_tool_list_layout.add_widget(Box::new(b));
 
-        let mut b = TheToolListButton::new(TheId::named("History Mode"));
+        let mut b = TheToolListButton::new(TheId::named("PatternMode"));
         b.set_icon_name("move".into());
-        b.set_status_text("History mode.");
+        b.set_status_text("Pattern mode.");
         v_tool_list_layout.add_widget(Box::new(b));
 
         let mut tool_list_bar = TheToolListBar::new(TheId::empty());
@@ -562,26 +578,57 @@ impl TheTrait for Editor {
                         if id.name == "PalettePicker" {
                             self.context.palette_index = *index as u8;
                         }
+                        if id.name == "PatternPicker" {
+                            self.context.pattern_index = *index as u8;
+                        }
                     }
                     TheEvent::StateChanged(id, _) => {
-                        if id.name == "Palette Mode" {
+                        if id.name == "PaletteMode" {
                             self.context.mode = ToolMode::Palette;
                             ctx.ui
-                                .set_widget_state("Point Mode".into(), TheWidgetState::None);
+                                .set_widget_state("PointMode".into(), TheWidgetState::None);
                             ctx.ui
-                                .set_widget_state("History Mode".into(), TheWidgetState::None);
-                        } else if id.name == "Point Mode" {
+                                .set_widget_state("PatternMode".into(), TheWidgetState::None);
+                            ctx.ui
+                                .send(TheEvent::SetStackIndex(TheId::named("ModeStack"), 0));
+
+                            // Activate the current palette in the nodegraph
+                            let palette = PALETTE.read().unwrap();
+                            let mut editor = NODEEDITOR.write().unwrap();
+                            editor.set_graph(
+                                NodeContext::Color(self.context.palette_index),
+                                palette.graphs[self.context.palette_index as usize].clone(),
+                                ui,
+                                ctx,
+                                &mut self.context,
+                            );
+                        } else if id.name == "PointMode" {
                             self.context.mode = ToolMode::Point;
                             ctx.ui
-                                .set_widget_state("Palette Mode".into(), TheWidgetState::None);
+                                .set_widget_state("PaletteMode".into(), TheWidgetState::None);
                             ctx.ui
-                                .set_widget_state("History Mode".into(), TheWidgetState::None);
-                        } else if id.name == "History Mode" {
-                            self.context.mode = ToolMode::History;
+                                .set_widget_state("PatternMode".into(), TheWidgetState::None);
                             ctx.ui
-                                .set_widget_state("Palette Mode".into(), TheWidgetState::None);
+                                .send(TheEvent::SetStackIndex(TheId::named("ModeStack"), 1));
+                        } else if id.name == "PatternMode" {
+                            self.context.mode = ToolMode::Pattern;
                             ctx.ui
-                                .set_widget_state("Point Mode".into(), TheWidgetState::None);
+                                .set_widget_state("PaletteMode".into(), TheWidgetState::None);
+                            ctx.ui
+                                .set_widget_state("PointMode".into(), TheWidgetState::None);
+                            ctx.ui
+                                .send(TheEvent::SetStackIndex(TheId::named("ModeStack"), 2));
+
+                            // Activate the current pattern in the nodegraph
+                            let patterns = PATTERNS.read().unwrap();
+                            let mut editor = NODEEDITOR.write().unwrap();
+                            editor.set_graph(
+                                NodeContext::Pattern(self.context.pattern_index),
+                                patterns.graphs[self.context.pattern_index as usize].clone(),
+                                ui,
+                                ctx,
+                                &mut self.context,
+                            );
                         }
 
                         if id.name == "Undo" {

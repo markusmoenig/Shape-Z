@@ -35,21 +35,24 @@ impl NodeFXGraph {
     }
 
     /// Evaluate a material graph
-    pub fn evaluate_material(&self) -> Material {
+    pub fn evaluate_material(&self, context: &Context) -> Material {
         let mut material = Material::default();
 
         let mut curr_index = 0_usize;
         let mut curr_terminal = 0_usize;
 
-        self.nodes[0].evaluate_material(&mut material, (self, 0));
+        self.nodes[0].evaluate_material(&mut material, (self, 0), context);
 
         let mut steps = 0;
         while steps < 16 {
             if let Some((next_node, next_terminal)) =
                 self.find_connected_input_node(curr_index, curr_terminal)
             {
-                self.nodes[next_node as usize]
-                    .evaluate_material(&mut material, (self, next_node as usize));
+                self.nodes[next_node as usize].evaluate_material(
+                    &mut material,
+                    (self, next_node as usize),
+                    context,
+                );
                 curr_index = next_node as usize;
                 curr_terminal = next_terminal as usize;
                 steps += 1;
@@ -59,6 +62,31 @@ impl NodeFXGraph {
         }
 
         material
+    }
+
+    /// Evaluate a pattrn graph
+    pub fn evaluate_pattern(&self, pattern_ctx: &mut PatternContext) -> u8 {
+        let mut curr_index = 0_usize;
+        let mut curr_terminal = 0_usize;
+
+        self.nodes[0].evaluate_pattern(pattern_ctx, (self, 0));
+
+        let mut steps = 0;
+        while steps < 16 {
+            if let Some((next_node, next_terminal)) =
+                self.find_connected_input_node(curr_index, curr_terminal)
+            {
+                self.nodes[next_node as usize]
+                    .evaluate_pattern(pattern_ctx, (self, next_node as usize));
+                curr_index = next_node as usize;
+                curr_terminal = next_terminal as usize;
+                steps += 1;
+            } else {
+                break;
+            }
+        }
+
+        pattern_ctx.result
     }
 
     /// Evaluate a shape graph

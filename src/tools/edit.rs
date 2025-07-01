@@ -1,5 +1,5 @@
 use crate::{
-    editor::{NODEEDITOR, PALETTE, SHAPES},
+    editor::{NODEEDITOR, PALETTE, PATTERNS, SHAPES},
     prelude::*,
 };
 
@@ -67,18 +67,29 @@ impl Tool for EditTool {
         match event {
             TheEvent::PaletteIndexChanged(id, index) => {
                 if id.name == "PalettePicker" {
-                    if ToolMode::Palette == context.mode {
-                        let palette = PALETTE.read().unwrap();
-                        let mut editor = NODEEDITOR.write().unwrap();
-                        editor.set_graph(
-                            NodeContext::Color(*index as u8),
-                            palette.graphs[*index as usize].clone(),
-                            ui,
-                            ctx,
-                            context,
-                        );
-                        redraw = true
-                    };
+                    // if ToolMode::Palette == context.mode {
+                    let palette = PALETTE.read().unwrap();
+                    let mut editor = NODEEDITOR.write().unwrap();
+                    editor.set_graph(
+                        NodeContext::Color(*index as u8),
+                        palette.graphs[*index as usize].clone(),
+                        ui,
+                        ctx,
+                        context,
+                    );
+                    redraw = true
+                    // }
+                } else if id.name == "PatternPicker" {
+                    let patterns = PATTERNS.read().unwrap();
+                    let mut editor = NODEEDITOR.write().unwrap();
+                    editor.set_graph(
+                        NodeContext::Pattern(*index as u8),
+                        patterns.graphs[*index as usize].clone(),
+                        ui,
+                        ctx,
+                        context,
+                    );
+                    redraw = true
                 }
             }
             _ => {}

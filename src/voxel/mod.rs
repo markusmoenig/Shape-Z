@@ -1,6 +1,7 @@
 pub mod camera;
 pub mod grid;
 pub mod palette;
+pub mod patterns;
 pub mod ray;
 pub mod renderbuffer;
 pub mod renderer;
