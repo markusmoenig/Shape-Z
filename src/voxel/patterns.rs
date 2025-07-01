@@ -33,10 +33,6 @@ impl Default for Patterns {
             node.position = Vec2::new(10, 10);
             graph.nodes.push(node);
 
-            let mut node = NodeFX::new(NodeFXRole::Checker);
-            node.position = Vec2::new(200, 10);
-            graph.nodes.push(node);
-
             graphs.push(graph);
         }
 

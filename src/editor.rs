@@ -373,7 +373,8 @@ impl TheTrait for Editor {
 
         // Palette
         let mut palette_canvas = TheCanvas::default();
-        let palette_picker = ThePalettePicker::new(TheId::named("PalettePicker"));
+        let mut palette_picker = ThePalettePicker::new(TheId::named("PalettePicker"));
+        palette_picker.set_dynamic_layout(true);
         palette_canvas.set_widget(palette_picker);
         stack_layout.add_canvas(palette_canvas);
 
@@ -385,7 +386,8 @@ impl TheTrait for Editor {
 
         // Patterns
         let mut pattern_canvas = TheCanvas::default();
-        let palette_picker = ThePalettePicker::new(TheId::named("PatternPicker"));
+        let mut palette_picker = ThePalettePicker::new(TheId::named("PatternPicker"));
+        palette_picker.set_dynamic_layout(true);
         pattern_canvas.set_widget(palette_picker);
         stack_layout.add_canvas(pattern_canvas);
 
@@ -416,7 +418,7 @@ impl TheTrait for Editor {
         // Nodes View
         let mut bottom_canvas = TheCanvas::new();
 
-        let mut shared_layout = TheSharedHLayout::new(TheId::named("Shared Panel Layout"));
+        let mut shared_layout = TheSharedHLayout::new(TheId::named("Shared Node Layout"));
         shared_layout.set_shared_ratio(0.8);
         shared_layout.set_mode(TheSharedHLayoutMode::Shared);
 
@@ -462,7 +464,7 @@ impl TheTrait for Editor {
         v_tool_list_layout.set_padding(1);
 
         let mut b = TheToolListButton::new(TheId::named("PaletteMode"));
-        b.set_icon_name("move".into());
+        b.set_icon_name("palette".into());
         b.set_status_text("Palette Mode.");
         b.set_state(TheWidgetState::Selected);
         v_tool_list_layout.add_widget(Box::new(b));
@@ -473,7 +475,7 @@ impl TheTrait for Editor {
         v_tool_list_layout.add_widget(Box::new(b));
 
         let mut b = TheToolListButton::new(TheId::named("PatternMode"));
-        b.set_icon_name("move".into());
+        b.set_icon_name("checkerboard".into());
         b.set_status_text("Pattern mode.");
         v_tool_list_layout.add_widget(Box::new(b));
 
@@ -562,6 +564,10 @@ impl TheTrait for Editor {
                 }
                 #[allow(clippy::single_match)]
                 match &event {
+                    // TheEvent::Resize => {
+                    //     ctx.ui.relayout = true;
+                    //     ctx.ui.redraw_all = true;
+                    // }
                     TheEvent::Custom(id, _) => {
                         if id.name == "Startup" {
                             crate::utils::update_palette_ui(ui, ctx);
@@ -629,6 +635,35 @@ impl TheTrait for Editor {
                                 ctx,
                                 &mut self.context,
                             );
+
+                            if let Some(layout) = ui.get_hlayout("Tool Params") {
+                                layout.clear();
+
+                                let mut nodes_button =
+                                    TheTraybarButton::new(TheId::named("Pattern Nodes"));
+                                // nodes_button
+                                //     .set_custom_color(self.categories.get("Modifier").cloned());
+                                nodes_button.set_text(str!("Pattern Nodes"));
+                                nodes_button.set_status_text(
+                                    "Nodes which control and modify terrain and mesh creation.",
+                                );
+                                nodes_button.set_context_menu(Some(TheContextMenu {
+                                    items: vec![
+                                        TheContextMenuItem::new(
+                                            "Pattern: Checker".to_string(),
+                                            TheId::named("Checker"),
+                                        ),
+                                        TheContextMenuItem::new(
+                                            "Material".to_string(),
+                                            TheId::named("MaterialIndex"),
+                                        ),
+                                    ],
+                                    ..Default::default()
+                                }));
+                                layout.add_widget(Box::new(nodes_button));
+
+                                layout.set_reverse_index(Some(1));
+                            }
                         }
 
                         if id.name == "Undo" {

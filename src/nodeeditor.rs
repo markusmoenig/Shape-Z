@@ -113,7 +113,7 @@ impl NodeEditor {
         for (index, node) in self.graph.nodes.iter().enumerate() {
             let mut buffer = TheRGBABuffer::new(TheDim::sized(width, height));
 
-            node.preview(&mut buffer, context);
+            node.preview(&mut buffer, (&self.graph, index), context);
 
             let n = TheNode {
                 name: node.name(),
@@ -131,6 +131,43 @@ impl NodeEditor {
         canvas
     }
 
+    /// Check if in Pattern mode we have to switch to the Palette mode for materials
+    pub fn check_for_material_switch(&self, ctx: &mut TheContext, context: &Context) {
+        if context.mode == ToolMode::Pattern {
+            let mut is_material = false;
+            if let Some(index) = self.graph.selected_node {
+                if let Some(node) = self.graph.nodes.get(index) {
+                    if node.role == NodeFXRole::MaterialIndex {
+                        ctx.ui
+                            .send(TheEvent::SetStackIndex(TheId::named("ModeStack"), 0));
+                        is_material = true;
+                    }
+                }
+            }
+            if !is_material {
+                ctx.ui
+                    .send(TheEvent::SetStackIndex(TheId::named("ModeStack"), 2));
+            }
+        }
+    }
+
+    /// Set a new palette index to the selected node. If accepted, update the node preview.
+    pub fn palette_index_changed(
+        &mut self,
+        palette_index: u8,
+        ui: &mut TheUI,
+        _ctx: &mut TheContext,
+        context: &mut Context,
+    ) {
+        if let Some(index) = self.graph.selected_node {
+            if self.graph.nodes[index].set_palette_index(palette_index) {
+                // TODO: Only update this node
+                let canvas = self.to_canvas(context);
+                ui.set_node_canvas("NodeView", canvas);
+            }
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn handle_event(
         &mut self,
@@ -142,17 +179,10 @@ impl NodeEditor {
         let redraw = false;
         #[allow(clippy::single_match)]
         match event {
-            /*
             TheEvent::ContextMenuSelected(id, item) => {
-                if (id.name == "ShapeFX Nodes"
-                    || id.name == "Modifier Nodes"
-                    || id.name == "Render Nodes"
-                    || id.name == "FX Nodes"
-                    || id.name == "Shape Nodes")
-                    && !self.graph.nodes.is_empty()
-                {
-                    if let Ok(role) = item.name.parse::<ShapeFXRole>() {
-                        let mut effect = ShapeFX::new(role);
+                if id.name == "Pattern Nodes" {
+                    if let Ok(role) = item.name.parse::<NodeFXRole>() {
+                        let mut effect = NodeFX::new(role);
 
                         effect.position = Vec2::new(
                             self.graph.scroll_offset.x + 220,
@@ -161,62 +191,61 @@ impl NodeEditor {
                         self.graph.nodes.push(effect);
                         self.graph.selected_node = Some(self.graph.nodes.len() - 1);
 
-                        let canvas = self.to_canvas();
-                        ui.set_node_canvas("ShapeFX NodeCanvas", canvas);
+                        let canvas = self.to_canvas(context);
+                        ui.set_node_canvas("NodeView", canvas);
 
-                        if let Some(map) = project.get_map_mut(server_ctx) {
-                            map.shapefx_graphs.insert(self.graph.id, self.graph.clone());
-                        }
-                        self.set_selected_node_ui(project, ui, ctx, true);
+                        self.set_node_ui(ui, ctx);
+                        self.check_for_material_switch(ctx, context);
                     }
                 }
-            }
+            } /*
             TheEvent::StateChanged(id, TheWidgetState::Clicked) => {
-                if id.name == "Create Graph Button" {
-                    // println!("{:?}", server_ctx.curr_map_context);
-                    //
-                    if server_ctx.curr_map_context == MapContext::Material
-                        || server_ctx.profile_view.is_some()
-                    {
-                        {
-                            self.graph = ShapeFXGraph {
-                                nodes: vec![ShapeFX::new(ShapeFXRole::MaterialGeometry)],
-                                ..Default::default()
-                            };
-                            self.context = NodeContext::Material;
-                        }
-                    } else if server_ctx.curr_map_context == MapContext::Character
-                        || server_ctx.curr_map_context == MapContext::Item
-                    {
-                        self.graph = ShapeFXGraph {
-                            nodes: vec![ShapeFX::new(ShapeFXRole::MaterialGeometry)],
-                            ..Default::default()
-                        };
-                        self.context = NodeContext::Shape;
-                    } else if self.context == NodeContext::Region {
-                        if server_ctx.curr_map_tool_type == MapToolType::Sector {
-                            self.graph = ShapeFXGraph {
-                                nodes: vec![ShapeFX::new(ShapeFXRole::SectorGeometry)],
-                                ..Default::default()
-                            };
-                        } else if server_ctx.curr_map_tool_type == MapToolType::Linedef {
-                            self.graph = ShapeFXGraph {
-                                nodes: vec![ShapeFX::new(ShapeFXRole::LinedefGeometry)],
-                                ..Default::default()
-                            };
-                        }
-                        self.context = NodeContext::Region;
-                    }
+            if id.name == "Create Graph Button" {
+            // println!("{:?}", server_ctx.curr_map_context);
+            //
+            if server_ctx.curr_map_context == MapContext::Material
+            || server_ctx.profile_view.is_some()
+            {
+            {
+            self.graph = ShapeFXGraph {
+            nodes: vec![ShapeFX::new(ShapeFXRole::MaterialGeometry)],
+            ..Default::default()
+            };
+            self.context = NodeContext::Material;
+            }
+            } else if server_ctx.curr_map_context == MapContext::Character
+            || server_ctx.curr_map_context == MapContext::Item
+            {
+            self.graph = ShapeFXGraph {
+            nodes: vec![ShapeFX::new(ShapeFXRole::MaterialGeometry)],
+            ..Default::default()
+            };
+            self.context = NodeContext::Shape;
+            } else if self.context == NodeContext::Region {
+            if server_ctx.curr_map_tool_type == MapToolType::Sector {
+            self.graph = ShapeFXGraph {
+            nodes: vec![ShapeFX::new(ShapeFXRole::SectorGeometry)],
+            ..Default::default()
+            };
+            } else if server_ctx.curr_map_tool_type == MapToolType::Linedef {
+            self.graph = ShapeFXGraph {
+            nodes: vec![ShapeFX::new(ShapeFXRole::LinedefGeometry)],
+            ..Default::default()
+            };
+            }
+            self.context = NodeContext::Region;
+            }
 
-                    let canvas = self.to_canvas();
-                    ui.set_node_canvas("ShapeFX NodeCanvas", canvas);
-                    self.graph_changed(project, ui, ctx, server_ctx);
-                }
+            let canvas = self.to_canvas();
+            ui.set_node_canvas("ShapeFX NodeCanvas", canvas);
+            self.graph_changed(project, ui, ctx, server_ctx);
+            }
             }*/
             TheEvent::NodeSelectedIndexChanged(id, index) => {
                 if id.name == "NodeView" {
                     self.graph.selected_node = *index;
                     self.set_node_ui(ui, ctx);
+                    self.check_for_material_switch(ctx, context);
                 }
             }
             TheEvent::NodeDragged(id, index, position) => {
@@ -368,6 +397,14 @@ impl NodeEditor {
             nodeui.apply_to_text_layout(layout);
             // layout.relayout(ctx);
             ctx.ui.relayout = true;
+        }
+
+        if nodeui.len() == 0 {
+            if let Some(layout) = ui.get_sharedhlayout("Shared Node Layout") {
+                layout.set_mode(TheSharedHLayoutMode::Left);
+            }
+        } else if let Some(layout) = ui.get_sharedhlayout("Shared Node Layout") {
+            layout.set_mode(TheSharedHLayoutMode::Shared);
         }
     }
 

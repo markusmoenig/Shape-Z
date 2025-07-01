@@ -25,6 +25,7 @@ pub enum NodeFXParam {
 pub enum NodeFXRole {
     BaseColor,
     Brush,
+    MaterialIndex,
     PatternUV,
     Checker,
 }
@@ -39,6 +40,7 @@ impl FromStr for NodeFXRole {
             "BaseColor" => Ok(NodeFXRole::BaseColor),
             "Brush" => Ok(NodeFXRole::Brush),
             "Checker" => Ok(NodeFXRole::Checker),
+            "MaterialIndex" => Ok(NodeFXRole::MaterialIndex),
             "PatternUV" => Ok(NodeFXRole::PatternUV),
             _ => Err(()),
         }
@@ -66,6 +68,9 @@ impl NodeFX {
             Checker => {
                 vec![0.0]
             }
+            MaterialIndex => {
+                vec![0.0]
+            }
             PatternUV => {
                 vec![0.0]
             }
@@ -84,13 +89,14 @@ impl NodeFX {
             BaseColor => "Base Color".into(),
             Brush => "Brush".into(),
             Checker => "Checker".into(),
+            MaterialIndex => "Material".into(),
             PatternUV => "Pattern UV".into(),
         }
     }
 
     pub fn inputs(&self) -> Vec<TheNodeTerminal> {
         match self.role {
-            BaseColor => {
+            BaseColor | PatternUV => {
                 vec![]
             }
             _ => {
@@ -104,6 +110,18 @@ impl NodeFX {
 
     pub fn outputs(&self) -> Vec<TheNodeTerminal> {
         match self.role {
+            Checker => {
+                vec![
+                    TheNodeTerminal {
+                        name: "mat1".into(),
+                        category_name: "ShapeFX".into(),
+                    },
+                    TheNodeTerminal {
+                        name: "mat2".into(),
+                        category_name: "ShapeFX".into(),
+                    },
+                ]
+            }
             _ => {
                 vec![TheNodeTerminal {
                     name: "out".into(),
@@ -111,6 +129,21 @@ impl NodeFX {
                 }]
             }
         }
+    }
+
+    /// Set the palette index
+    pub fn set_palette_index(&mut self, index: u8) -> bool {
+        #[allow(clippy::single_match)]
+        match self.role {
+            MaterialIndex => {
+                if self.values[0] != index as f32 {
+                    self.values[0] = index as f32;
+                    return true;
+                }
+            }
+            _ => {}
+        }
+        false
     }
 
     /// The parameters for the NodeFX
@@ -338,7 +371,12 @@ impl NodeFX {
     }
 
     /// Evaluate the node in a shape context
-    pub fn preview(&self, buffer: &mut TheRGBABuffer, context: &mut Context) {
+    pub fn preview(
+        &self,
+        buffer: &mut TheRGBABuffer,
+        _graph_node: (&NodeFXGraph, usize),
+        context: &mut Context,
+    ) {
         let width = buffer.dim().width as usize;
         let height = buffer.dim().height;
 
@@ -390,6 +428,8 @@ impl NodeFX {
 
         let fc = 0.5;
 
+        let palette = PALETTE.read().unwrap();
+
         buffer
             .pixels_mut()
             .par_rchunks_exact_mut(width * 4)
@@ -415,6 +455,34 @@ impl NodeFX {
                                 color.z = fc;
                                 color.w = 1.0;
                             }
+                        }
+                        Checker => {
+                            let dx = ((x as i32) - cx);
+                            let dz = ((y as i32) - cy);
+
+                            let mut pattern_ctx = PatternContext {
+                                result: context.palette_index,
+                                world: Vec3::zero(),
+                                uv: Vec2::new(dx, dz),
+                                normal: Vec3::unit_y(),
+                                layer: 0,
+                                max_layer: 1,
+                            };
+                            self.evaluate_pattern(&mut pattern_ctx, _graph_node);
+
+                            let c = palette.materials[pattern_ctx.result as usize].base_color;
+                            color.x = c.x;
+                            color.y = c.y;
+                            color.z = c.z;
+                            color.w = 1.0;
+                        }
+                        MaterialIndex => {
+                            let index = self.values[0] as usize;
+                            let c = palette.materials[index].base_color;
+                            color.x = c.x;
+                            color.y = c.y;
+                            color.z = c.z;
+                            color.w = 1.0;
                         }
                         _ => {}
                     }

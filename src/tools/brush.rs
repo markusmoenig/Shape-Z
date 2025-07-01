@@ -14,17 +14,17 @@ impl Tool for BrushTool {
         Self: Sized,
     {
         Self {
-            id: TheId::named("Brush Tool"),
+            id: TheId::named("Attach Tool"),
         }
     }
     fn id(&self) -> TheId {
         self.id.clone()
     }
     fn info(&self) -> String {
-        str!("Brush Tool.")
+        str!("Attach / Erase voxels using brushes.")
     }
     fn icon_name(&self) -> String {
-        str!("move")
+        str!("stack")
     }
     fn accel(&self) -> Option<char> {
         Some('b')
@@ -39,6 +39,9 @@ impl Tool for BrushTool {
     ) -> bool {
         match tool_event {
             ToolEvent::Activate => {
+                if let Some(layout) = ui.get_hlayout("Tool Params") {
+                    layout.clear();
+                }
                 let shapes = SHAPES.read().unwrap();
                 let mut editor = NODEEDITOR.write().unwrap();
                 editor.set_graph(
