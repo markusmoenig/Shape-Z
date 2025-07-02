@@ -1,5 +1,5 @@
 use crate::{
-    editor::{NODEEDITOR, PALETTE, PATTERNS, SHAPES},
+    editor::{NODEEDITOR, PALETTE, PATTERNS},
     prelude::*,
 };
 

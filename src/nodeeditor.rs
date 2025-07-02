@@ -283,10 +283,10 @@ impl NodeEditor {
                                     node.set_value(&snake_case, *v);
                                 }
                                 TheValue::IntRange(v, _) => {
-                                    // node.values.set(&snake_case, rusterix::Value::Int(*v))
+                                    node.set_value(&snake_case, *v as f32);
                                 }
                                 TheValue::Int(v) => {
-                                    // node.values.set(&snake_case, rusterix::Value::Int(*v))
+                                    node.set_value(&snake_case, *v as f32);
                                 }
                                 TheValue::ColorObject(v) => {
                                     node.values[0] = v.r;

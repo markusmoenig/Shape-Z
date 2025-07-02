@@ -157,7 +157,7 @@ impl ModelEditor {
         }
 
         let _stop = self.get_time();
-        // println!("Shader execution time: {:?} ms.", _stop - _start);
+        println!("Shader execution time: {:?} ms.", _stop - _start);
     }
 
     pub fn handle_event(

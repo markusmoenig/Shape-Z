@@ -8,8 +8,11 @@ pub struct VoxelGrid {
     pub density: usize,
     pub density_f: F,
     pub bounds: [F; 3],
+    /// AABB that encloses every non-empty tile.
+    pub active_bbox: Aabb<F>,
 
     pub preview: Option<Box<VoxelGrid>>,
+    pub preview_mode: ToolAttachMode,
 }
 
 impl Default for VoxelGrid {
@@ -45,7 +48,12 @@ impl VoxelGrid {
             density,
             density_f: density as F,
             bounds,
+            active_bbox: {
+                let h = Vec3::from(bounds) * 0.5;
+                Aabb { min: -h, max: h }
+            },
             preview: None,
+            preview_mode: ToolAttachMode::Add,
         }
     }
 
@@ -57,9 +65,44 @@ impl VoxelGrid {
 
     /// Update the bounding boxes of the tiles (needed after editing)
     pub fn update_bboxes(&mut self) {
+        // Update the tiles bboxes
         self.tiles.par_iter_mut().for_each(|(_, tile)| {
             tile.update_bbox();
         });
+
+        // Compute a union of all non-empty tile bboxes
+        let empty = Aabb {
+            min: Vec3::broadcast(F::INFINITY),
+            max: Vec3::broadcast(-F::INFINITY),
+        };
+
+        let tight = self
+            .tiles
+            .par_iter()
+            .filter_map(|((tx, ty, tz), tile)| {
+                if tile.is_empty() {
+                    return None;
+                }
+
+                // tile local → world space:
+                //   world_min = tile_origin + tile_bbox.min / density
+                //   world_max = tile_origin + tile_bbox.max / density
+                let origin = Vec3::new(*tx as F, *ty as F, *tz as F);
+                let scale = 1.0 / self.density_f;
+                Some(Aabb {
+                    min: origin + tile.bbox.min * scale,
+                    max: origin + tile.bbox.max * scale,
+                })
+            })
+            .reduce(|| empty, |a, b| a.union(b));
+
+        // Store it
+        self.active_bbox = if tight.min.x.is_finite() {
+            tight
+        } else {
+            let h = Vec3::from(self.bounds) * 0.5;
+            Aabb { min: -h, max: h }
+        };
     }
 
     /// Get a voxel at the given world coordinate
@@ -121,6 +164,7 @@ impl VoxelGrid {
     fn bbox(&self) -> Aabb<F> {
         let h = Vec3::from(self.bounds) * 0.5;
         Aabb { min: -h, max: h }
+        // self.active_bbox
     }
 
     /// Merge the preview grid into the main grid, then clear the preview.
@@ -144,30 +188,53 @@ impl VoxelGrid {
             }
         }
 
-        // Merge
-        for (tile_key, src_tile) in preview.tiles {
-            let dst_tile = self
-                .tiles
-                .entry(tile_key)
-                .or_insert_with(|| Tile::new(self.density));
+        if self.preview_mode == ToolAttachMode::Add {
+            // Merge
+            for (tile_key, src_tile) in preview.tiles {
+                let dst_tile = self
+                    .tiles
+                    .entry(tile_key)
+                    .or_insert_with(|| Tile::new(self.density));
 
-            let d = src_tile.density as i32; // side length per axis
-            let area = d * d; // d², pre-compute
+                let d = src_tile.density as i32; // side length per axis
+                let area = d * d; // d², pre-compute
 
-            // Iterate over every voxel in the dense array.
-            for (idx, &maybe_mat) in src_tile.voxels.iter().enumerate() {
-                if let Some(mat) = maybe_mat {
-                    // Reconstruct (x,y,z) from flat index.
-                    let idx = idx as i32;
-                    let z = idx / area;
-                    let y = (idx - z * area) / d;
-                    let x = idx - z * area - y * d;
+                // Iterate over every voxel in the dense array.
+                for (idx, &maybe_mat) in src_tile.voxels.iter().enumerate() {
+                    if let Some(mat) = maybe_mat {
+                        // Reconstruct (x,y,z) from flat index.
+                        let idx = idx as i32;
+                        let z = idx / area;
+                        let y = (idx - z * area) / d;
+                        let x = idx - z * area - y * d;
 
-                    dst_tile.set((x, y, z), mat); // overwrite policy
+                        dst_tile.set((x, y, z), mat); // overwrite policy
+                    }
+                }
+
+                dst_tile.update_bbox();
+            }
+        } else {
+            // Removal
+            for (tile_key, src_tile) in preview.tiles {
+                if let Some(dst_tile) = self.tiles.get_mut(&tile_key) {
+                    let d = src_tile.density as i32;
+                    let area = d * d;
+
+                    for (idx, &maybe_mat) in src_tile.voxels.iter().enumerate() {
+                        if maybe_mat.is_some() {
+                            let idx = idx as i32;
+                            let z = idx / area;
+                            let y = (idx - z * area) / d;
+                            let x = idx - z * area - y * d;
+
+                            dst_tile.clear((x, y, z));
+                        }
+                    }
+
+                    dst_tile.update_bbox();
                 }
             }
-
-            dst_tile.update_bbox();
         }
 
         originals
@@ -237,7 +304,7 @@ impl VoxelGrid {
             None => return HitRecord::default(),
         };
 
-        t_min = (t_min - 0.5).max(0.0);
+        t_min = (t_min - 0.1).max(0.0);
         let mut t = t_min;
 
         let ro = ray.at(t);
@@ -248,43 +315,55 @@ impl VoxelGrid {
         let rdi = Vec3::broadcast(1.0) / (rd * 2.0);
 
         while t < t_max {
-            let key = i.map(|v| v as i32);
+            let key = {
+                let vi = i.map(|v| v as i32);
+                (vi.x, vi.y, vi.z)
+            };
 
-            // Test the preview first (if any)
-            if let Some(preview) = &self.preview {
-                if let Some(tile) = preview.tiles.get(&(key.x, key.y, key.z)) {
-                    let mut lro = ray.at(t);
-                    lro -= i;
-                    lro *= tile.density as f32;
-                    lro -= rd * 0.01;
+            if self.preview_mode == ToolAttachMode::Add {
+                // Test the preview first (if any) in add mode
+                if let Some(preview) = &self.preview {
+                    if let Some(tile) = preview.tiles.get(&key) {
+                        let mut lro = ray.at(t);
+                        lro -= i;
+                        lro *= tile.density as f32;
+                        lro -= rd * 0.01;
 
-                    if !tile.is_empty() {
-                        if let Some(mut hit) = tile.dda(&Ray::new(lro, rd)) {
-                            // hit.tile_key = preview_key;
-                            hit.hitpoint = ray.at(t + hit.distance / self.density_f);
-                            hit.distance = t;
-                            // hit.is_preview = true; // Optional flag
-                            return hit;
+                        if !tile.is_empty() {
+                            if let Some(mut hit) = tile.dda(&Ray::new(lro, rd), None) {
+                                // hit.tile_key = preview_key;
+                                hit.hitpoint = ray.at(t + hit.distance / self.density_f);
+                                hit.distance = t;
+                                // hit.is_preview = true; // Optional flag
+                                return hit;
+                            }
                         }
                     }
                 }
             }
 
-            if let Some(tile) = self.tiles.get(&(key.x, key.y, key.z)) {
+            if let Some(tile) = self.tiles.get(&key) {
                 let mut lro = ray.at(t);
                 lro -= i; // subtract tile origin
                 lro *= tile.density as f32; // scale to voxel grid
-                lro -= rd * 0.01; // tiny epsilon
+                // lro -= rd * 0.01;
 
                 if !tile.is_empty() {
                     // Cast inside the tile’s dense voxel grid
-                    if let Some(mut hit) = tile.dda(&Ray::new(lro, rd)) {
-                        hit.tile_key = (key.x, key.y, key.z);
+                    let remove_preview_tile = match self.preview_mode {
+                        ToolAttachMode::Remove => self
+                            .preview
+                            .as_ref()
+                            .and_then(|preview| preview.tiles.get(&key)),
+                        ToolAttachMode::Add => None,
+                    };
+                    if let Some(mut hit) = tile.dda(&Ray::new(lro, rd), remove_preview_tile) {
+                        hit.tile_key = key;
                         hit.hitpoint = ray.at(t + hit.distance / self.density_f);
                         hit.distance = t;
                         return hit;
                     }
-                }
+                };
             }
 
             let plane = (Vec3::broadcast(1.0) + srd - 2.0 * (ro - i)) * rdi;

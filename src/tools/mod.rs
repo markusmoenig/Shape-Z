@@ -1,5 +1,6 @@
 pub mod brush;
 pub mod edit;
+pub mod terrainbrush;
 
 pub use crate::prelude::*;
 

@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use crate::tools::brush::BrushTool;
 use crate::tools::edit::EditTool;
+use crate::tools::terrainbrush::TerrainBrushTool;
 
 use crate::editor::{CAMERA, VOXELGRID};
 use std::sync::Arc;
@@ -11,6 +12,7 @@ pub struct ToolList {
     pub curr_tool: String,
 
     drag_coord: Vec2<i32>,
+    dragging: bool,
 }
 
 impl Default for ToolList {
@@ -21,11 +23,16 @@ impl Default for ToolList {
 
 impl ToolList {
     pub fn new() -> Self {
-        let tools: Vec<Box<dyn Tool>> = vec![Box::new(EditTool::new()), Box::new(BrushTool::new())];
+        let tools: Vec<Box<dyn Tool>> = vec![
+            Box::new(EditTool::new()),
+            Box::new(BrushTool::new()),
+            Box::new(TerrainBrushTool::new()),
+        ];
         Self {
             tools,
             curr_tool: "Edit Tool".into(),
             drag_coord: Vec2::zero(),
+            dragging: false,
         }
     }
 
@@ -75,9 +82,9 @@ impl ToolList {
             let mut hit = grid.dda(&ray);
 
             if let HitType::Voxel(_) = hit.hit {
-                let snap = context.snap;
                 let vox_size = 1.0 / grid.density as f32;
-                let mut snapped = self.snap_on_grid(hit.hitpoint, hit.normal, snap);
+                let snap_step = context.snap.max(vox_size);
+                let mut snapped = self.snap_on_grid(hit.hitpoint, hit.normal, snap_step);
                 snapped = (snapped / vox_size).round() * vox_size;
                 snapped += hit.normal * (vox_size * 0.5);
 
@@ -110,7 +117,7 @@ impl ToolList {
 
                 if acc {
                     let mut tool_uuid = None;
-                    for (index, tool) in self.tools.iter().enumerate() {
+                    for tool in self.tools.iter() {
                         if tool.accel() == Some(*c) {
                             tool_uuid = Some(tool.id().uuid);
                             // ctx.ui.set_widget_state(
@@ -147,10 +154,16 @@ impl ToolList {
 
                         if ui.alt {
                             camera.zoom((*coord - self.drag_coord).y as f32);
+                            self.dragging = false;
                         } else if ui.logo || ui.ctrl {
-                            camera.rotate((*coord - self.drag_coord).map(|v| -v as f32 * 2.0));
+                            if self.dragging {
+                                camera.rotate((*coord - self.drag_coord).map(|v| -v as f32 * 2.0));
+                            }
                             self.drag_coord = *coord;
+                            self.dragging = true;
                         } else {
+                            self.dragging = false;
+
                             let mut hit;
 
                             {
@@ -162,9 +175,10 @@ impl ToolList {
                             }
 
                             if let HitType::Voxel(_) = hit.hit {
-                                let snap = context.snap;
                                 let vox_size = 1.0 / context.density as f32;
-                                let mut snapped = self.snap_on_grid(hit.hitpoint, hit.normal, snap);
+                                let snap_step = context.snap.max(vox_size);
+                                let mut snapped =
+                                    self.snap_on_grid(hit.hitpoint, hit.normal, snap_step);
                                 snapped = (snapped / vox_size).round() * vox_size;
                                 snapped += hit.normal * (vox_size * 0.5);
 
@@ -205,7 +219,7 @@ impl ToolList {
                     }
                 }
             }
-            TheEvent::RenderViewUp(id, coord) => {
+            TheEvent::RenderViewUp(id, _) => {
                 if id.name == "ModelView" {
                     self.get_current_tool()
                         .tool_event(ToolEvent::HitUp, ui, ctx, context);

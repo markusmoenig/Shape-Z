@@ -115,14 +115,21 @@ impl Tile {
     }
 
     #[inline]
+    pub fn clear(&mut self, coord: Coord) {
+        if let Some(i) = self.index(coord) {
+            self.voxels[i] = None;
+        }
+    }
+
+    #[inline]
     pub fn is_empty(&self) -> bool {
         !self.has_voxels
     }
 
-    pub fn dda(&self, ray: &Ray) -> Option<HitRecord> {
+    pub fn dda(&self, ray: &Ray, remove_preview_tile: Option<&Tile>) -> Option<HitRecord> {
         let (mut t_min, t_max) = ray.intersect_aabb(&self.bbox)?;
 
-        t_min = (t_min - 0.5).max(0.0);
+        t_min = (t_min - 0.1).max(0.0);
 
         let ro = ray.at(t_min);
         let rd = ray.dir;
@@ -139,15 +146,30 @@ impl Tile {
 
         let mut t = t_min;
         while t < t_max {
-            let key = i.map(|v| v as i32);
+            let key = {
+                let vi = i.map(|v| v as i32);
+                (vi.x, vi.y, vi.z)
+            };
 
-            if let Some(material) = self.get((key.x, key.y, key.z)) {
+            // Check for removal preview
+            if let Some(remove_preview_tile) = remove_preview_tile {
+                if remove_preview_tile.get(key).is_some() {
+                    // The voxel exists in remove preview tile, ignore hit
+                    let plane = (Vec3::broadcast(1.0) + srd - 2.0 * (ro - i)) * rdi;
+                    t = plane.x.min(plane.y.min(plane.z));
+                    normal = equal(t, plane) * srd;
+                    i += normal;
+                    continue;
+                }
+            }
+
+            if let Some(material) = self.get(key) {
                 return Some(HitRecord {
                     hit: HitType::Voxel(material),
                     hitpoint: ray.at(t),
                     distance: t_min + t,
                     normal: -normal,
-                    local_key: (key.x, key.y, key.z),
+                    local_key: key,
                     ..Default::default()
                 });
             }

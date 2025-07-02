@@ -89,8 +89,8 @@ impl NodeFXGraph {
         pattern_ctx.result
     }
 
-    /// Evaluate a shape graph
-    pub fn evaluate_shape(&self, hit: &HitRecord, context: &mut Context) -> VoxelGrid {
+    /// Evaluate a brush graph
+    pub fn evaluate_brush(&self, hit: &HitRecord, context: &mut Context) -> VoxelGrid {
         let mut preview = VoxelGrid::new([0.0, 0.0, 0.0], context.density);
 
         let mut curr_index = 0_usize;
@@ -106,6 +106,44 @@ impl NodeFXGraph {
                 self.nodes[next_node as usize].evaluate_brush(
                     &mut preview,
                     hit,
+                    (self, next_node as usize),
+                    context,
+                );
+                curr_index = next_node as usize;
+                curr_terminal = next_terminal as usize;
+                steps += 1;
+            } else {
+                break;
+            }
+        }
+
+        preview.update_bboxes();
+        preview
+    }
+
+    /// Evaluate a terrain brush graph
+    pub fn evaluate_terrain_brush(
+        &self,
+        hit: &HitRecord,
+        grid: &VoxelGrid,
+        context: &mut Context,
+    ) -> VoxelGrid {
+        let mut preview = VoxelGrid::new([0.0, 0.0, 0.0], context.density);
+
+        let mut curr_index = 0_usize;
+        let mut curr_terminal = 0_usize;
+
+        self.nodes[0].evaluate_terrain_brush(&mut preview, hit, grid, (self, 0), context);
+
+        let mut steps = 0;
+        while steps < 16 {
+            if let Some((next_node, next_terminal)) =
+                self.find_connected_input_node(curr_index, curr_terminal)
+            {
+                self.nodes[next_node as usize].evaluate_terrain_brush(
+                    &mut preview,
+                    hit,
+                    grid,
                     (self, next_node as usize),
                     context,
                 );

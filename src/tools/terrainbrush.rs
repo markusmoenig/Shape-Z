@@ -4,30 +4,30 @@ use crate::{
 };
 use std::sync::Arc;
 
-pub struct BrushTool {
+pub struct TerrainBrushTool {
     id: TheId,
 }
 
-impl Tool for BrushTool {
+impl Tool for TerrainBrushTool {
     fn new() -> Self
     where
         Self: Sized,
     {
         Self {
-            id: TheId::named("Attach Tool"),
+            id: TheId::named("Terrain Tool"),
         }
     }
     fn id(&self) -> TheId {
         self.id.clone()
     }
     fn info(&self) -> String {
-        str!("Attach / Erase voxels using brushes (B).")
+        str!("Terrain Brush (T).")
     }
     fn icon_name(&self) -> String {
-        str!("stack")
+        str!("wave-sine")
     }
     fn accel(&self) -> Option<char> {
-        Some('b')
+        Some('t')
     }
 
     fn tool_event(
@@ -77,10 +77,10 @@ impl Tool for BrushTool {
                     depth_edit.limiter_mut().set_max_width(150);
                     layout.add_widget(Box::new(depth_edit));
 
-                    let mut border_edit = TheTextLineEdit::new(TheId::named("Brush Border"));
-                    border_edit.set_value(TheValue::Float(context.brush_border));
-                    border_edit.set_info_text(Some("Brush Border".to_string()));
-                    border_edit.set_range(TheValue::RangeF32(0.0..=1.0));
+                    let mut border_edit = TheTextLineEdit::new(TheId::named("Brush Falloff"));
+                    border_edit.set_value(TheValue::Float(context.brush_falloff));
+                    border_edit.set_info_text(Some("Brush Falloff".to_string()));
+                    border_edit.set_range(TheValue::RangeF32(0.0..=3.0));
                     border_edit.set_continuous(false);
                     border_edit.set_status_text("The subdivision level of the grid.");
                     border_edit.limiter_mut().set_max_width(150);
@@ -115,19 +115,23 @@ impl Tool for BrushTool {
                 context.undo_grid = grid.merge_preview();
             }
             ToolEvent::HitHover(hit) => {
-                let shapes = SHAPES.read().unwrap();
-                let preview = shapes[context.shape_index].evaluate_brush(&hit, context);
-
                 let grid = Arc::clone(&VOXELGRID);
                 let mut grid = grid.write().unwrap();
+
+                let shapes = SHAPES.read().unwrap();
+                let preview =
+                    shapes[context.shape_index].evaluate_terrain_brush(&hit, &grid, context);
+
                 grid.preview = Some(Box::new(preview));
             }
             ToolEvent::HitDrag(hit) => {
-                let shapes = SHAPES.read().unwrap();
-                let preview = shapes[context.shape_index].evaluate_brush(&hit, context);
-
                 let grid = Arc::clone(&VOXELGRID);
                 let mut grid = grid.write().unwrap();
+
+                let shapes = SHAPES.read().unwrap();
+                let preview =
+                    shapes[context.shape_index].evaluate_terrain_brush(&hit, &grid, context);
+
                 grid.preview = Some(Box::new(preview));
                 let changes = grid.merge_preview();
                 context.undo_grid.merge(&changes);
@@ -183,9 +187,9 @@ impl Tool for BrushTool {
                         context.snap = v;
                     }
                 }
-                if id.name == "Brush Border" {
+                if id.name == "Brush Falloff" {
                     if let Some(v) = value.to_f32() {
-                        context.brush_border = v;
+                        context.brush_falloff = v;
                     }
                 }
             }

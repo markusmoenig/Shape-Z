@@ -147,8 +147,8 @@ impl NodeFX {
     }
 
     /// Set the palette index
-    pub fn set_value(&mut self, name: &str, value: f32) {
-        println!("set_value {}: {}", name, value);
+    pub fn set_value(&mut self, _name: &str, value: f32) {
+        // println!("set_value {}: {}", name, value);
         self.values[0] = value;
     }
 
@@ -211,7 +211,7 @@ impl NodeFX {
         &self,
         material: &mut Material,
         _graph_node: (&NodeFXGraph, usize),
-        _context: &Context,
+        context: &Context,
     ) {
         match self.role {
             BaseColor => {
@@ -223,7 +223,7 @@ impl NodeFX {
         }
     }
 
-    /// Evaluate the node in a shape context
+    /// Evaluate the node in a brush context
     pub fn evaluate_brush(
         &self,
         preview: &mut VoxelGrid,
@@ -274,23 +274,43 @@ impl NodeFX {
             dist_sq <= (r_vox as F + 0.5).powi(2)
         }
 
+        #[inline(always)]
+        fn rim_thickness(r_vox: i32, border_frac: f32) -> i32 {
+            let f = border_frac.clamp(0.0, 1.0);
+            ((f * r_vox as f32).round()) as i32 // 0 → 0  …  1 → r_vox
+        }
+
+        #[inline(always)]
+        fn stamp_circle_border(local: Vec3<F>, r_vox: i32, border_frac: f32) -> bool {
+            let dist2 = local.x.powi(2) + local.z.powi(2);
+            let outer2 = (r_vox as F + 0.5).powi(2);
+            if dist2 > outer2 {
+                return false;
+            } // outside brush
+
+            let rim = rim_thickness(r_vox, border_frac);
+            if rim == 0 {
+                return true;
+            } // solid
+
+            let inner_r = (r_vox - rim).max(0);
+            let inner2 = (inner_r as F + 0.5).powi(2);
+            dist2 > inner2 // true only for rim
+        }
+
         #[inline]
         fn stamp_rect(local: Vec3<F>, half_vox: i32) -> bool {
             local.x.abs() <= half_vox as F &&           // |x| ≤ half-width
             local.z.abs() <= half_vox as F // |z| ≤ half-height
         }
 
-        /// Full 3-D sphere (useful when you want a true ball, not just a disc).
-        #[inline]
-        fn stamp_sphere(local: Vec3<F>, r_vox: i32) -> bool {
-            local.magnitude_squared() <= (r_vox as F + 0.5).powi(2)
-        }
-
         if let Some(hit_point) = hit_point {
             let patterns = PATTERNS.read().unwrap();
 
-            let depth = 10;
-            let normal = hit.normal;
+            let mut normal = hit.normal;
+            if context.attach_mode == ToolAttachMode::Remove {
+                normal = -normal;
+            }
 
             // Exact voxel-size constants
             let vox_size = 1.0 / preview.density_f; // = step
@@ -314,7 +334,14 @@ impl NodeFX {
                 patterns.graphs[context.pattern_index as usize].nodes[0].values[0].max(vox_size);
             let inv_cell = 1.0 / cell_world;
 
-            let r_vox = (1.0 * preview.density_f / 2.0).round() as i32;
+            let vox_size = 1.0 / preview.density_f;
+            let diam_vox = (context.brush_size / vox_size).max(1.0);
+            let r_vox = ((diam_vox - 1.0) * 0.5).ceil() as i32;
+
+            let depth_vox = (context.brush_depth / vox_size).ceil() as i32;
+            let depth = depth_vox.max(1);
+
+            let border = context.brush_border;
 
             // Carry overflow/underflow between local and tile coordinates
             let carry = |mut tile: Coord, mut loc: Coord| -> (Coord, Coord) {
@@ -336,7 +363,7 @@ impl NodeFX {
 
             for dx in -r_vox..=r_vox {
                 for dz in -r_vox..=r_vox {
-                    if !stamp_circle(Vec3::new(dx as F, 0.0, dz as F), r_vox) {
+                    if !stamp_circle_border(Vec3::new(dx as F, 0.0, dz as F), r_vox, border) {
                         continue;
                     }
 
@@ -372,30 +399,161 @@ impl NodeFX {
                     }
                 }
             }
+        }
+    }
 
-            /*
-            // Extrude in half 3D shapes (Sphere)
-            for dx in -r_vox..=r_vox {
-                for dy in -r_vox..=r_vox {
-                    for dz in -r_vox..=r_vox {
-                        let local = Vec3::new(dx as F, dy as F, dz as F);
+    /// Evaluate the node in a terrain brush context
+    pub fn evaluate_terrain_brush(
+        &self,
+        preview: &mut VoxelGrid,
+        hit: &HitRecord,
+        grid: &VoxelGrid,
+        _graph_node: (&NodeFXGraph, usize),
+        context: &mut Context,
+    ) {
+        let hit_point = match hit.hit {
+            HitType::Voxel(_) => hit.hitpoint,
+            _ => return,
+        };
 
-                        if !stamp_sphere(local, r_vox) {
-                            // true 3-D check
-                            continue;
+        let vox_size = 1.0 / preview.density_f;
+        let density_i = preview.density as i32;
+
+        let (tile0, loc0) = preview.to_tile_coord(hit_point);
+
+        let carry = |mut tile: Coord, mut loc: Coord| -> (Coord, Coord) {
+            for (t, l) in [
+                (&mut tile.0, &mut loc.0),
+                (&mut tile.1, &mut loc.1),
+                (&mut tile.2, &mut loc.2),
+            ] {
+                if *l >= density_i {
+                    *t += *l / density_i;
+                    *l %= density_i;
+                } else if *l < 0 {
+                    *t += (*l - (density_i - 1)) / density_i;
+                    *l = ((*l % density_i) + density_i) % density_i;
+                }
+            }
+            (tile, loc)
+        };
+
+        #[inline]
+        fn layers_for_radius(dist2: i32, r_vox: i32, depth: i32, falloff: f32) -> i32 {
+            if falloff <= 0.0 {
+                return depth; // hard edge
+            }
+            let r = r_vox as f32 + 0.5;
+            let d = (dist2 as f32).sqrt(); // distance in voxels
+            let t = (1.0 - d / r).clamp(0.0, 1.0); // 1 at centre → 0 at rim
+            let t_pow = t.powf(falloff); // adjustable curve
+            (depth as f32 * t_pow).ceil() as i32
+        }
+
+        let r_vox = ((context.brush_size / vox_size - 1.0) * 0.5).ceil() as i32; // radius
+        let depth_max = (context.brush_depth / vox_size).ceil() as i32; // layers
+        let falloff = context.brush_falloff;
+
+        let patterns = PATTERNS.read().unwrap();
+        let vox_size = 1.0 / preview.density_f;
+
+        let cell_world =
+            patterns.graphs[context.pattern_index as usize].nodes[0].values[0].max(vox_size);
+        let inv_cell = 1.0 / cell_world;
+
+        // tangent / bitangent for a terrain brush (XZ plane)
+        let tangent_f: Vec3<f32> = Vec3::unit_x(); // (1,0,0)
+        let bitangent_f: Vec3<f32> = Vec3::unit_z(); // (0,0,1)
+        let normal_f: Vec3<f32> = Vec3::unit_y(); // (0,1,0)
+
+        for dx in -r_vox..=r_vox {
+            for dz in -r_vox..=r_vox {
+                let dist2 = dx * dx + dz * dz;
+                if dist2 > (r_vox + 1).pow(2) {
+                    continue;
+                }
+
+                // How many layers should this column get?
+                let layers_here = layers_for_radius(dist2, r_vox, depth_max, falloff);
+                if layers_here == 0 {
+                    continue;
+                }
+
+                // Vertical scan
+                let top_vox = loc0.1 + depth_max; // scan band still ±depth_max
+                let bottom_vox = loc0.1 - depth_max;
+
+                let mut placed = false;
+
+                for y in (bottom_vox..=top_vox).rev() {
+                    let loc = (loc0.0 + dx, y, loc0.2 + dz);
+                    let (tile, loc) = carry(tile0, loc);
+
+                    let mut centre = grid.to_world_coord(tile, loc);
+                    centre += Vec3::broadcast(vox_size * 0.5);
+
+                    if grid.get(centre).is_some() {
+                        // place up to N layers above the first solid voxel
+                        let mut loc_above = (loc.0, loc.1 + 1, loc.2);
+                        for depth in 0..layers_here {
+                            let (tile_a, loc_a) = carry(tile, loc_above);
+
+                            let mut world = preview.to_world_coord(tile_a, loc_a);
+                            world += Vec3::broadcast(vox_size * 0.5);
+
+                            let mut pattern_ctx = PatternContext {
+                                result: context.palette_index, // default
+                                cell_scale: 1.0,
+                                world,
+                                uv: Vec2::new(
+                                    (world.dot(tangent_f) * inv_cell).floor() as i32,
+                                    (world.dot(bitangent_f) * inv_cell).floor() as i32,
+                                ),
+                                normal: normal_f,
+                                layer: depth,
+                                max_layer: layers_here,
+                            };
+
+                            let index = patterns.graphs[context.pattern_index as usize]
+                                .evaluate_pattern(&mut pattern_ctx);
+                            preview.set_create(world, index);
+
+                            loc_above.1 += 1; // next layer
                         }
-
-                        // keep only voxels on or in front of the hit plane (hemisphere)
-                        let rotated = rot * local;
-                        if rotated.dot(normal) < 0.0 {
-                            continue;
-                        }
-
-                        let pos = hit_point + outside + rotated * step;
-                        preview.set_create(pos, context.palette_index);
+                        placed = true;
+                        break;
                     }
                 }
-            }*/
+
+                if !placed {
+                    let mut loc = (loc0.0 + dx, bottom_vox, loc0.2 + dz);
+                    for depth in 0..layers_here {
+                        let (tile_b, loc_b) = carry(tile0, loc);
+
+                        let mut world = preview.to_world_coord(tile_b, loc_b);
+                        world += Vec3::broadcast(vox_size * 0.5);
+
+                        let mut pattern_ctx = PatternContext {
+                            result: context.palette_index, // default
+                            cell_scale: 1.0,
+                            world,
+                            uv: Vec2::new(
+                                (world.dot(tangent_f) * inv_cell).floor() as i32,
+                                (world.dot(bitangent_f) * inv_cell).floor() as i32,
+                            ),
+                            normal: normal_f,
+                            layer: depth,
+                            max_layer: layers_here,
+                        };
+
+                        let index = patterns.graphs[context.pattern_index as usize]
+                            .evaluate_pattern(&mut pattern_ctx);
+                        preview.set_create(world, index);
+
+                        loc.1 += 1;
+                    }
+                }
+            }
         }
     }
 
