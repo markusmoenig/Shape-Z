@@ -2,9 +2,12 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use crate::prelude::*;
+use serde::{Deserialize, Serialize};
+use theframework::prelude::*;
+use vek::Vec3;
 
 /// A material definition
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Material {
     /* ─────── Disney “principled” core ─────── */
     pub base_color: Vec3<f32>,
@@ -26,21 +29,34 @@ pub struct Material {
     pub emission_strength: f32,
 
     /* ─────── Optional OpenPBR extensions ─────── */
+    #[serde(default)]
     pub coat_weight: f32,
+    #[serde(default)]
     pub coat_color: Vec3<f32>,
+    #[serde(default)]
     pub coat_roughness: f32,
+    #[serde(default)]
     pub coat_ior: f32,
 
+    #[serde(default)]
     pub thin_walled: bool,
+    #[serde(default)]
     pub thin_film_thickness: Option<f32>,
+    #[serde(default)]
     pub thin_film_ior: Option<f32>,
 
+    #[serde(default)]
     pub specular_edge_color: Option<Vec3<f32>>,
+    #[serde(default)]
     pub specular_weight: f32,
 
+    #[serde(default)]
     pub transmission_depth: Option<f32>,
+    #[serde(default)]
     pub volume_scatter_color: Option<Vec3<f32>>,
+    #[serde(default)]
     pub volume_absorption_color: Option<Vec3<f32>>,
+    #[serde(default)]
     pub volume_anisotropy: Option<f32>,
 }
 
@@ -106,15 +122,26 @@ impl Material {
 }
 
 /// A palette that stores exactly 256 materials
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Palette {
     pub materials: Vec<Material>,
+    pub graphs: Vec<NodeFXGraph>,
 }
 
 impl Default for Palette {
     fn default() -> Self {
+        let mut graphs = vec![];
+        for _ in 0..256 {
+            let mut graph = NodeFXGraph::default();
+            let mut node = NodeFX::new(NodeFXRole::BaseColor);
+            node.position = Vec2::new(10, 10);
+            graph.nodes.push(node);
+            graphs.push(graph);
+        }
+
         Self {
             materials: vec![Material::default(); 256],
+            graphs,
         }
     }
 }
@@ -162,6 +189,10 @@ impl Palette {
 
             if idx < self.materials.len() {
                 self.materials[idx].base_color = Vec3::new(r, g, b);
+                self.graphs[idx].nodes[0].values[0] = r;
+                self.graphs[idx].nodes[0].values[1] = g;
+                self.graphs[idx].nodes[0].values[2] = b;
+
                 idx += 1;
             } else {
                 break; // palette already full

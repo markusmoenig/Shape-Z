@@ -145,6 +145,7 @@ impl RenderBuffer {
         out
     }
 
+    /*
     /// Save the buffer to a file as PNG
     pub fn save(&self, path: std::path::PathBuf) {
         let mut image = image::ImageBuffer::new(self.width as u32, self.height as u32);
@@ -218,5 +219,5 @@ impl RenderBuffer {
         }
 
         image.save(path).unwrap();
-    }
+    }*/
 }

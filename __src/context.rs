@@ -1,7 +1,6 @@
-use std::convert::TryFrom;
 use theframework::prelude::*;
 
-use crate::tools::VoxelGrid;
+use crate::tools::{BrushShape, VoxelGrid};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum ToolMode {
@@ -43,6 +42,8 @@ pub struct Context {
     pub hover_hitpoint: Option<Vec3<f32>>,
     pub density: usize,
 
+    pub brush_shape: BrushShape,
+
     pub palette_index: u8,
     pub pattern_index: u8,
     pub shape_index: usize,
@@ -72,6 +73,8 @@ impl Context {
 
             hover_hitpoint: None,
             density: 96,
+
+            brush_shape: BrushShape::Rect,
 
             palette_index: 0,
             pattern_index: 0,

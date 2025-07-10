@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-#[derive(Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Tile {
     pub voxels: Vec<Option<u8>>,
     pub density: usize,
@@ -126,7 +126,7 @@ impl Tile {
         !self.has_voxels
     }
 
-    pub fn dda(&self, ray: &Ray) -> Option<HitRecord> {
+    pub fn dda(&self, ray: &Ray, remove_preview_tile: Option<&Tile>) -> Option<HitRecord> {
         let (mut t_min, t_max) = ray.intersect_aabb(&self.bbox)?;
 
         t_min = (t_min - 0.1).max(0.0);
@@ -150,6 +150,18 @@ impl Tile {
                 let vi = i.map(|v| v as i32);
                 (vi.x, vi.y, vi.z)
             };
+
+            // Check for removal preview
+            if let Some(remove_preview_tile) = remove_preview_tile {
+                if remove_preview_tile.get(key).is_some() {
+                    // The voxel exists in remove preview tile, ignore hit
+                    let plane = (Vec3::broadcast(1.0) + srd - 2.0 * (ro - i)) * rdi;
+                    t = plane.x.min(plane.y.min(plane.z));
+                    normal = equal(t, plane) * srd;
+                    i += normal;
+                    continue;
+                }
+            }
 
             if let Some(material) = self.get(key) {
                 return Some(HitRecord {

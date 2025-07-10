@@ -195,8 +195,14 @@ impl NodeFX {
 
                 let cell_x = ux.div_euclid(size);
                 let cell_y = uy.div_euclid(size);
+                let cell_z = (pattern_ctx.layer as f32 / (pattern_ctx.cell_scale * 96.0))
+                    .round()
+                    .max(1.0) as i32;
+                let checker2d = (cell_x ^ cell_y) & 1;
+                let flip = cell_z & 1;
+                let v = checker2d ^ flip;
 
-                let v = (cell_x ^ cell_y) & 1;
+                // let v = (cell_x ^ cell_y ^ cell_z) & 1;
                 // pattern_ctx.result = if v == 0 { 100 } else { 101 };
                 if v != 0 {
                     pattern_ctx.result = 100;
