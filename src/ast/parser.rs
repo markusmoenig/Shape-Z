@@ -58,32 +58,71 @@ impl Parser {
         self.tokens = tokens;
         self.path = path.clone();
 
-        println!("Tokens: {:?}", self.tokens);
-
         // Collect statements
         let mut statements = vec![];
 
         while !self.is_at_end() {
-            let stmt = self.expression_statement()?;
+            let stmt = self.declaration()?;
             statements.push(Box::new(stmt));
         }
 
-        // Exe
-
-        let mut visitor = ExecuteVisitor::new();
-        let mut ctx = Context {};
-
-        for statement in statements {
-            let rc = statement.accept(&mut visitor, &mut ctx);
-            println!("Executed statement: {:?}", rc);
-        }
-
-        let module = Module::new(name, source, self.path.clone());
+        let module = Module::new(name, source, self.path.clone(), statements);
 
         Ok(module)
     }
 
-    // fn declaration(&mut self) -> Result<Stmt, RPUError> {}
+    fn declaration(&mut self) -> Result<Stmt, ParseError> {
+        if self.match_token(vec![TokenType::Define]) {
+            return self.define_declaration();
+        }
+
+        self.expression_statement()
+    }
+
+    fn define_declaration(&mut self) -> Result<Stmt, ParseError> {
+        let line = self.current_line;
+        self.consume(
+            TokenType::Identifier,
+            "Expected identifier after 'define''",
+            self.current_line,
+        )?;
+
+        let id = self.previous().unwrap().lexeme.clone();
+        let mut params = FxHashMap::default();
+
+        while self.match_token(vec![TokenType::Identifier]) {
+            let id = self.previous().unwrap().lexeme.clone();
+
+            self.consume(
+                TokenType::Equal,
+                "Expected '=' after define identifier",
+                self.current_line,
+            )?;
+
+            let value = self.expression()?;
+
+            params.insert(id, Box::new(value));
+        }
+
+        self.consume(
+            TokenType::LeftBrace,
+            "Expected '{' after define header",
+            self.current_line,
+        )?;
+
+        self.consume(
+            TokenType::RightBrace,
+            "Expected '}' after define body",
+            self.current_line,
+        )?;
+
+        // println!("[Parser] Define declaration: {}, {:?}", id, params);
+
+        Ok(Stmt::Define(
+            DefineObject { name: id, params },
+            self.create_loc(line),
+        ))
+    }
 
     fn expression_statement(&mut self) -> Result<Stmt, ParseError> {
         let value: Expr = self.expression()?;

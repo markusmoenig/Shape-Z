@@ -1,4 +1,5 @@
 pub mod context;
+pub mod defineobject;
 pub mod environment;
 pub mod error;
 pub mod execute;
@@ -61,6 +62,7 @@ pub enum Stmt {
     Print(Box<Expr>, Location),
     Block(Vec<Box<Stmt>>, Location),
     Expression(Box<Expr>, Location),
+    Define(DefineObject, Location),
     VarDeclaration(String, Value, Box<Expr>, Location),
     StructDeclaration(String, Vec<(String, Value)>, Location),
     FunctionDeclaration(String, Vec<Value>, Vec<Box<Stmt>>, Value, bool, Location),
@@ -215,6 +217,13 @@ pub trait Visitor {
     fn expression(
         &mut self,
         expression: &Expr,
+        loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<Value, RuntimeError>;
+
+    fn define(
+        &mut self,
+        define_context: &DefineObject,
         loc: &Location,
         ctx: &mut Context,
     ) -> Result<Value, RuntimeError>;
@@ -402,6 +411,7 @@ impl Stmt {
             Stmt::Print(expression, loc) => visitor.print(expression, loc, ctx),
             Stmt::Block(list, loc) => visitor.block(list, loc, ctx),
             Stmt::Expression(expression, loc) => visitor.expression(expression, loc, ctx),
+            Stmt::Define(define_context, loc) => visitor.define(define_context, loc, ctx),
             Stmt::VarDeclaration(name, static_type, initializer, loc) => {
                 visitor.var_declaration(name, static_type, initializer, loc, ctx)
             }
@@ -446,6 +456,21 @@ impl Expr {
                 visitor.ternary(cond, then_expr, else_expr, loc, ctx)
             }
         }
+    }
+
+    /// Converts a Float3 expression to a Vec3<f32>
+    pub fn to_vec3(&self, visitor: &mut ExecuteVisitor, ctx: &mut Context) -> Option<Vec3<f32>> {
+        if let Expr::Value(Value::Float3(x, y, z), _, _, _) = self {
+            let x_val = x.accept(visitor, ctx).ok()?;
+            let y_val = y.accept(visitor, ctx).ok()?;
+            let z_val = z.accept(visitor, ctx).ok()?;
+
+            if let (Value::Float(x_f), Value::Float(y_f), Value::Float(z_f)) = (x_val, y_val, z_val)
+            {
+                return Some(Vec3::new(x_f, y_f, z_f));
+            }
+        }
+        None
     }
 }
 

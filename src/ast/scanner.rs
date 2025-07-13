@@ -57,6 +57,7 @@ pub enum TokenType {
     Export,
     Const,
     Struct,
+    Define,
     In,
     Out,
     Inout,
@@ -139,6 +140,8 @@ impl Scanner {
         keywords.insert("export", TokenType::Export);
         keywords.insert("const", TokenType::Const);
         keywords.insert("struct", TokenType::Struct);
+
+        keywords.insert("define", TokenType::Define);
 
         keywords.insert("in", TokenType::In);
         keywords.insert("out", TokenType::Out);

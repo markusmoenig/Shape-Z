@@ -25,6 +25,7 @@ pub mod prelude {
     pub use vek::{Aabb, Vec2, Vec3, Vec4};
 
     pub use crate::ast::context::Context;
+    pub use crate::ast::defineobject::DefineObject;
     pub use crate::ast::environment::Environment;
     pub use crate::ast::error::{ParseError, RuntimeError};
     pub use crate::ast::execute::ExecuteVisitor;
@@ -55,16 +56,23 @@ pub mod prelude {
 // ---
 
 use prelude::*;
+use vek::serde::de;
 
 fn main() {
     let mut path = std::path::PathBuf::new();
     path.push("main.shpz");
 
+    let size = Vec3::new(10, 4, 10);
+    let density = 96;
+
     let camera: Arc<RwLock<Box<dyn Camera>>> = Arc::new(RwLock::new(Box::new(Iso::new())));
     let renderer: Arc<Box<dyn Renderer>> = Arc::new(Box::new(PBR::new()));
     let mut buffer = Arc::new(Mutex::new(RenderBuffer::new(800, 800)));
-    let grid = Arc::new(RwLock::new(VoxelGrid::default()));
     let palette = Arc::new(RwLock::new(Palette::default()));
+    let mut grid = Arc::new(RwLock::new(VoxelGrid::new(
+        [size.x as F, size.y as F, size.z as F],
+        density,
+    )));
     let tracer = tracer::Tracer::new();
 
     {
@@ -73,32 +81,61 @@ fn main() {
         // c.set_center(Vec3::zero());
     }
 
+    // Parse and compile
+
     let mut parser = Parser::new();
-    match parser.compile(path.clone()) {
-        Ok(module) => {
-            println!("Module compiled successfully: {:?}", module.name);
-        }
+    let module = match parser.compile(path.clone()) {
+        Ok(module) => module,
         Err(e) => {
             eprintln!("Error compiling module: {}", e);
             return;
         }
+    };
+
+    println!("Module {} compiled successfully.", module.name);
+
+    // Execute the AST to compile the content
+
+    let mut visitor = ExecuteVisitor::new();
+    let mut ctx = Context::new(density);
+
+    for statement in module.stmts {
+        match statement.accept(&mut visitor, &mut ctx) {
+            Ok(_) => {}
+            Err(e) => {
+                eprintln!("Error executing statement: {:?}", e);
+                return;
+            }
+        }
     }
 
-    {
-        let mut grid = grid.write().unwrap();
-        let mut palette = palette.write().unwrap();
-        palette.materials[1].base_color = Vec3::new(1.0, 0.0, 0.0);
+    // Build the voxel grid
 
-        let rect = VoxelRect {
-            origin: Vec3::new(0.0, 0.0, 0.0),
-            size: Vec3::new(1.0, 1.0, 1.0),
-        };
-
-        rect.fill(&mut grid, 1); // Fill with material ID 1
-        grid.update_bboxes();
+    let mut definitions = ctx.definitions.clone();
+    for object in definitions.values_mut() {
+        let at = Vec3::new(0.0, 0.0, 0.0);
+        let g = object.place(at, &mut ctx);
+        grid.write().unwrap().merge(&g);
     }
+
+    grid.write().unwrap().update_bboxes();
+    // {
+    //     let mut grid = ctx.grid.write().unwrap();
+    //     let mut palette = palette.write().unwrap();
+    //     palette.materials[1].base_color = Vec3::new(1.0, 0.0, 0.0);
+
+    //     let rect = VoxelRect {
+    //         origin: Vec3::new(0.0, 0.0, 0.0),
+    //         size: Vec3::new(1.0, 1.0, 1.0),
+    //     };
+
+    //     rect.fill(&mut grid, 1); // Fill with material ID 1
+    //     grid.update_bboxes();
+    // }
 
     tracer.render(&mut buffer, &grid, &palette, &renderer, &camera);
+
+    // Save the rendered image
 
     let b = buffer.lock().unwrap();
 

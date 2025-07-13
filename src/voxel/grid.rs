@@ -19,6 +19,19 @@ impl Default for VoxelGrid {
 }
 
 impl VoxelGrid {
+    pub fn empty(density: usize) -> Self {
+        Self {
+            tiles: FxHashMap::default(),
+            density,
+            density_f: density as F,
+            bounds: [0.0, 0.0, 0.0],
+            active_bbox: {
+                let h = Vec3::from([0.0, 0.0, 0.0]) * 0.5;
+                Aabb { min: -h, max: h }
+            },
+        }
+    }
+
     pub fn new(bounds: [F; 3], density: usize) -> Self {
         let mut tiles = FxHashMap::default();
 
@@ -124,6 +137,33 @@ impl VoxelGrid {
             .entry(tile_key)
             .or_insert_with(|| Tile::new(self.density))
             .set(local_key, mat);
+    }
+
+    /// Merges this grid with another grid.
+    pub fn merge(&mut self, other: &VoxelGrid) {
+        // Merge
+        for (tile_key, src_tile) in &other.tiles {
+            let dst_tile = self
+                .tiles
+                .entry(*tile_key)
+                .or_insert_with(|| Tile::new(self.density));
+
+            let d = src_tile.density as i32; // side length per axis
+            let area = d * d; // d², pre-compute
+
+            // Iterate over every voxel in the dense array.
+            for (idx, &maybe_mat) in src_tile.voxels.iter().enumerate() {
+                if let Some(mat) = maybe_mat {
+                    // Reconstruct (x,y,z) from flat index.
+                    let idx = idx as i32;
+                    let z = idx / area;
+                    let y = (idx - z * area) / d;
+                    let x = idx - z * area - y * d;
+
+                    dst_tile.set((x, y, z), mat); // overwrite policy
+                }
+            }
+        }
     }
 
     /// Converts the hit keys to a world coordinate

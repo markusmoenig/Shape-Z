@@ -314,6 +314,20 @@ impl Visitor for ExecuteVisitor {
         expression.accept(self, ctx)
     }
 
+    fn define(
+        &mut self,
+        define_object: &DefineObject,
+        _loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<Value, RuntimeError> {
+        //expression.accept(self, ctx)
+
+        ctx.definitions
+            .insert(define_object.name.clone(), define_object.clone());
+
+        Ok(Value::None)
+    }
+
     fn var_declaration(
         &mut self,
         name: &str,
