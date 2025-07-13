@@ -24,10 +24,11 @@ impl DefineObject {
         }
     }
 
+    /*
     pub fn place(&mut self, at: Vec3<f32>, ctx: &mut Context) -> VoxelGrid {
         let mut grid = VoxelGrid::empty(ctx.density);
 
-        let mut visitor = ExecuteVisitor::new();
+        let mut visitor = CompileVisitor::new();
         let mut size = Vec3::new(1.0, 1.0, 1.0);
 
         if let Some(size_expr) = self.params.get("size") {
@@ -80,5 +81,5 @@ impl DefineObject {
         //rect.fill(&mut grid, 1); // Fill with material ID 1
 
         grid
-    }
+    }*/
 }

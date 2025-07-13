@@ -1,8 +1,8 @@
+pub mod compile;
 pub mod context;
 pub mod defineobject;
 pub mod environment;
 pub mod error;
-pub mod execute;
 pub mod idverifier;
 pub mod module;
 pub mod parser;
@@ -478,7 +478,7 @@ impl Expr {
     }
 
     /// Converts a Float3 expression to a Vec3<f32>
-    pub fn to_vec3(&self, visitor: &mut ExecuteVisitor, ctx: &mut Context) -> Option<Vec3<f32>> {
+    pub fn to_vec3(&self, visitor: &mut CompileVisitor, ctx: &mut Context) -> Option<Vec3<f32>> {
         if let Expr::Value(ASTValue::Float3(x, y, z), _, _, _) = self {
             let x_val = x.accept(visitor, ctx).ok()?;
             let y_val = y.accept(visitor, ctx).ok()?;

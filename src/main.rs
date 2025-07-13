@@ -1,4 +1,5 @@
 pub mod ast;
+pub mod node;
 pub mod tracer;
 pub mod voxel;
 
@@ -24,11 +25,16 @@ pub mod prelude {
 
     pub use vek::{Aabb, Vec2, Vec3, Vec4};
 
+    pub use crate::node::execution::*;
+    pub use crate::node::program::*;
+    pub use crate::node::value::Value;
+    pub use crate::node::*;
+
+    pub use crate::ast::compile::CompileVisitor;
     pub use crate::ast::context::Context;
     pub use crate::ast::defineobject::DefineObject;
     pub use crate::ast::environment::Environment;
     pub use crate::ast::error::{ParseError, RuntimeError};
-    pub use crate::ast::execute::ExecuteVisitor;
     pub use crate::ast::idverifier::IdVerifier;
     pub use crate::ast::module::Module;
     pub use crate::ast::parser::Parser;
@@ -91,12 +97,12 @@ fn main() {
         }
     };
 
-    println!("Module {} compiled successfully.", module.name);
+    println!("Module '{}' compiled successfully.", module.name);
 
-    // Execute the AST to compile the content
+    // Compile the AST
 
-    let mut visitor = ExecuteVisitor::new();
-    let mut ctx = Context::new(density);
+    let mut visitor = CompileVisitor::new();
+    let mut ctx = Context::default();
 
     for statement in module.stmts {
         match statement.accept(&mut visitor, &mut ctx) {
@@ -108,6 +114,14 @@ fn main() {
         }
     }
 
+    println!("{:?}", ctx.program.globals);
+
+    let mut execution = Execution::new();
+    execution.execute(&ctx.program.globals);
+
+    println!("= {:?}", execution.stack);
+
+    /*
     // Build the voxel grid
 
     let _start: u128 = tracer.get_time();
@@ -147,4 +161,5 @@ fn main() {
     path.push("main.png");
 
     b.save_srgb(path);
+    */
 }
