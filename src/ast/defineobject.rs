@@ -50,7 +50,7 @@ impl DefineObject {
 
             visitor.environment.define(
                 "local".into(),
-                Value::Float3(
+                ASTValue::Float3(
                     expr_float!(local.x),
                     expr_float!(local.y),
                     expr_float!(local.z),
@@ -66,7 +66,7 @@ impl DefineObject {
             if let Some(block) = &self.block {
                 let rc = block.accept(&mut visitor, ctx);
                 // println!("Block executed with result: {:?}", rc);
-                if let Ok(Value::Float(v)) = rc {
+                if let Ok(ASTValue::Float(v)) = rc {
                     if v <= 0.0 {
                         grid.set_create(world, 0);
                     }

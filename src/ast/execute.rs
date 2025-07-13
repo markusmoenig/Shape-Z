@@ -4,7 +4,7 @@ use crate::prelude::*;
 /// ExecuteVisitor
 pub struct ExecuteVisitor {
     pub environment: Environment,
-    functions: FxHashMap<String, Value>,
+    functions: FxHashMap<String, ASTValue>,
     break_depth: Vec<i32>,
 }
 
@@ -13,14 +13,14 @@ impl Visitor for ExecuteVisitor {
     where
         Self: Sized,
     {
-        let mut functions: FxHashMap<String, Value> = FxHashMap::default();
+        let mut functions: FxHashMap<String, ASTValue> = FxHashMap::default();
 
         functions.insert(
             "length".to_string(),
-            Value::Function(
+            ASTValue::Function(
                 "length".to_string(),
-                vec![Value::None],
-                Box::new(Value::None),
+                vec![ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
 
@@ -28,231 +28,231 @@ impl Visitor for ExecuteVisitor {
 
         functions.insert(
             "normalize".to_string(),
-            Value::Function(
+            ASTValue::Function(
                 "normalize".to_string(),
-                vec![Value::None],
-                Box::new(ASTValue::None),
+                vec![ASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "smoothstep".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "smoothstep".to_string(),
-                vec![ASTValue::None, ASTValue::None, ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None, ASTASTValue::None, ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "mix".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "mix".to_string(),
-                vec![ASTValue::None, ASTValue::None, ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None, ASTASTValue::None, ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "dot".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "dot".to_string(),
-                vec![ASTValue::None, ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None, ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "cross".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "cross".to_string(),
-                vec![ASTValue::None, ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None, ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "sqrt".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "sqrt".to_string(),
-                vec![ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "sin".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "sin".to_string(),
-                vec![ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "cos".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "cos".to_string(),
-                vec![ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "ceil".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "ceil".to_string(),
-                vec![ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "floor".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "floor".to_string(),
-                vec![ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "fract".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "fract".to_string(),
-                vec![ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "abs".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "abs".to_string(),
-                vec![ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "tan".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "tan".to_string(),
-                vec![ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "atan".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "atan".to_string(),
-                vec![ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "degrees".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "degrees".to_string(),
-                vec![ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "radians".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "radians".to_string(),
-                vec![ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "sign".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "sign".to_string(),
-                vec![ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "exp".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "exp".to_string(),
-                vec![ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "log".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "log".to_string(),
-                vec![ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "rand".to_string(),
-            ASTValue::Function("rand".to_string(), vec![], Box::new(ASTValue::None)),
+            ASTASTValue::Function("rand".to_string(), vec![], Box::new(ASTASTValue::None)),
         );
 
         functions.insert(
             "max".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "max".to_string(),
-                vec![ASTValue::None, ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None, ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "min".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "min".to_string(),
-                vec![ASTValue::None, ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None, ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "pow".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "pow".to_string(),
-                vec![ASTValue::None, ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None, ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "mod".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "mod".to_string(),
-                vec![ASTValue::None, ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None, ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "step".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "step".to_string(),
-                vec![ASTValue::None, ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None, ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );
 
         functions.insert(
             "clamp".to_string(),
-            ASTValue::Function(
+            ASTASTValue::Function(
                 "clamp".to_string(),
-                vec![ASTValue::None, ASTValue::None, ASTValue::None],
-                Box::new(ASTValue::None),
+                vec![ASTASTValue::None, ASTASTValue::None, ASTASTValue::None],
+                Box::new(ASTASTValue::None),
             ),
         );*/
 
@@ -268,12 +268,12 @@ impl Visitor for ExecuteVisitor {
         expression: &Expr,
         _loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         print!("-- Print ");
         expression.accept(self, ctx)?;
         println!(" --");
 
-        Ok(Value::None)
+        Ok(ASTValue::None)
     }
 
     fn block(
@@ -281,7 +281,7 @@ impl Visitor for ExecuteVisitor {
         list: &[Box<Stmt>],
         _loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         // let instr = "(block".to_string();
         // ctx.add_wat(&instr);
         // ctx.add_indention();
@@ -290,9 +290,9 @@ impl Visitor for ExecuteVisitor {
         //     self.break_depth.push(d + 1);
         // }
 
-        let mut value = Value::None;
+        let mut value = ASTValue::None;
 
-        self.environment.begin_scope(Value::None, false);
+        self.environment.begin_scope(ASTValue::None, false);
         for stmt in list {
             value = stmt.accept(self, ctx)?;
             //println!("Block statement executed with result: {:?}", rc);
@@ -314,7 +314,7 @@ impl Visitor for ExecuteVisitor {
         expression: &Expr,
         _loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         expression.accept(self, ctx)
     }
 
@@ -323,23 +323,23 @@ impl Visitor for ExecuteVisitor {
         define_object: &DefineObject,
         _loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         //expression.accept(self, ctx)
 
         ctx.definitions
             .insert(define_object.name.clone(), define_object.clone());
 
-        Ok(Value::None)
+        Ok(ASTValue::None)
     }
 
     fn var_declaration(
         &mut self,
         name: &str,
-        static_type: &Value,
+        static_type: &ASTValue,
         expression: &Expr,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         let v = expression.accept(self, ctx)?;
 
         /*
@@ -359,18 +359,18 @@ impl Visitor for ExecuteVisitor {
         // Global function definition. We write these out in the module header in gen_wat().
         if self.environment.is_global_scope() {
             ctx.globals.insert(name.to_string(), v.clone());
-            return Ok(ASTValue::None);
+            return Ok(ASTASTValue::None);
         }
 
         match &v {
-            ASTValue::Int(_, _) => {
+            ASTASTValue::Int(_, _) => {
                 let instr = format!("(local ${} i{})", name, ctx.pr);
                 ctx.wat_locals.push_str(&format!("        {}\n", instr));
 
                 let instr = format!("local.set ${}", name);
                 ctx.add_wat(&instr);
             }
-            ASTValue::Int2(_, _, _) => {
+            ASTASTValue::Int2(_, _, _) => {
                 let instr = format!("(local ${}_x i{})", name, ctx.pr);
                 ctx.wat_locals.push_str(&format!("        {}\n", instr));
                 let instr = format!("(local ${}_y i{})", name, ctx.pr);
@@ -381,7 +381,7 @@ impl Visitor for ExecuteVisitor {
                 let instr = format!("local.set ${}_x", name);
                 ctx.add_wat(&instr);
             }
-            ASTValue::Int3(_, _, _, _) => {
+            ASTASTValue::Int3(_, _, _, _) => {
                 let instr = format!("(local ${}_x i{})", name, ctx.pr);
                 ctx.wat_locals.push_str(&format!("        {}\n", instr));
                 let instr = format!("(local ${}_y i{})", name, ctx.pr);
@@ -396,7 +396,7 @@ impl Visitor for ExecuteVisitor {
                 let instr = format!("local.set ${}_x", name);
                 ctx.add_wat(&instr);
             }
-            ASTValue::Int4(_, _, _, _, _) => {
+            ASTASTValue::Int4(_, _, _, _, _) => {
                 let instr = format!("(local ${}_x i{})", name, ctx.pr);
                 ctx.wat_locals.push_str(&format!("        {}\n", instr));
                 let instr = format!("(local ${}_y i{})", name, ctx.pr);
@@ -415,14 +415,14 @@ impl Visitor for ExecuteVisitor {
                 let instr = format!("local.set ${}_x", name);
                 ctx.add_wat(&instr);
             }
-            ASTValue::Float(_, _) => {
+            ASTASTValue::Float(_, _) => {
                 let instr = format!("(local ${} f{})", name, ctx.pr);
                 ctx.wat_locals.push_str(&format!("        {}\n", instr));
 
                 let instr = format!("local.set ${}", name);
                 ctx.add_wat(&instr);
             }
-            ASTValue::Float2(_, _, _) => {
+            ASTASTValue::Float2(_, _, _) => {
                 let instr = format!("(local ${}_x f{})", name, ctx.pr);
                 ctx.wat_locals.push_str(&format!("        {}\n", instr));
                 let instr = format!("(local ${}_y f{})", name, ctx.pr);
@@ -433,7 +433,7 @@ impl Visitor for ExecuteVisitor {
                 let instr = format!("local.set ${}_x", name);
                 ctx.add_wat(&instr);
             }
-            ASTValue::Float3(_, _, _, _) => {
+            ASTASTValue::Float3(_, _, _, _) => {
                 let instr = format!("(local ${}_x f{})", name, ctx.pr);
                 ctx.wat_locals.push_str(&format!("        {}\n", instr));
                 let instr = format!("(local ${}_y f{})", name, ctx.pr);
@@ -448,7 +448,7 @@ impl Visitor for ExecuteVisitor {
                 let instr = format!("local.set ${}_x", name);
                 ctx.add_wat(&instr);
             }
-            ASTValue::Float4(_, _, _, _, _) => {
+            ASTASTValue::Float4(_, _, _, _, _) => {
                 let instr = format!("(local ${}_x f{})", name, ctx.pr);
                 ctx.wat_locals.push_str(&format!("        {}\n", instr));
                 let instr = format!("(local ${}_y f{})", name, ctx.pr);
@@ -467,7 +467,7 @@ impl Visitor for ExecuteVisitor {
                 let instr = format!("local.set ${}_x", name);
                 ctx.add_wat(&instr);
             }
-            ASTValue::Mat2(_, _) | ASTValue::Mat3(_, _) | ASTValue::Mat4(_, _) => {
+            ASTASTValue::Mat2(_, _) | ASTASTValue::Mat3(_, _) | ASTASTValue::Mat4(_, _) => {
                 let comps = v.write_definition("local", name, &ctx.pr);
                 for c in comps {
                     ctx.wat_locals.push_str(&format!("        {}\n", c));
@@ -477,7 +477,7 @@ impl Visitor for ExecuteVisitor {
                     ctx.add_wat(c);
                 }
             }
-            ASTValue::Struct(_, _, _) => {
+            ASTASTValue::Struct(_, _, _) => {
                 // Copy the incoming struct mem ptr to the variable
                 let comps = v.write_definition("local", name, &ctx.pr);
                 for c in comps {
@@ -493,7 +493,7 @@ impl Visitor for ExecuteVisitor {
         */
         self.environment.define(name.to_string(), v);
 
-        Ok(Value::None)
+        Ok(ASTValue::None)
     }
 
     fn variable_assignment(
@@ -505,7 +505,7 @@ impl Visitor for ExecuteVisitor {
         expression: &Expr,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         let mut v = expression.accept(self, ctx)?;
         /*
         let incoming_components = v.components();
@@ -558,7 +558,7 @@ impl Visitor for ExecuteVisitor {
         }
 
         match &v {
-            ASTValue::Int(_, _) | ASTValue::Float(_, _) => match op {
+            ASTASTValue::Int(_, _) | ASTASTValue::Float(_, _) => match op {
                 AssignmentOperator::Assign => {
                     let instr = format!("local.set ${}", name);
                     ctx.add_wat(&instr);
@@ -576,7 +576,7 @@ impl Visitor for ExecuteVisitor {
                     ctx.add_wat(&instr);
                 }
             },
-            ASTValue::Int2(_, _, _) | ASTValue::Float2(_, _, _) => {
+            ASTASTValue::Int2(_, _, _) | ASTASTValue::Float2(_, _, _) => {
                 if swizzle.is_empty() {
                     match op {
                         AssignmentOperator::Assign => {
@@ -644,7 +644,7 @@ impl Visitor for ExecuteVisitor {
                     }
                 }
             }
-            ASTValue::Int3(_, _, _, _) | ASTValue::Float3(_, _, _, _) => {
+            ASTASTValue::Int3(_, _, _, _) | ASTASTValue::Float3(_, _, _, _) => {
                 if swizzle.is_empty() {
                     match op {
                         AssignmentOperator::Assign => {
@@ -733,7 +733,7 @@ impl Visitor for ExecuteVisitor {
                     }
                 }
             }
-            ASTValue::Int4(_, _, _, _, _) | ASTValue::Float4(_, _, _, _, _) => {
+            ASTASTValue::Int4(_, _, _, _, _) | ASTASTValue::Float4(_, _, _, _, _) => {
                 if swizzle.is_empty() {
                     match op {
                         AssignmentOperator::Assign => {
@@ -843,7 +843,7 @@ impl Visitor for ExecuteVisitor {
                     }
                 }
             }
-            ASTValue::Struct(struct_name, _, _) => {
+            ASTASTValue::Struct(struct_name, _, _) => {
                 if field_path.is_empty() {
                     // We got an incoming complete struct, just copy the mem ptr
                     // TODO Check if the struct types are the same
@@ -859,7 +859,7 @@ impl Visitor for ExecuteVisitor {
         */
         self.environment.assign(&name, v);
 
-        Ok(Value::None)
+        Ok(ASTValue::None)
     }
 
     fn variable(
@@ -869,9 +869,9 @@ impl Visitor for ExecuteVisitor {
         field_path: &[String],
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         let instr = String::new();
-        let mut rc = Value::None;
+        let mut rc = ASTValue::None;
 
         /*
         if swizzle.len() > 4 {
@@ -921,12 +921,12 @@ impl Visitor for ExecuteVisitor {
                 rc = ctx.create_value_from_swizzle(&v, swizzle.len());
             }
             match &v {
-                ASTValue::Int(_, _) | ASTValue::Float(_, _) => {
+                ASTASTValue::Int(_, _) | ASTASTValue::Float(_, _) => {
                     let instr = format!("{}.get ${}", scope, name);
                     ctx.add_wat(&instr);
                     rc = v.clone();
                 }
-                ASTValue::Int2(_, _, _) | ASTValue::Float2(_, _, _) => {
+                ASTASTValue::Int2(_, _, _) | ASTASTValue::Float2(_, _, _) => {
                     if swizzle.is_empty() {
                         let instr = format!("{}.get ${}_x", scope, name);
                         ctx.add_wat(&instr);
@@ -937,7 +937,7 @@ impl Visitor for ExecuteVisitor {
                         process_swizzle(&v, swizzle, scope, &name, ctx);
                     }
                 }
-                ASTValue::Int3(_, _, _, _) | ASTValue::Float3(_, _, _, _) => {
+                ASTASTValue::Int3(_, _, _, _) | ASTASTValue::Float3(_, _, _, _) => {
                     if swizzle.is_empty() {
                         let instr = format!("{}.get ${}_x", scope, name);
                         ctx.add_wat(&instr);
@@ -950,7 +950,7 @@ impl Visitor for ExecuteVisitor {
                         process_swizzle(&v, swizzle, scope, &name, ctx);
                     }
                 }
-                ASTValue::Int4(_, _, _, _, _) | ASTValue::Float4(_, _, _, _, _) => {
+                ASTASTValue::Int4(_, _, _, _, _) | ASTASTValue::Float4(_, _, _, _, _) => {
                     if swizzle.is_empty() {
                         let instr = format!("{}.get ${}_x", scope, name);
                         ctx.add_wat(&instr);
@@ -965,7 +965,7 @@ impl Visitor for ExecuteVisitor {
                         process_swizzle(&v, swizzle, scope, &name, ctx);
                     }
                 }
-                ASTValue::Mat2(_, _) | ASTValue::Mat3(_, _) | ASTValue::Mat4(_, _) => {
+                ASTASTValue::Mat2(_, _) | ASTASTValue::Mat3(_, _) | ASTASTValue::Mat4(_, _) => {
                     let instr = format!("{}.get", scope);
                     let comps = v.write_access(&instr, &name);
 
@@ -975,14 +975,14 @@ impl Visitor for ExecuteVisitor {
 
                     rc = v;
                 }
-                ASTValue::Struct(struct_name, _, _) => {
+                ASTASTValue::Struct(struct_name, _, _) => {
                     rc = ctx.access_struct(&name, struct_name, field_path, false, loc)?;
                 }
 
                 _ => {}
             }
-        } else if let Some(ASTValue::Function(name, args, body)) = self.functions.get(&name) {
-            rc = ASTValue::Function(name.clone(), args.clone(), body.clone());
+        } else if let Some(ASTASTValue::Function(name, args, body)) = self.functions.get(&name) {
+            rc = ASTASTValue::Function(name.clone(), args.clone(), body.clone());
         } else {
             return Err(RPUError::loc(format!("Unknown identifier '{}'", name), loc));
         }
@@ -994,8 +994,8 @@ impl Visitor for ExecuteVisitor {
 
         if let Some(vv) = self.environment.get(&name) {
             rc = vv;
-        } else if let Some(Value::Function(name, args, body)) = self.functions.get(&name) {
-            rc = Value::Function(name.clone(), args.clone(), body.clone());
+        } else if let Some(ASTValue::Function(name, args, body)) = self.functions.get(&name) {
+            rc = ASTValue::Function(name.clone(), args.clone(), body.clone());
         }
 
         Ok(rc)
@@ -1003,12 +1003,12 @@ impl Visitor for ExecuteVisitor {
 
     fn value(
         &mut self,
-        value: Value,
+        value: ASTValue,
         swizzle: &[u8],
         _field_path: &[String],
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         let rc;
         // let instr;
 
@@ -1024,19 +1024,19 @@ impl Visitor for ExecuteVisitor {
         // }
 
         match &value {
-            Value::Boolean(f) => {
-                rc = Value::Boolean(*f);
+            ASTValue::Boolean(f) => {
+                rc = ASTValue::Boolean(*f);
             }
-            // ASTValue::Int(_, i) => {
+            // ASTASTValue::Int(_, i) => {
             //     instr = format!("(i{}.const {})", ctx.pr, i);
-            //     rc = ASTValue::Int(None, *i);
+            //     rc = ASTASTValue::Int(None, *i);
             // }
-            Value::Float(i) => {
+            ASTValue::Float(i) => {
                 // instr = format!("(f{}.const {})", ctx.pr, i);
-                rc = Value::Float(*i);
+                rc = ASTValue::Float(*i);
             }
             /*
-            ASTValue::Float2(comps_txt, x, y) | ASTValue::Int2(comps_txt, x, y) => {
+            ASTASTValue::Float2(comps_txt, x, y) | ASTASTValue::Int2(comps_txt, x, y) => {
                 instr = "".to_string();
                 let comps: i32 = comps_txt.clone().unwrap().parse().unwrap();
                 let mut to_go = 2;
@@ -1068,7 +1068,7 @@ impl Visitor for ExecuteVisitor {
                     rc = value.clone();
                 }
             }
-            ASTValue::Float3(comps_txt, x, y, z) | ASTValue::Int3(comps_txt, x, y, z) => {
+            ASTASTValue::Float3(comps_txt, x, y, z) | ASTASTValue::Int3(comps_txt, x, y, z) => {
                 instr = "".to_string();
                 let comps: i32 = comps_txt.clone().unwrap().parse().unwrap();
                 let mut to_go = 3;
@@ -1104,7 +1104,7 @@ impl Visitor for ExecuteVisitor {
                     rc = value.clone();
                 }
             }
-            ASTValue::Float4(comps_txt, x, y, z, w) | ASTValue::Int4(comps_txt, x, y, z, w) => {
+            ASTASTValue::Float4(comps_txt, x, y, z, w) | ASTASTValue::Int4(comps_txt, x, y, z, w) => {
                 instr = "".to_string();
                 let comps: i32 = comps_txt.clone().unwrap().parse().unwrap();
 
@@ -1145,28 +1145,28 @@ impl Visitor for ExecuteVisitor {
                     rc = value.clone();
                 }
             }
-            ASTValue::Mat2(_, comps) => {
+            ASTASTValue::Mat2(_, comps) => {
                 instr = "".to_string();
                 for comp in comps {
                     let _ = comp.accept(self, ctx)?;
                 }
                 rc = value.clone();
             }
-            ASTValue::Mat3(_, comps) => {
+            ASTASTValue::Mat3(_, comps) => {
                 instr = "".to_string();
                 for comp in comps {
                     let _ = comp.accept(self, ctx)?;
                 }
                 rc = value.clone();
             }
-            ASTValue::Mat4(_, comps) => {
+            ASTASTValue::Mat4(_, comps) => {
                 instr = "".to_string();
                 for comp in comps {
                     let _ = comp.accept(self, ctx)?;
                 }
                 rc = value.clone();
             }
-            ASTValue::Struct(struct_name, _, fields) => {
+            ASTASTValue::Struct(struct_name, _, fields) => {
                 instr = "".to_string();
 
                 // Write all fields of the struct onto the stack
@@ -1217,7 +1217,7 @@ impl Visitor for ExecuteVisitor {
 
                 rc = value.clone();
             }*/
-            Value::None => {
+            ASTValue::None => {
                 // instr = "".to_string();
                 rc = value.clone();
             }
@@ -1239,7 +1239,7 @@ impl Visitor for ExecuteVisitor {
         expr: &Expr,
         _loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         let v = expr.accept(self, ctx)?;
 
         // !, - have the same behavior right now.
@@ -1257,7 +1257,7 @@ impl Visitor for ExecuteVisitor {
         right: &Expr,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         let left_value = left.accept(self, ctx)?;
         let right_value = right.accept(self, ctx)?;
 
@@ -1288,7 +1288,7 @@ impl Visitor for ExecuteVisitor {
         ctx.add_wat(&instr);
         */
 
-        Ok(Value::None)
+        Ok(ASTValue::None)
     }
 
     fn comparison(
@@ -1298,7 +1298,7 @@ impl Visitor for ExecuteVisitor {
         right: &Expr,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         let left_value = left.accept(self, ctx)?;
         let right_value = right.accept(self, ctx)?;
 
@@ -1345,485 +1345,485 @@ impl Visitor for ExecuteVisitor {
         right: &Expr,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         let left_type = left.accept(self, ctx)?;
         let right_type = right.accept(self, ctx)?;
 
         let rc = match (&left_type, &right_type) {
             // Float x Float
-            (Value::Float(left), Value::Float(right)) => match op {
-                BinaryOperator::Add => Value::Float(left + right),
-                BinaryOperator::Subtract => Value::Float(left - right),
-                BinaryOperator::Multiply => Value::Float(left * right),
-                BinaryOperator::Divide => Value::Float(left / right),
+            (ASTValue::Float(left), ASTValue::Float(right)) => match op {
+                BinaryOperator::Add => ASTValue::Float(left + right),
+                BinaryOperator::Subtract => ASTValue::Float(left - right),
+                BinaryOperator::Multiply => ASTValue::Float(left * right),
+                BinaryOperator::Divide => ASTValue::Float(left / right),
             },
             // Float3 x Float
-            (Value::Float3(x, y, z), Value::Float(right)) => {
+            (ASTValue::Float3(x, y, z), ASTValue::Float(right)) => {
                 let x_val = x.accept(self, ctx)?.to_float().unwrap_or_default();
                 let y_val = y.accept(self, ctx)?.to_float().unwrap_or_default();
                 let z_val = z.accept(self, ctx)?.to_float().unwrap_or_default();
                 match op {
-                    BinaryOperator::Add => Value::Float3(
+                    BinaryOperator::Add => ASTValue::Float3(
                         expr_float!(x_val + right),
                         expr_float!(y_val + right),
                         expr_float!(z_val + right),
                     ),
-                    BinaryOperator::Subtract => Value::Float3(
+                    BinaryOperator::Subtract => ASTValue::Float3(
                         expr_float!(x_val - right),
                         expr_float!(y_val - right),
                         expr_float!(z_val - right),
                     ),
-                    BinaryOperator::Multiply => Value::Float3(
+                    BinaryOperator::Multiply => ASTValue::Float3(
                         expr_float!(x_val * right),
                         expr_float!(y_val * right),
                         expr_float!(z_val * right),
                     ),
-                    BinaryOperator::Divide => Value::Float3(
+                    BinaryOperator::Divide => ASTValue::Float3(
                         expr_float!(x_val / right),
                         expr_float!(y_val / right),
                         expr_float!(z_val / right),
                     ),
                 }
             }
-            _ => Value::None, /*
-                              // Float x Float2
-                              (ASTValue::Float(_, _), ASTValue::Float2(_, _, _)) => {
-                                  rc = ASTValue::Float2(None, empty_expr!(), empty_expr!());
-                                  match op {
-                                      // Scalar and ivec2
-                                      BinaryOperator::Add => {
-                                          ctx.gen_scalar_vec2(&format!("f{}", ctx.pr), "add");
-                                          format!("(call $_rpu_scalar_add_vec2_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Subtract => {
-                                          ctx.gen_scalar_vec2(&format!("f{}", ctx.pr), "sub");
-                                          format!("(call $_rpu_scalar_sub_vec2_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Multiply => {
-                                          ctx.gen_scalar_vec2(&format!("f{}", ctx.pr), "mul");
-                                          format!("(call $_rpu_scalar_mul_vec2_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Divide => {
-                                          ctx.gen_scalar_vec2(&format!("f{}", ctx.pr), "div");
-                                          format!("(call $_rpu_scalar_div_vec2_f{})", ctx.pr)
-                                      }
-                                  }
-                              }
-                              // Float2 x Float
-                              (ASTValue::Float2(_, _, _), ASTValue::Float(_, _)) => {
-                                  rc = ASTValue::Float2(None, empty_expr!(), empty_expr!());
-                                  match op {
-                                      BinaryOperator::Add => {
-                                          ctx.gen_vec2_scalar(&format!("f{}", ctx.pr), "add");
-                                          format!("(call $_rpu_vec2_add_scalar_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Subtract => {
-                                          ctx.gen_vec2_scalar(&format!("f{}", ctx.pr), "sub");
-                                          format!("(call $_rpu_vec2_sub_scalar_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Multiply => {
-                                          ctx.gen_vec2_scalar(&format!("f{}", ctx.pr), "mul");
-                                          format!("(call $_rpu_vec2_mul_scalar_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Divide => {
-                                          ctx.gen_vec2_scalar(&format!("f{}", ctx.pr), "div");
-                                          format!("(call $_rpu_vec2_div_scalar_f{})", ctx.pr)
-                                      }
-                                  }
-                              }
-                              // Float x Float3
-                              (ASTValue::Float(_, _), ASTValue::Float3(_, _, _, _)) => {
-                                  rc = ASTValue::Float3(None, empty_expr!(), empty_expr!(), empty_expr!());
-                                  match op {
-                                      BinaryOperator::Add => {
-                                          ctx.gen_scalar_vec3(&format!("f{}", ctx.pr), "add");
-                                          format!("(call $_rpu_scalar_add_vec3_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Subtract => {
-                                          ctx.gen_scalar_vec3(&format!("f{}", ctx.pr), "sub");
-                                          format!("(call $_rpu_scalar_sub_vec3_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Multiply => {
-                                          ctx.gen_scalar_vec3(&format!("f{}", ctx.pr), "mul");
-                                          format!("(call $_rpu_scalar_mul_vec3_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Divide => {
-                                          ctx.gen_scalar_vec3(&format!("f{}", ctx.pr), "div");
-                                          format!("(call $_rpu_scalar_div_vec3_f{})", ctx.pr)
-                                      }
-                                  }
-                              }
-                              // Float3 x Float
-                              (ASTValue::Float3(_, _, _, _), ASTValue::Float(_, _)) => {
-                                  rc = ASTValue::Float3(None, empty_expr!(), empty_expr!(), empty_expr!());
-                                  match op {
-                                      BinaryOperator::Add => {
-                                          ctx.gen_vec3_scalar(&format!("f{}", ctx.pr), "add");
-                                          format!("(call $_rpu_vec3_add_scalar_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Subtract => {
-                                          ctx.gen_vec3_scalar(&format!("f{}", ctx.pr), "sub");
-                                          format!("(call $_rpu_vec3_sub_scalar_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Multiply => {
-                                          ctx.gen_vec3_scalar(&format!("f{}", ctx.pr), "mul");
-                                          format!("(call $_rpu_vec3_mul_scalar_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Divide => {
-                                          ctx.gen_vec3_scalar(&format!("f{}", ctx.pr), "div");
-                                          format!("(call $_rpu_vec3_div_scalar_f{})", ctx.pr)
-                                      }
-                                  }
-                              }
-                              // Float x Float4
-                              (ASTValue::Float(_, _), ASTValue::Float4(_, _, _, _, _)) => {
-                                  rc = ASTValue::Float4(
-                                      None,
-                                      empty_expr!(),
-                                      empty_expr!(),
-                                      empty_expr!(),
-                                      empty_expr!(),
-                                  );
-                                  match op {
-                                      BinaryOperator::Add => {
-                                          ctx.gen_scalar_vec4(&format!("f{}", ctx.pr), "add");
-                                          format!("(call $_rpu_scalar_add_vec4_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Subtract => {
-                                          ctx.gen_scalar_vec4(&format!("f{}", ctx.pr), "sub");
-                                          format!("(call $_rpu_scalar_sub_vec4_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Multiply => {
-                                          ctx.gen_scalar_vec4(&format!("f{}", ctx.pr), "mul");
-                                          format!("(call $_rpu_scalar_mul_vec4_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Divide => {
-                                          ctx.gen_scalar_vec4(&format!("f{}", ctx.pr), "div");
-                                          format!("(call $_rpu_scalar_div_vec4_f{})", ctx.pr)
-                                      }
-                                  }
-                              }
-                              // Float4 x Float
-                              (ASTValue::Float4(_, _, _, _, _), ASTValue::Float(_, _)) => {
-                                  rc = ASTValue::Float4(
-                                      None,
-                                      empty_expr!(),
-                                      empty_expr!(),
-                                      empty_expr!(),
-                                      empty_expr!(),
-                                  );
-                                  match op {
-                                      BinaryOperator::Add => {
-                                          ctx.gen_vec4_scalar(&format!("f{}", ctx.pr), "add");
-                                          format!("(call $_rpu_vec4_add_scalar_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Subtract => {
-                                          ctx.gen_vec4_scalar(&format!("f{}", ctx.pr), "sub");
-                                          format!("(call $_rpu_vec4_sub_scalar_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Multiply => {
-                                          ctx.gen_vec4_scalar(&format!("f{}", ctx.pr), "mul");
-                                          format!("(call $_rpu_vec4_mul_scalar_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Divide => {
-                                          ctx.gen_vec4_scalar(&format!("f{}", ctx.pr), "div");
-                                          format!("(call $_rpu_vec4_div_scalar_f{})", ctx.pr)
-                                      }
-                                  }
-                              }
-                              // Int2 x Int2
-                              (ASTValue::Int2(_, _, _), ASTValue::Int2(_, _, _)) => {
-                                  rc = ASTValue::Int2(None, empty_expr!(), empty_expr!());
-                                  match op {
-                                      BinaryOperator::Add => {
-                                          ctx.gen_vec2_vec2(&format!("i{}", ctx.pr), "add");
-                                          format!("(call $_rpu_vec2_add_vec2_i{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Subtract => {
-                                          ctx.gen_vec2_vec2(&format!("i{}", ctx.pr), "sub");
-                                          format!("(call $_rpu_vec2_sub_vec2_i{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Multiply => {
-                                          ctx.gen_vec2_vec2(&format!("i{}", ctx.pr), "mul");
-                                          format!("(call $_rpu_vec2_mul_vec2_i{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Divide => {
-                                          ctx.gen_vec2_vec2(&format!("i{}", ctx.pr), "div");
-                                          format!("(call $_rpu_vec2_div_vec2_i{})", ctx.pr)
-                                      }
-                                  }
-                              }
-                              // Float2 x Float2
-                              (ASTValue::Float2(_, _, _), ASTValue::Float2(_, _, _)) => {
-                                  rc = ASTValue::Float2(None, empty_expr!(), empty_expr!());
-                                  match op {
-                                      BinaryOperator::Add => {
-                                          ctx.gen_vec2_vec2(&format!("f{}", ctx.pr), "add");
-                                          format!("(call $_rpu_vec2_add_vec2_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Subtract => {
-                                          ctx.gen_vec2_vec2(&format!("f{}", ctx.pr), "sub");
-                                          format!("(call $_rpu_vec2_sub_vec2_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Multiply => {
-                                          ctx.gen_vec2_vec2(&format!("f{}", ctx.pr), "mul");
-                                          format!("(call $_rpu_vec2_mul_vec2_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Divide => {
-                                          ctx.gen_vec2_vec2(&format!("f{}", ctx.pr), "div");
-                                          format!("(call $_rpu_vec2_div_vec2_f{})", ctx.pr)
-                                      }
-                                  }
-                              }
-                              // Int3 x Int3
-                              (ASTValue::Int3(_, _, _, _), ASTValue::Int3(_, _, _, _)) => {
-                                  rc = ASTValue::Int3(None, empty_expr!(), empty_expr!(), empty_expr!());
-                                  match op {
-                                      BinaryOperator::Add => {
-                                          ctx.gen_vec3_vec3(&format!("i{}", ctx.pr), "add");
-                                          format!("(call $_rpu_vec3_add_vec3_i{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Subtract => {
-                                          ctx.gen_vec3_vec3(&format!("i{}", ctx.pr), "sub");
-                                          format!("(call $_rpu_vec3_sub_vec3_i{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Multiply => {
-                                          ctx.gen_vec3_vec3(&format!("i{}", ctx.pr), "mul");
-                                          format!("(call $_rpu_vec3_mul_vec3_i{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Divide => {
-                                          ctx.gen_vec3_vec3(&format!("i{}", ctx.pr), "div");
-                                          format!("(call $_rpu_vec3_div_vec3_i{})", ctx.pr)
-                                      }
-                                  }
-                              }
-                              // Float3 x Float3
-                              (ASTValue::Float3(_, _, _, _), ASTValue::Float3(_, _, _, _)) => {
-                                  rc = ASTValue::Float3(None, empty_expr!(), empty_expr!(), empty_expr!());
-                                  match op {
-                                      BinaryOperator::Add => {
-                                          ctx.gen_vec3_vec3(&format!("f{}", ctx.pr), "add");
-                                          format!("(call $_rpu_vec3_add_vec3_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Subtract => {
-                                          ctx.gen_vec3_vec3(&format!("f{}", ctx.pr), "sub");
-                                          format!("(call $_rpu_vec3_sub_vec3_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Multiply => {
-                                          ctx.gen_vec3_vec3(&format!("f{}", ctx.pr), "mul");
-                                          format!("(call $_rpu_vec3_mul_vec3_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Divide => {
-                                          ctx.gen_vec3_vec3(&format!("f{}", ctx.pr), "div");
-                                          format!("(call $_rpu_vec3_div_vec3_f{})", ctx.pr)
-                                      }
-                                  }
-                              }
-                              // Int4 x Int4
-                              (ASTValue::Int4(_, _, _, _, _), ASTValue::Int4(_, _, _, _, _)) => {
-                                  rc = ASTValue::Int4(
-                                      None,
-                                      empty_expr!(),
-                                      empty_expr!(),
-                                      empty_expr!(),
-                                      empty_expr!(),
-                                  );
-                                  match op {
-                                      BinaryOperator::Add => {
-                                          ctx.gen_vec4_vec4(&format!("i{}", ctx.pr), "add");
-                                          format!("(call $_rpu_vec4_add_vec4_i{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Subtract => {
-                                          ctx.gen_vec4_vec4(&format!("i{}", ctx.pr), "sub");
-                                          format!("(call $_rpu_vec4_sub_vec4_i{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Multiply => {
-                                          ctx.gen_vec4_vec4(&format!("i{}", ctx.pr), "mul");
-                                          format!("(call $_rpu_vec4_mul_vec4_i{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Divide => {
-                                          ctx.gen_vec4_vec4(&format!("i{}", ctx.pr), "div");
-                                          format!("(call $_rpu_vec4_div_vec4_i{})", ctx.pr)
-                                      }
-                                  }
-                              }
-                              // Float4 x Float4
-                              (ASTValue::Float4(_, _, _, _, _), ASTValue::Float4(_, _, _, _, _)) => {
-                                  rc = ASTValue::Float4(
-                                      None,
-                                      empty_expr!(),
-                                      empty_expr!(),
-                                      empty_expr!(),
-                                      empty_expr!(),
-                                  );
-                                  match op {
-                                      BinaryOperator::Add => {
-                                          ctx.gen_vec4_vec4(&format!("f{}", ctx.pr), "add");
-                                          format!("(call $_rpu_vec4_add_vec4_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Subtract => {
-                                          ctx.gen_vec4_vec4(&format!("f{}", ctx.pr), "sub");
-                                          format!("(call $_rpu_vec4_sub_vec4_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Multiply => {
-                                          ctx.gen_vec4_vec4(&format!("f{}", ctx.pr), "mul");
-                                          format!("(call $_rpu_vec4_mul_vec4_f{})", ctx.pr)
-                                      }
-                                      BinaryOperator::Divide => {
-                                          ctx.gen_vec4_vec4(&format!("f{}", ctx.pr), "div");
-                                          format!("(call $_rpu_vec4_div_vec4_f{})", ctx.pr)
-                                      }
-                                  }
-                              }
-                              // Mat2 x Float2
-                              (ASTValue::Mat2(_, _), ASTValue::Float2(_, _, _)) => {
-                                  rc = ASTValue::Float2(None, empty_expr!(), empty_expr!());
-                                  match op {
-                                      BinaryOperator::Multiply => {
-                                          ctx.gen_mat2_vec2(&format!("f{}", ctx.pr), "mul");
-                                          format!("(call $_rpu_mat2_mul_vec2_f{})", ctx.pr)
-                                      }
-                                      _ => {
-                                          return Err(RPUError::loc(
-                                              format!(
-                                                  "Invalid operator '{}' for types '{}' '{}'",
-                                                  op.describe(),
-                                                  left_type.to_type(),
-                                                  right_type.to_type()
-                                              ),
-                                              loc,
-                                          ));
-                                      }
-                                  }
-                              }
-                              // Float2 x Mat2
-                              (ASTValue::Float2(_, _, _), ASTValue::Mat2(_, _)) => {
-                                  rc = ASTValue::Float2(None, empty_expr!(), empty_expr!());
-                                  match op {
-                                      BinaryOperator::Multiply => {
-                                          ctx.gen_vec2_mat2(&format!("f{}", ctx.pr), "mul");
-                                          format!("(call $_rpu_vec2_mul_mat2_f{})", ctx.pr)
-                                      }
-                                      _ => {
-                                          return Err(RPUError::loc(
-                                              format!(
-                                                  "Invalid operator '{}' for types '{}' '{}'",
-                                                  op.describe(),
-                                                  left_type.to_type(),
-                                                  right_type.to_type()
-                                              ),
-                                              loc,
-                                          ));
-                                      }
-                                  }
-                              }
-                              // Mat3 x Float3
-                              (ASTValue::Mat3(_, _), ASTValue::Float3(_, _, _, _)) => {
-                                  rc = ASTValue::Float3(None, empty_expr!(), empty_expr!(), empty_expr!());
-                                  match op {
-                                      BinaryOperator::Multiply => {
-                                          ctx.gen_mat3_vec3(&format!("f{}", ctx.pr), "mul");
-                                          format!("(call $_rpu_mat3_mul_vec3_f{})", ctx.pr)
-                                      }
-                                      _ => {
-                                          return Err(RPUError::loc(
-                                              format!(
-                                                  "Invalid operator '{}' for types '{}' '{}'",
-                                                  op.describe(),
-                                                  left_type.to_type(),
-                                                  right_type.to_type()
-                                              ),
-                                              loc,
-                                          ));
-                                      }
-                                  }
-                              }
-                              // Float3 x Mat3
-                              (ASTValue::Float3(_, _, _, _), ASTValue::Mat3(_, _)) => {
-                                  rc = ASTValue::Float3(None, empty_expr!(), empty_expr!(), empty_expr!());
-                                  match op {
-                                      BinaryOperator::Multiply => {
-                                          ctx.gen_vec3_mat3(&format!("f{}", ctx.pr), "mul");
-                                          format!("(call $_rpu_vec3_mul_mat3_f{})", ctx.pr)
-                                      }
-                                      _ => {
-                                          return Err(RPUError::loc(
-                                              format!(
-                                                  "Invalid operator '{}' for types '{}' '{}'",
-                                                  op.describe(),
-                                                  left_type.to_type(),
-                                                  right_type.to_type()
-                                              ),
-                                              loc,
-                                          ));
-                                      }
-                                  }
-                              }
-                              // Mat4 x Float4
-                              (ASTValue::Mat4(_, _), ASTValue::Float4(_, _, _, _, _)) => {
-                                  rc = ASTValue::Float4(
-                                      None,
-                                      empty_expr!(),
-                                      empty_expr!(),
-                                      empty_expr!(),
-                                      empty_expr!(),
-                                  );
-                                  match op {
-                                      BinaryOperator::Multiply => {
-                                          ctx.gen_mat4_vec4(&format!("f{}", ctx.pr), "mul");
-                                          format!("(call $_rpu_mat4_mul_vec4_f{})", ctx.pr)
-                                      }
-                                      _ => {
-                                          return Err(RPUError::loc(
-                                              format!(
-                                                  "Invalid operator '{}' for types '{}' '{}'",
-                                                  op.describe(),
-                                                  left_type.to_type(),
-                                                  right_type.to_type()
-                                              ),
-                                              loc,
-                                          ));
-                                      }
-                                  }
-                              }
-                              // Float4 x Mat4
-                              (ASTValue::Float4(_, _, _, _, _), ASTValue::Mat4(_, _)) => {
-                                  rc = ASTValue::Float4(
-                                      None,
-                                      empty_expr!(),
-                                      empty_expr!(),
-                                      empty_expr!(),
-                                      empty_expr!(),
-                                  );
-                                  match op {
-                                      BinaryOperator::Multiply => {
-                                          ctx.gen_vec4_mat4(&format!("f{}", ctx.pr), "mul");
-                                          format!("(call $_rpu_vec4_mul_mat4_f{})", ctx.pr)
-                                      }
-                                      _ => {
-                                          return Err(RPUError::loc(
-                                              format!(
-                                                  "Invalid operator '{}' for types '{}' '{}'",
-                                                  op.describe(),
-                                                  left_type.to_type(),
-                                                  right_type.to_type()
-                                              ),
-                                              loc,
-                                          ));
-                                      }
-                                  }
-                              }
-                              _ => {
-                                  return Err(RPUError::loc(
-                                      format!(
-                                          "Invalid types '{}' '{}' for operator '{}'",
-                                          left_type.to_type(),
-                                          right_type.to_type(),
-                                          op.describe()
-                                      ),
-                                      loc,
-                                  ));
-                              }*/
+            _ => ASTValue::None, /*
+                                 // Float x Float2
+                                 (ASTASTValue::Float(_, _), ASTASTValue::Float2(_, _, _)) => {
+                                     rc = ASTASTValue::Float2(None, empty_expr!(), empty_expr!());
+                                     match op {
+                                         // Scalar and ivec2
+                                         BinaryOperator::Add => {
+                                             ctx.gen_scalar_vec2(&format!("f{}", ctx.pr), "add");
+                                             format!("(call $_rpu_scalar_add_vec2_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Subtract => {
+                                             ctx.gen_scalar_vec2(&format!("f{}", ctx.pr), "sub");
+                                             format!("(call $_rpu_scalar_sub_vec2_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Multiply => {
+                                             ctx.gen_scalar_vec2(&format!("f{}", ctx.pr), "mul");
+                                             format!("(call $_rpu_scalar_mul_vec2_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Divide => {
+                                             ctx.gen_scalar_vec2(&format!("f{}", ctx.pr), "div");
+                                             format!("(call $_rpu_scalar_div_vec2_f{})", ctx.pr)
+                                         }
+                                     }
+                                 }
+                                 // Float2 x Float
+                                 (ASTASTValue::Float2(_, _, _), ASTASTValue::Float(_, _)) => {
+                                     rc = ASTASTValue::Float2(None, empty_expr!(), empty_expr!());
+                                     match op {
+                                         BinaryOperator::Add => {
+                                             ctx.gen_vec2_scalar(&format!("f{}", ctx.pr), "add");
+                                             format!("(call $_rpu_vec2_add_scalar_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Subtract => {
+                                             ctx.gen_vec2_scalar(&format!("f{}", ctx.pr), "sub");
+                                             format!("(call $_rpu_vec2_sub_scalar_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Multiply => {
+                                             ctx.gen_vec2_scalar(&format!("f{}", ctx.pr), "mul");
+                                             format!("(call $_rpu_vec2_mul_scalar_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Divide => {
+                                             ctx.gen_vec2_scalar(&format!("f{}", ctx.pr), "div");
+                                             format!("(call $_rpu_vec2_div_scalar_f{})", ctx.pr)
+                                         }
+                                     }
+                                 }
+                                 // Float x Float3
+                                 (ASTASTValue::Float(_, _), ASTASTValue::Float3(_, _, _, _)) => {
+                                     rc = ASTASTValue::Float3(None, empty_expr!(), empty_expr!(), empty_expr!());
+                                     match op {
+                                         BinaryOperator::Add => {
+                                             ctx.gen_scalar_vec3(&format!("f{}", ctx.pr), "add");
+                                             format!("(call $_rpu_scalar_add_vec3_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Subtract => {
+                                             ctx.gen_scalar_vec3(&format!("f{}", ctx.pr), "sub");
+                                             format!("(call $_rpu_scalar_sub_vec3_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Multiply => {
+                                             ctx.gen_scalar_vec3(&format!("f{}", ctx.pr), "mul");
+                                             format!("(call $_rpu_scalar_mul_vec3_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Divide => {
+                                             ctx.gen_scalar_vec3(&format!("f{}", ctx.pr), "div");
+                                             format!("(call $_rpu_scalar_div_vec3_f{})", ctx.pr)
+                                         }
+                                     }
+                                 }
+                                 // Float3 x Float
+                                 (ASTASTValue::Float3(_, _, _, _), ASTASTValue::Float(_, _)) => {
+                                     rc = ASTASTValue::Float3(None, empty_expr!(), empty_expr!(), empty_expr!());
+                                     match op {
+                                         BinaryOperator::Add => {
+                                             ctx.gen_vec3_scalar(&format!("f{}", ctx.pr), "add");
+                                             format!("(call $_rpu_vec3_add_scalar_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Subtract => {
+                                             ctx.gen_vec3_scalar(&format!("f{}", ctx.pr), "sub");
+                                             format!("(call $_rpu_vec3_sub_scalar_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Multiply => {
+                                             ctx.gen_vec3_scalar(&format!("f{}", ctx.pr), "mul");
+                                             format!("(call $_rpu_vec3_mul_scalar_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Divide => {
+                                             ctx.gen_vec3_scalar(&format!("f{}", ctx.pr), "div");
+                                             format!("(call $_rpu_vec3_div_scalar_f{})", ctx.pr)
+                                         }
+                                     }
+                                 }
+                                 // Float x Float4
+                                 (ASTASTValue::Float(_, _), ASTASTValue::Float4(_, _, _, _, _)) => {
+                                     rc = ASTASTValue::Float4(
+                                         None,
+                                         empty_expr!(),
+                                         empty_expr!(),
+                                         empty_expr!(),
+                                         empty_expr!(),
+                                     );
+                                     match op {
+                                         BinaryOperator::Add => {
+                                             ctx.gen_scalar_vec4(&format!("f{}", ctx.pr), "add");
+                                             format!("(call $_rpu_scalar_add_vec4_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Subtract => {
+                                             ctx.gen_scalar_vec4(&format!("f{}", ctx.pr), "sub");
+                                             format!("(call $_rpu_scalar_sub_vec4_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Multiply => {
+                                             ctx.gen_scalar_vec4(&format!("f{}", ctx.pr), "mul");
+                                             format!("(call $_rpu_scalar_mul_vec4_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Divide => {
+                                             ctx.gen_scalar_vec4(&format!("f{}", ctx.pr), "div");
+                                             format!("(call $_rpu_scalar_div_vec4_f{})", ctx.pr)
+                                         }
+                                     }
+                                 }
+                                 // Float4 x Float
+                                 (ASTASTValue::Float4(_, _, _, _, _), ASTASTValue::Float(_, _)) => {
+                                     rc = ASTASTValue::Float4(
+                                         None,
+                                         empty_expr!(),
+                                         empty_expr!(),
+                                         empty_expr!(),
+                                         empty_expr!(),
+                                     );
+                                     match op {
+                                         BinaryOperator::Add => {
+                                             ctx.gen_vec4_scalar(&format!("f{}", ctx.pr), "add");
+                                             format!("(call $_rpu_vec4_add_scalar_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Subtract => {
+                                             ctx.gen_vec4_scalar(&format!("f{}", ctx.pr), "sub");
+                                             format!("(call $_rpu_vec4_sub_scalar_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Multiply => {
+                                             ctx.gen_vec4_scalar(&format!("f{}", ctx.pr), "mul");
+                                             format!("(call $_rpu_vec4_mul_scalar_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Divide => {
+                                             ctx.gen_vec4_scalar(&format!("f{}", ctx.pr), "div");
+                                             format!("(call $_rpu_vec4_div_scalar_f{})", ctx.pr)
+                                         }
+                                     }
+                                 }
+                                 // Int2 x Int2
+                                 (ASTASTValue::Int2(_, _, _), ASTASTValue::Int2(_, _, _)) => {
+                                     rc = ASTASTValue::Int2(None, empty_expr!(), empty_expr!());
+                                     match op {
+                                         BinaryOperator::Add => {
+                                             ctx.gen_vec2_vec2(&format!("i{}", ctx.pr), "add");
+                                             format!("(call $_rpu_vec2_add_vec2_i{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Subtract => {
+                                             ctx.gen_vec2_vec2(&format!("i{}", ctx.pr), "sub");
+                                             format!("(call $_rpu_vec2_sub_vec2_i{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Multiply => {
+                                             ctx.gen_vec2_vec2(&format!("i{}", ctx.pr), "mul");
+                                             format!("(call $_rpu_vec2_mul_vec2_i{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Divide => {
+                                             ctx.gen_vec2_vec2(&format!("i{}", ctx.pr), "div");
+                                             format!("(call $_rpu_vec2_div_vec2_i{})", ctx.pr)
+                                         }
+                                     }
+                                 }
+                                 // Float2 x Float2
+                                 (ASTASTValue::Float2(_, _, _), ASTASTValue::Float2(_, _, _)) => {
+                                     rc = ASTASTValue::Float2(None, empty_expr!(), empty_expr!());
+                                     match op {
+                                         BinaryOperator::Add => {
+                                             ctx.gen_vec2_vec2(&format!("f{}", ctx.pr), "add");
+                                             format!("(call $_rpu_vec2_add_vec2_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Subtract => {
+                                             ctx.gen_vec2_vec2(&format!("f{}", ctx.pr), "sub");
+                                             format!("(call $_rpu_vec2_sub_vec2_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Multiply => {
+                                             ctx.gen_vec2_vec2(&format!("f{}", ctx.pr), "mul");
+                                             format!("(call $_rpu_vec2_mul_vec2_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Divide => {
+                                             ctx.gen_vec2_vec2(&format!("f{}", ctx.pr), "div");
+                                             format!("(call $_rpu_vec2_div_vec2_f{})", ctx.pr)
+                                         }
+                                     }
+                                 }
+                                 // Int3 x Int3
+                                 (ASTASTValue::Int3(_, _, _, _), ASTASTValue::Int3(_, _, _, _)) => {
+                                     rc = ASTASTValue::Int3(None, empty_expr!(), empty_expr!(), empty_expr!());
+                                     match op {
+                                         BinaryOperator::Add => {
+                                             ctx.gen_vec3_vec3(&format!("i{}", ctx.pr), "add");
+                                             format!("(call $_rpu_vec3_add_vec3_i{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Subtract => {
+                                             ctx.gen_vec3_vec3(&format!("i{}", ctx.pr), "sub");
+                                             format!("(call $_rpu_vec3_sub_vec3_i{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Multiply => {
+                                             ctx.gen_vec3_vec3(&format!("i{}", ctx.pr), "mul");
+                                             format!("(call $_rpu_vec3_mul_vec3_i{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Divide => {
+                                             ctx.gen_vec3_vec3(&format!("i{}", ctx.pr), "div");
+                                             format!("(call $_rpu_vec3_div_vec3_i{})", ctx.pr)
+                                         }
+                                     }
+                                 }
+                                 // Float3 x Float3
+                                 (ASTASTValue::Float3(_, _, _, _), ASTASTValue::Float3(_, _, _, _)) => {
+                                     rc = ASTASTValue::Float3(None, empty_expr!(), empty_expr!(), empty_expr!());
+                                     match op {
+                                         BinaryOperator::Add => {
+                                             ctx.gen_vec3_vec3(&format!("f{}", ctx.pr), "add");
+                                             format!("(call $_rpu_vec3_add_vec3_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Subtract => {
+                                             ctx.gen_vec3_vec3(&format!("f{}", ctx.pr), "sub");
+                                             format!("(call $_rpu_vec3_sub_vec3_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Multiply => {
+                                             ctx.gen_vec3_vec3(&format!("f{}", ctx.pr), "mul");
+                                             format!("(call $_rpu_vec3_mul_vec3_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Divide => {
+                                             ctx.gen_vec3_vec3(&format!("f{}", ctx.pr), "div");
+                                             format!("(call $_rpu_vec3_div_vec3_f{})", ctx.pr)
+                                         }
+                                     }
+                                 }
+                                 // Int4 x Int4
+                                 (ASTASTValue::Int4(_, _, _, _, _), ASTASTValue::Int4(_, _, _, _, _)) => {
+                                     rc = ASTASTValue::Int4(
+                                         None,
+                                         empty_expr!(),
+                                         empty_expr!(),
+                                         empty_expr!(),
+                                         empty_expr!(),
+                                     );
+                                     match op {
+                                         BinaryOperator::Add => {
+                                             ctx.gen_vec4_vec4(&format!("i{}", ctx.pr), "add");
+                                             format!("(call $_rpu_vec4_add_vec4_i{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Subtract => {
+                                             ctx.gen_vec4_vec4(&format!("i{}", ctx.pr), "sub");
+                                             format!("(call $_rpu_vec4_sub_vec4_i{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Multiply => {
+                                             ctx.gen_vec4_vec4(&format!("i{}", ctx.pr), "mul");
+                                             format!("(call $_rpu_vec4_mul_vec4_i{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Divide => {
+                                             ctx.gen_vec4_vec4(&format!("i{}", ctx.pr), "div");
+                                             format!("(call $_rpu_vec4_div_vec4_i{})", ctx.pr)
+                                         }
+                                     }
+                                 }
+                                 // Float4 x Float4
+                                 (ASTASTValue::Float4(_, _, _, _, _), ASTASTValue::Float4(_, _, _, _, _)) => {
+                                     rc = ASTASTValue::Float4(
+                                         None,
+                                         empty_expr!(),
+                                         empty_expr!(),
+                                         empty_expr!(),
+                                         empty_expr!(),
+                                     );
+                                     match op {
+                                         BinaryOperator::Add => {
+                                             ctx.gen_vec4_vec4(&format!("f{}", ctx.pr), "add");
+                                             format!("(call $_rpu_vec4_add_vec4_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Subtract => {
+                                             ctx.gen_vec4_vec4(&format!("f{}", ctx.pr), "sub");
+                                             format!("(call $_rpu_vec4_sub_vec4_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Multiply => {
+                                             ctx.gen_vec4_vec4(&format!("f{}", ctx.pr), "mul");
+                                             format!("(call $_rpu_vec4_mul_vec4_f{})", ctx.pr)
+                                         }
+                                         BinaryOperator::Divide => {
+                                             ctx.gen_vec4_vec4(&format!("f{}", ctx.pr), "div");
+                                             format!("(call $_rpu_vec4_div_vec4_f{})", ctx.pr)
+                                         }
+                                     }
+                                 }
+                                 // Mat2 x Float2
+                                 (ASTASTValue::Mat2(_, _), ASTASTValue::Float2(_, _, _)) => {
+                                     rc = ASTASTValue::Float2(None, empty_expr!(), empty_expr!());
+                                     match op {
+                                         BinaryOperator::Multiply => {
+                                             ctx.gen_mat2_vec2(&format!("f{}", ctx.pr), "mul");
+                                             format!("(call $_rpu_mat2_mul_vec2_f{})", ctx.pr)
+                                         }
+                                         _ => {
+                                             return Err(RPUError::loc(
+                                                 format!(
+                                                     "Invalid operator '{}' for types '{}' '{}'",
+                                                     op.describe(),
+                                                     left_type.to_type(),
+                                                     right_type.to_type()
+                                                 ),
+                                                 loc,
+                                             ));
+                                         }
+                                     }
+                                 }
+                                 // Float2 x Mat2
+                                 (ASTASTValue::Float2(_, _, _), ASTASTValue::Mat2(_, _)) => {
+                                     rc = ASTASTValue::Float2(None, empty_expr!(), empty_expr!());
+                                     match op {
+                                         BinaryOperator::Multiply => {
+                                             ctx.gen_vec2_mat2(&format!("f{}", ctx.pr), "mul");
+                                             format!("(call $_rpu_vec2_mul_mat2_f{})", ctx.pr)
+                                         }
+                                         _ => {
+                                             return Err(RPUError::loc(
+                                                 format!(
+                                                     "Invalid operator '{}' for types '{}' '{}'",
+                                                     op.describe(),
+                                                     left_type.to_type(),
+                                                     right_type.to_type()
+                                                 ),
+                                                 loc,
+                                             ));
+                                         }
+                                     }
+                                 }
+                                 // Mat3 x Float3
+                                 (ASTASTValue::Mat3(_, _), ASTASTValue::Float3(_, _, _, _)) => {
+                                     rc = ASTASTValue::Float3(None, empty_expr!(), empty_expr!(), empty_expr!());
+                                     match op {
+                                         BinaryOperator::Multiply => {
+                                             ctx.gen_mat3_vec3(&format!("f{}", ctx.pr), "mul");
+                                             format!("(call $_rpu_mat3_mul_vec3_f{})", ctx.pr)
+                                         }
+                                         _ => {
+                                             return Err(RPUError::loc(
+                                                 format!(
+                                                     "Invalid operator '{}' for types '{}' '{}'",
+                                                     op.describe(),
+                                                     left_type.to_type(),
+                                                     right_type.to_type()
+                                                 ),
+                                                 loc,
+                                             ));
+                                         }
+                                     }
+                                 }
+                                 // Float3 x Mat3
+                                 (ASTASTValue::Float3(_, _, _, _), ASTASTValue::Mat3(_, _)) => {
+                                     rc = ASTASTValue::Float3(None, empty_expr!(), empty_expr!(), empty_expr!());
+                                     match op {
+                                         BinaryOperator::Multiply => {
+                                             ctx.gen_vec3_mat3(&format!("f{}", ctx.pr), "mul");
+                                             format!("(call $_rpu_vec3_mul_mat3_f{})", ctx.pr)
+                                         }
+                                         _ => {
+                                             return Err(RPUError::loc(
+                                                 format!(
+                                                     "Invalid operator '{}' for types '{}' '{}'",
+                                                     op.describe(),
+                                                     left_type.to_type(),
+                                                     right_type.to_type()
+                                                 ),
+                                                 loc,
+                                             ));
+                                         }
+                                     }
+                                 }
+                                 // Mat4 x Float4
+                                 (ASTASTValue::Mat4(_, _), ASTASTValue::Float4(_, _, _, _, _)) => {
+                                     rc = ASTASTValue::Float4(
+                                         None,
+                                         empty_expr!(),
+                                         empty_expr!(),
+                                         empty_expr!(),
+                                         empty_expr!(),
+                                     );
+                                     match op {
+                                         BinaryOperator::Multiply => {
+                                             ctx.gen_mat4_vec4(&format!("f{}", ctx.pr), "mul");
+                                             format!("(call $_rpu_mat4_mul_vec4_f{})", ctx.pr)
+                                         }
+                                         _ => {
+                                             return Err(RPUError::loc(
+                                                 format!(
+                                                     "Invalid operator '{}' for types '{}' '{}'",
+                                                     op.describe(),
+                                                     left_type.to_type(),
+                                                     right_type.to_type()
+                                                 ),
+                                                 loc,
+                                             ));
+                                         }
+                                     }
+                                 }
+                                 // Float4 x Mat4
+                                 (ASTASTValue::Float4(_, _, _, _, _), ASTASTValue::Mat4(_, _)) => {
+                                     rc = ASTASTValue::Float4(
+                                         None,
+                                         empty_expr!(),
+                                         empty_expr!(),
+                                         empty_expr!(),
+                                         empty_expr!(),
+                                     );
+                                     match op {
+                                         BinaryOperator::Multiply => {
+                                             ctx.gen_vec4_mat4(&format!("f{}", ctx.pr), "mul");
+                                             format!("(call $_rpu_vec4_mul_mat4_f{})", ctx.pr)
+                                         }
+                                         _ => {
+                                             return Err(RPUError::loc(
+                                                 format!(
+                                                     "Invalid operator '{}' for types '{}' '{}'",
+                                                     op.describe(),
+                                                     left_type.to_type(),
+                                                     right_type.to_type()
+                                                 ),
+                                                 loc,
+                                             ));
+                                         }
+                                     }
+                                 }
+                                 _ => {
+                                     return Err(RPUError::loc(
+                                         format!(
+                                             "Invalid types '{}' '{}' for operator '{}'",
+                                             left_type.to_type(),
+                                             right_type.to_type(),
+                                             op.describe()
+                                         ),
+                                         loc,
+                                     ));
+                                 }*/
         };
 
         // ctx.add_wat(&instr);
@@ -1836,7 +1836,7 @@ impl Visitor for ExecuteVisitor {
         expression: &Expr,
         _loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         expression.accept(self, ctx)
     }
 
@@ -1848,16 +1848,16 @@ impl Visitor for ExecuteVisitor {
         args: &[Box<Expr>],
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         let callee = callee.accept(self, ctx)?;
-        let mut rc = Value::None;
+        let mut rc = ASTValue::None;
 
         // println!(
         //     "func_call: callee: {:?}, swizzle: {:?}, args: {:?}",
         //     callee, swizzle, args
         // );
 
-        if let Value::Function(name, func_args, returns) = callee {
+        if let ASTValue::Function(name, func_args, returns) = callee {
             if func_args.len() != args.len() {
                 // return Err(RPUError::loc(
                 //     format!(
@@ -1874,13 +1874,13 @@ impl Visitor for ExecuteVisitor {
                 let v = args[0].accept(self, ctx)?;
 
                 match v {
-                    Value::Float3(x, y, z) => {
+                    ASTValue::Float3(x, y, z) => {
                         let x_val = x.accept(self, ctx)?.to_float().unwrap_or_default();
                         let y_val = y.accept(self, ctx)?.to_float().unwrap_or_default();
                         let z_val = z.accept(self, ctx)?.to_float().unwrap_or_default();
 
                         let r = Vec3::new(x_val, y_val, z_val).magnitude();
-                        rc = Value::Float(r);
+                        rc = ASTValue::Float(r);
                     }
                     _ => {}
                 }
@@ -1896,39 +1896,10 @@ impl Visitor for ExecuteVisitor {
                 let func_name = ctx.gen_vec_length(v.components() as u32);
                 let instr = format!("(call ${})", func_name);
                 ctx.add_wat(&instr);
-                rc = ASTValue::Float(None, 0.0);*/
+                rc = ASTASTValue::Float(None, 0.0);*/
             }
         }
 
-        /*
-        if let Value::Function(name, func_args, returns) = callee {
-            if func_args.len() != args.len() {
-                return Err(RPUError::loc(
-                    format!(
-                        "Function '{}' expects {} arguments, but {} were provided",
-                        name,
-                        func_args.len(),
-                        args.len()
-                    ),
-                    loc,
-                ));
-            }
-
-            if name == "length" {
-                let v = args[0].accept(self, ctx)?;
-                let components = v.components();
-                if !(1..=4).contains(&components) {
-                    return Err(RPUError::loc(
-                        format!("Invalid number of components {}", components),
-                        loc,
-                    ));
-                }
-                let func_name = ctx.gen_vec_length(v.components() as u32);
-                let instr = format!("(call ${})", func_name);
-                ctx.add_wat(&instr);
-                rc = ASTValue::Float(None, 0.0);
-            }
-        }*/
         /*
         if let ASTValue::Function(name, func_args, returns) = callee {
             if func_args.len() != args.len() {
@@ -1955,7 +1926,36 @@ impl Visitor for ExecuteVisitor {
                 let func_name = ctx.gen_vec_length(v.components() as u32);
                 let instr = format!("(call ${})", func_name);
                 ctx.add_wat(&instr);
-                rc = ASTValue::Float(None, 0.0);
+                rc = ASTASTValue::Float(None, 0.0);
+            }
+        }*/
+        /*
+        if let ASTASTValue::Function(name, func_args, returns) = callee {
+            if func_args.len() != args.len() {
+                return Err(RPUError::loc(
+                    format!(
+                        "Function '{}' expects {} arguments, but {} were provided",
+                        name,
+                        func_args.len(),
+                        args.len()
+                    ),
+                    loc,
+                ));
+            }
+
+            if name == "length" {
+                let v = args[0].accept(self, ctx)?;
+                let components = v.components();
+                if !(1..=4).contains(&components) {
+                    return Err(RPUError::loc(
+                        format!("Invalid number of components {}", components),
+                        loc,
+                    ));
+                }
+                let func_name = ctx.gen_vec_length(v.components() as u32);
+                let instr = format!("(call ${})", func_name);
+                ctx.add_wat(&instr);
+                rc = ASTASTValue::Float(None, 0.0);
             } else if name == "normalize" {
                 let v = args[0].accept(self, ctx)?;
                 let components = v.components();
@@ -1976,7 +1976,7 @@ impl Visitor for ExecuteVisitor {
                 let instr = "(call $_rpu_rand)";
                 ctx.add_wat(instr);
                 ctx.imports_hash.insert("$_rpu_rand".to_string());
-                rc = ASTValue::Float(None, 0.0);
+                rc = ASTASTValue::Float(None, 0.0);
             } else if name == "sqrt"
                 || name == "sin"
                 || name == "cos"
@@ -2207,7 +2207,7 @@ impl Visitor for ExecuteVisitor {
 
                 let instr = format!("(call ${})", func_name);
                 ctx.add_wat(&instr);
-                rc = ASTValue::Float(None, 0.0);
+                rc = ASTASTValue::Float(None, 0.0);
             } else if name == "cross" {
                 let a1 = args[0].accept(self, ctx)?;
                 let components = a1.components();
@@ -2269,10 +2269,10 @@ impl Visitor for ExecuteVisitor {
     fn struct_declaration(
         &mut self,
         name: &str,
-        fields: &[(String, Value)],
+        fields: &[(String, ASTValue)],
         _loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         /*
         let mut size: usize = 0;
 
@@ -2285,25 +2285,25 @@ impl Visitor for ExecuteVisitor {
 
         ctx.struct_sizes.insert(name.to_string(), size);
 
-        Ok(Value::Struct("".to_string(), None, vec![]))
+        Ok(ASTValue::Struct("".to_string(), None, vec![]))
         */
-        Ok(Value::None)
+        Ok(ASTValue::None)
     }
 
     fn func_declaration(
         &mut self,
         name: &str,
-        args: &[Value],
+        args: &[ASTValue],
         body: &[Box<Stmt>],
-        returns: &Value,
+        returns: &ASTValue,
         export: &bool,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         /*
                 self.functions.insert(
                     name.to_string(),
-                    ASTValue::Function(name.to_string(), args.to_vec(), Box::new(returns.clone())),
+                    ASTASTValue::Function(name.to_string(), args.to_vec(), Box::new(returns.clone())),
                 );
 
                 let mut params = String::new();
@@ -2318,14 +2318,14 @@ impl Visitor for ExecuteVisitor {
                     }
 
                     match param {
-                        ASTValue::Int(name, _) => {
+                        ASTASTValue::Int(name, _) => {
                             params += &format!(
                                 "(param ${} i{})",
                                 name.clone().unwrap(),
                                 ctx.precision.describe()
                             );
                         }
-                        ASTValue::Int2(name, _, _) => {
+                        ASTASTValue::Int2(name, _, _) => {
                             params += &format!(
                                 "(param ${}_x i{}) (param ${}_y i{})",
                                 name.clone().unwrap(),
@@ -2334,7 +2334,7 @@ impl Visitor for ExecuteVisitor {
                                 ctx.precision.describe()
                             );
                         }
-                        ASTValue::Int3(name, _, _, _) => {
+                        ASTASTValue::Int3(name, _, _, _) => {
                             params += &format!(
                                 "(param ${}_x i{}) (param ${}_y i{}) (param ${}_z i{})",
                                 name.clone().unwrap(),
@@ -2345,7 +2345,7 @@ impl Visitor for ExecuteVisitor {
                                 ctx.precision.describe()
                             );
                         }
-                        ASTValue::Int4(name, _, _, _, _) => {
+                        ASTASTValue::Int4(name, _, _, _, _) => {
                             params += &format!(
                                 "(param ${}_x i{}) (param ${}_y i{}) (param ${}_z i{}) (param ${}_w i{})",
                                 name.clone().unwrap(),
@@ -2358,14 +2358,14 @@ impl Visitor for ExecuteVisitor {
                                 ctx.precision.describe()
                             );
                         }
-                        ASTValue::Float(name, _) => {
+                        ASTASTValue::Float(name, _) => {
                             params += &format!(
                                 "(param ${} f{})",
                                 name.clone().unwrap(),
                                 ctx.precision.describe()
                             );
                         }
-                        ASTValue::Float2(name, _, _) => {
+                        ASTASTValue::Float2(name, _, _) => {
                             params += &format!(
                                 "(param ${}_x f{}) (param ${}_y f{})",
                                 name.clone().unwrap(),
@@ -2374,7 +2374,7 @@ impl Visitor for ExecuteVisitor {
                                 ctx.precision.describe()
                             );
                         }
-                        ASTValue::Float3(name, _, _, _) => {
+                        ASTASTValue::Float3(name, _, _, _) => {
                             params += &format!(
                                 "(param ${}_x f{}) (param ${}_y f{}) (param ${}_z f{})",
                                 name.clone().unwrap(),
@@ -2385,7 +2385,7 @@ impl Visitor for ExecuteVisitor {
                                 ctx.precision.describe()
                             );
                         }
-                        ASTValue::Float4(name, _, _, _, _) => {
+                        ASTASTValue::Float4(name, _, _, _, _) => {
                             params += &format!(
                                 "(param ${}_x f{}) (param ${}_y f{}) (param ${}_z f{}) (param ${}_w f{})",
                                 name.clone().unwrap(),
@@ -2398,7 +2398,7 @@ impl Visitor for ExecuteVisitor {
                                 ctx.precision.describe()
                             );
                         }
-                        ASTValue::Struct(_, param_name, _) => {
+                        ASTASTValue::Struct(_, param_name, _) => {
                             params += &format!("(param ${} i32)", param_name.clone().unwrap());
                         }
                         _ => {}
@@ -2426,7 +2426,7 @@ impl Visitor for ExecuteVisitor {
 
                 ctx.wat.push_str("__LOCALS__");
 
-                let mut last_value = ASTValue::None;
+                let mut last_value = ASTASTValue::None;
                 for stmt in body {
                     last_value = stmt.accept(self, ctx)?;
                 }
@@ -2448,7 +2448,7 @@ impl Visitor for ExecuteVisitor {
                 ctx.remove_indention();
                 ctx.add_wat(")");
         */
-        Ok(Value::None)
+        Ok(ASTValue::None)
     }
 
     fn return_stmt(
@@ -2456,7 +2456,7 @@ impl Visitor for ExecuteVisitor {
         expr: &Expr,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         let rc = expr.accept(self, ctx)?;
 
         /*
@@ -2486,7 +2486,7 @@ impl Visitor for ExecuteVisitor {
         else_stmt: &Option<Box<Stmt>>,
         _loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         /*
         ctx.add_line();
         let _rc = cond.accept(self, ctx)?;
@@ -2531,7 +2531,7 @@ impl Visitor for ExecuteVisitor {
         ctx.add_wat(")");
         //ctx.add_line();
         */
-        Ok(Value::None)
+        Ok(ASTValue::None)
     }
 
     fn ternary(
@@ -2541,7 +2541,7 @@ impl Visitor for ExecuteVisitor {
         else_expr: &Expr,
         _loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         /*
         ctx.add_line();
         let _rc = cond.accept(self, ctx)?;
@@ -2622,7 +2622,7 @@ impl Visitor for ExecuteVisitor {
         body_stmt: &Stmt,
         _loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         /*
         ctx.add_line();
 
@@ -2667,7 +2667,7 @@ impl Visitor for ExecuteVisitor {
         ctx.remove_indention();
         ctx.add_wat(")");
         */
-        Ok(Value::None)
+        Ok(ASTValue::None)
     }
 
     fn while_stmt(
@@ -2676,7 +2676,7 @@ impl Visitor for ExecuteVisitor {
         body_stmt: &Stmt,
         _loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         /*
                 ctx.add_line();
 
@@ -2711,16 +2711,16 @@ impl Visitor for ExecuteVisitor {
                 ctx.remove_indention();
                 ctx.add_wat(")");
         */
-        Ok(Value::None)
+        Ok(ASTValue::None)
     }
 
-    fn break_stmt(&mut self, _loc: &Location, ctx: &mut Context) -> Result<Value, RuntimeError> {
+    fn break_stmt(&mut self, _loc: &Location, ctx: &mut Context) -> Result<ASTValue, RuntimeError> {
         // if let Some(d) = self.break_depth.last() {
         //     let instr = format!("(br {})", d);
         //     ctx.add_wat(&instr);
         // }
 
-        Ok(Value::None)
+        Ok(ASTValue::None)
     }
 
     fn logical_expr(
@@ -2730,7 +2730,7 @@ impl Visitor for ExecuteVisitor {
         right: &Expr,
         _loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         let _l = left.accept(self, ctx)?;
         let _r = right.accept(self, ctx)?;
 
@@ -2746,6 +2746,6 @@ impl Visitor for ExecuteVisitor {
             }
         }*/
 
-        Ok(Value::None)
+        Ok(ASTValue::None)
     }
 }

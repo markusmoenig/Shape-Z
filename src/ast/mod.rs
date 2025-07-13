@@ -15,7 +15,7 @@ use crate::prelude::*;
 macro_rules! empty_expr {
     () => {
         Box::new(Expr::Value(
-            Value::None,
+            ASTValue::None,
             vec![],
             vec![],
             Location::default(),
@@ -27,7 +27,7 @@ macro_rules! empty_expr {
 macro_rules! zero_expr_int {
     () => {
         Box::new(Expr::Value(
-            Value::Int(0),
+            ASTValue::Int(0),
             vec![],
             vec![],
             Location::default(),
@@ -39,7 +39,7 @@ macro_rules! zero_expr_int {
 macro_rules! zero_expr_float {
     () => {
         Box::new(Expr::Value(
-            Value::Float(0.0),
+            ASTValue::Float(0.0),
             vec![],
             vec![],
             Location::default(),
@@ -51,7 +51,7 @@ macro_rules! zero_expr_float {
 macro_rules! expr_float {
     ($val:expr) => {
         Box::new(Expr::Value(
-            Value::Float($val),
+            ASTValue::Float($val),
             vec![],
             vec![],
             Location::default(),
@@ -75,9 +75,16 @@ pub enum Stmt {
     Block(Vec<Box<Stmt>>, Location),
     Expression(Box<Expr>, Location),
     Define(DefineObject, Location),
-    VarDeclaration(String, Value, Box<Expr>, Location),
-    StructDeclaration(String, Vec<(String, Value)>, Location),
-    FunctionDeclaration(String, Vec<Value>, Vec<Box<Stmt>>, Value, bool, Location),
+    VarDeclaration(String, ASTValue, Box<Expr>, Location),
+    StructDeclaration(String, Vec<(String, ASTValue)>, Location),
+    FunctionDeclaration(
+        String,
+        Vec<ASTValue>,
+        Vec<Box<Stmt>>,
+        ASTValue,
+        bool,
+        Location,
+    ),
     Return(Box<Expr>, Location),
     Break(Location),
 }
@@ -85,7 +92,7 @@ pub enum Stmt {
 /// Expressions in the AST
 #[derive(Clone, Debug)]
 pub enum Expr {
-    Value(Value, Vec<u8>, Vec<String>, Location),
+    Value(ASTValue, Vec<u8>, Vec<String>, Location),
     Logical(Box<Expr>, LogicalOperator, Box<Expr>, Location),
     Unary(UnaryOperator, Box<Expr>, Location),
     Equality(Box<Expr>, EqualityOperator, Box<Expr>, Location),
@@ -217,46 +224,46 @@ pub trait Visitor {
         expression: &Expr,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     fn block(
         &mut self,
         list: &[Box<Stmt>],
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     fn expression(
         &mut self,
         expression: &Expr,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     fn define(
         &mut self,
         define_context: &DefineObject,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     fn var_declaration(
         &mut self,
         name: &str,
-        static_type: &Value,
+        static_type: &ASTValue,
         expression: &Expr,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     fn value(
         &mut self,
-        value: Value,
+        value: ASTValue,
         swizzle: &[u8],
         field_path: &[String],
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     fn unary(
         &mut self,
@@ -264,7 +271,7 @@ pub trait Visitor {
         expr: &Expr,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     fn equality(
         &mut self,
@@ -273,7 +280,7 @@ pub trait Visitor {
         right: &Expr,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     fn comparison(
         &mut self,
@@ -282,7 +289,7 @@ pub trait Visitor {
         right: &Expr,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     fn binary(
         &mut self,
@@ -291,14 +298,14 @@ pub trait Visitor {
         right: &Expr,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     fn grouping(
         &mut self,
         expression: &Expr,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     fn variable(
         &mut self,
@@ -307,7 +314,7 @@ pub trait Visitor {
         field_path: &[String],
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     #[allow(clippy::too_many_arguments)]
     fn variable_assignment(
@@ -319,7 +326,7 @@ pub trait Visitor {
         expression: &Expr,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     fn func_call(
         &mut self,
@@ -329,36 +336,36 @@ pub trait Visitor {
         args: &[Box<Expr>],
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     fn struct_declaration(
         &mut self,
         name: &str,
-        field: &[(String, Value)],
+        field: &[(String, ASTValue)],
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     #[allow(clippy::too_many_arguments)]
     fn func_declaration(
         &mut self,
         name: &str,
-        args: &[Value],
+        args: &[ASTValue],
         body: &[Box<Stmt>],
-        returns: &Value,
+        returns: &ASTValue,
         export: &bool,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     fn return_stmt(
         &mut self,
         expr: &Expr,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
-    fn break_stmt(&mut self, loc: &Location, ctx: &mut Context) -> Result<Value, RuntimeError>;
+    fn break_stmt(&mut self, loc: &Location, ctx: &mut Context) -> Result<ASTValue, RuntimeError>;
 
     fn if_stmt(
         &mut self,
@@ -367,7 +374,7 @@ pub trait Visitor {
         else_stmt: &Option<Box<Stmt>>,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     fn while_stmt(
         &mut self,
@@ -375,7 +382,7 @@ pub trait Visitor {
         body_stmt: &Stmt,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     fn for_stmt(
         &mut self,
@@ -385,7 +392,7 @@ pub trait Visitor {
         body_stmt: &Stmt,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     fn logical_expr(
         &mut self,
@@ -394,7 +401,7 @@ pub trait Visitor {
         right: &Expr,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 
     fn ternary(
         &mut self,
@@ -403,7 +410,7 @@ pub trait Visitor {
         else_expr: &Expr,
         loc: &Location,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError>;
+    ) -> Result<ASTValue, RuntimeError>;
 }
 
 impl Stmt {
@@ -411,7 +418,7 @@ impl Stmt {
         &self,
         visitor: &mut dyn Visitor,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         match self {
             Stmt::If(cond, then_stmt, else_stmt, loc) => {
                 visitor.if_stmt(cond, then_stmt, else_stmt, loc, ctx)
@@ -444,7 +451,7 @@ impl Expr {
         &self,
         visitor: &mut dyn Visitor,
         ctx: &mut Context,
-    ) -> Result<Value, RuntimeError> {
+    ) -> Result<ASTValue, RuntimeError> {
         match self {
             Expr::Value(value, swizzle, field_path, loc) => {
                 visitor.value(value.clone(), swizzle, field_path, loc, ctx)
@@ -472,12 +479,13 @@ impl Expr {
 
     /// Converts a Float3 expression to a Vec3<f32>
     pub fn to_vec3(&self, visitor: &mut ExecuteVisitor, ctx: &mut Context) -> Option<Vec3<f32>> {
-        if let Expr::Value(Value::Float3(x, y, z), _, _, _) = self {
+        if let Expr::Value(ASTValue::Float3(x, y, z), _, _, _) = self {
             let x_val = x.accept(visitor, ctx).ok()?;
             let y_val = y.accept(visitor, ctx).ok()?;
             let z_val = z.accept(visitor, ctx).ok()?;
 
-            if let (Value::Float(x_f), Value::Float(y_f), Value::Float(z_f)) = (x_val, y_val, z_val)
+            if let (ASTValue::Float(x_f), ASTValue::Float(y_f), ASTValue::Float(z_f)) =
+                (x_val, y_val, z_val)
             {
                 return Some(Vec3::new(x_f, y_f, z_f));
             }

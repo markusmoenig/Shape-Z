@@ -506,7 +506,7 @@ impl Parser {
             TokenType::False => {
                 self.advance();
                 Ok(Expr::Value(
-                    Value::Boolean(false),
+                    ASTValue::Boolean(false),
                     vec![],
                     vec![],
                     self.create_loc(token.line),
@@ -515,7 +515,7 @@ impl Parser {
             TokenType::True => {
                 self.advance();
                 Ok(Expr::Value(
-                    Value::Boolean(true),
+                    ASTValue::Boolean(true),
                     vec![],
                     vec![],
                     self.create_loc(token.line),
@@ -524,14 +524,14 @@ impl Parser {
             TokenType::Void => {
                 self.advance();
                 Ok(Expr::Value(
-                    Value::None,
+                    ASTValue::None,
                     vec![],
                     vec![],
                     self.create_loc(token.line),
                 ))
             }
             TokenType::Semicolon => Ok(Expr::Value(
-                Value::None,
+                ASTValue::None,
                 vec![],
                 vec![],
                 self.create_loc(token.line),
@@ -541,7 +541,7 @@ impl Parser {
                 if let Ok(number) = token.lexeme.parse::<i32>() {
                     // if self.force_floats {
                     Ok(Expr::Value(
-                        Value::Float(number as f32),
+                        ASTValue::Float(number as f32),
                         vec![],
                         vec![],
                         self.create_loc(token.line),
@@ -666,7 +666,7 @@ impl Parser {
                 self.advance();
                 if let Ok(number) = token.lexeme.parse::<f32>() {
                     Ok(Expr::Value(
-                        Value::Float(number),
+                        ASTValue::Float(number),
                         vec![],
                         vec![],
                         self.create_loc(token.line),
@@ -686,7 +686,7 @@ impl Parser {
                     let swizzle: Vec<u8> = self.get_swizzle_at_current();
 
                     Ok(Expr::Value(
-                        Value::Float2(
+                        ASTValue::Float2(
                             if !comps.is_empty() {
                                 Box::new(comps[0].clone())
                             } else {
@@ -717,7 +717,7 @@ impl Parser {
                     let swizzle: Vec<u8> = self.get_swizzle_at_current();
 
                     Ok(Expr::Value(
-                        Value::Float3(
+                        ASTValue::Float3(
                             if !comps.is_empty() {
                                 Box::new(comps[0].clone())
                             } else {

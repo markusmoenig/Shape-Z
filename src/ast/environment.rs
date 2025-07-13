@@ -7,9 +7,9 @@ pub enum ScopeTypes {
 
 // Define a struct to represent the environment
 pub struct Environment {
-    scopes: Vec<FxHashMap<String, Value>>,
+    scopes: Vec<FxHashMap<String, ASTValue>>,
     scopes_types: Vec<ScopeTypes>,
-    scoped_returns: Vec<Value>,
+    scoped_returns: Vec<ASTValue>,
 }
 
 impl Default for Environment {
@@ -28,14 +28,14 @@ impl Environment {
     }
 
     /// Define a variable in the current scope
-    pub fn define(&mut self, name: String, value: Value) {
+    pub fn define(&mut self, name: String, value: ASTValue) {
         if let Some(scope) = self.scopes.last_mut() {
             scope.insert(name, value);
         }
     }
 
     /// Assign a value to an existing variable in the current scope or any outer scope
-    pub fn assign(&mut self, name: &str, value: Value) -> bool {
+    pub fn assign(&mut self, name: &str, value: ASTValue) -> bool {
         for scope in self.scopes.iter_mut().rev() {
             if scope.contains_key(name) {
                 scope.insert(name.to_string(), value);
@@ -46,7 +46,7 @@ impl Environment {
     }
 
     /// Get the value of a variable in the current scope or any outer scope
-    pub fn get(&self, name: &str) -> Option<Value> {
+    pub fn get(&self, name: &str) -> Option<ASTValue> {
         for scope in self.scopes.iter().rev() {
             if let Some(value) = scope.get(name) {
                 return Some(value.clone());
@@ -56,7 +56,7 @@ impl Environment {
     }
 
     /// Begin a new scope.
-    pub fn begin_scope(&mut self, returns: Value, func: bool) {
+    pub fn begin_scope(&mut self, returns: ASTValue, func: bool) {
         self.scopes.push(FxHashMap::default());
         if func {
             self.scopes_types.push(ScopeTypes::Function);
@@ -74,7 +74,7 @@ impl Environment {
     }
 
     /// Returns the return value of the current scope.
-    pub fn get_return(&self) -> Option<Value> {
+    pub fn get_return(&self) -> Option<ASTValue> {
         // Unwind until we find the last function return type
         for (i, scope) in self.scopes_types.iter().enumerate().rev() {
             if let ScopeTypes::Function = scope {
