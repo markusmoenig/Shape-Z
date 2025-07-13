@@ -33,6 +33,7 @@ impl VoxelRect {
     }
 
     /// Convert a world coordinate to local
+    #[inline(always)]
     pub fn world_to_local(&self, world: Vec3<F>) -> Vec3<F> {
         world - self.origin
     }

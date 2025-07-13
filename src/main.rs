@@ -111,27 +111,32 @@ fn main() {
 
     // Build the voxel grid
 
-    let mut definitions = ctx.definitions.clone();
-    for object in definitions.values_mut() {
-        let at = Vec3::new(0.0, 0.0, 0.0);
-        let g = object.place(at, &mut ctx);
-        grid.write().unwrap().merge(&g);
+    let _start: u128 = tracer.get_time();
+
+    // let mut definitions = ctx.definitions.clone();
+    // for object in definitions.values_mut() {
+    //     let at = Vec3::new(0.0, 0.0, 0.0);
+    //     let g = object.place(at, &mut ctx);
+    //     grid.write().unwrap().merge(&g);
+    // }
+
+    let _stop = tracer.get_time();
+    println!("Modeling time: {:?} ms.", _stop - _start);
+
+    {
+        let mut grid = grid.write().unwrap();
+        let mut palette = palette.write().unwrap();
+        palette.materials[1].base_color = Vec3::new(1.0, 0.0, 0.0);
+
+        let rect = VoxelRect {
+            origin: Vec3::new(0.0, 0.0, 0.0),
+            size: Vec3::new(1.0, 1.0, 1.0),
+        };
+
+        rect.fill(&mut grid, 1); // Fill with material ID 1
     }
 
     grid.write().unwrap().update_bboxes();
-    // {
-    //     let mut grid = ctx.grid.write().unwrap();
-    //     let mut palette = palette.write().unwrap();
-    //     palette.materials[1].base_color = Vec3::new(1.0, 0.0, 0.0);
-
-    //     let rect = VoxelRect {
-    //         origin: Vec3::new(0.0, 0.0, 0.0),
-    //         size: Vec3::new(1.0, 1.0, 1.0),
-    //     };
-
-    //     rect.fill(&mut grid, 1); // Fill with material ID 1
-    //     grid.update_bboxes();
-    // }
 
     tracer.render(&mut buffer, &grid, &palette, &renderer, &camera);
 

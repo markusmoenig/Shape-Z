@@ -110,18 +110,47 @@ impl Parser {
             self.current_line,
         )?;
 
+        /*
         self.consume(
             TokenType::RightBrace,
             "Expected '}' after define body",
             self.current_line,
-        )?;
+        )?;*/
 
         // println!("[Parser] Define declaration: {}, {:?}", id, params);
 
+        let block = self.block()?;
+
         Ok(Stmt::Define(
-            DefineObject { name: id, params },
+            DefineObject::new(id, params, Box::new(block)),
             self.create_loc(line),
         ))
+    }
+
+    fn block(&mut self) -> Result<Stmt, ParseError> {
+        let mut statements = vec![];
+
+        self.verifier.begin_scope();
+
+        while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+            match self.declaration() {
+                Ok(stmt) => {
+                    statements.push(Box::new(stmt));
+                }
+                Err(error) => {
+                    println!("{}", error);
+                    break;
+                }
+            }
+        }
+
+        self.verifier.end_scope();
+
+        let line = self.current_line;
+
+        self.consume(TokenType::RightBrace, "Expect '}}' after block", line)?;
+
+        Ok(Stmt::Block(statements, self.create_loc(line)))
     }
 
     fn expression_statement(&mut self) -> Result<Stmt, ParseError> {
@@ -411,20 +440,19 @@ impl Parser {
     }
 
     fn call(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.primary()?;
+        let mut expr = self.primary()?;
 
-        // loop {
-        //     if self.match_token(vec![TokenType::LeftParen]) {
-        //         expr = self.finish_call(expr)?;
-        //     } else {
-        //         break;
-        //     }
-        // }
+        loop {
+            if self.match_token(vec![TokenType::LeftParen]) {
+                expr = self.finish_call(expr)?;
+            } else {
+                break;
+            }
+        }
 
         Ok(expr)
     }
 
-    /*
     fn finish_call(&mut self, callee: Expr) -> Result<Expr, ParseError> {
         let mut arguments = vec![];
         let line = self.current_line;
@@ -452,15 +480,17 @@ impl Parser {
             "Expect ')' after function arguments",
             line,
         )?;
-        let mut swizzle = vec![];
-        let mut field_path = vec![];
+
+        let swizzle = vec![];
+        let field_path = vec![];
+        /*
         if self.check(TokenType::Dot) {
             if self.is_swizzle_valid_at_current() {
                 swizzle = self.get_swizzle_at_current();
             } else {
                 field_path = self.get_field_path_at_current();
             }
-        }
+        }*/
         Ok(Expr::FunctionCall(
             Box::new(callee),
             swizzle,
@@ -468,7 +498,7 @@ impl Parser {
             arguments,
             self.create_loc(paren.line),
         ))
-    }*/
+    }
 
     fn primary(&mut self) -> Result<Expr, ParseError> {
         let token = self.peek();
@@ -904,7 +934,14 @@ impl Parser {
                     //     field_path = self.get_field_path_at_current();
                     // }
                 }
-                if let Some(var_name) = self.verifier.get_var_name(&token.lexeme) {
+                if token.lexeme == "local" {
+                    Ok(Expr::Variable(
+                        token.lexeme.clone(),
+                        swizzle,
+                        field_path,
+                        self.create_loc(token.line),
+                    ))
+                } else if let Some(var_name) = self.verifier.get_var_name(&token.lexeme) {
                     Ok(Expr::Variable(
                         var_name,
                         swizzle,

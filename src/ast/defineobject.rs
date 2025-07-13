@@ -1,9 +1,10 @@
-use crate::prelude::*;
+use crate::{expr_float, prelude::*};
 
 #[derive(Clone, Debug)]
 pub struct DefineObject {
     pub name: String,
     pub params: FxHashMap<String, Box<Expr>>,
+    pub block: Option<Box<Stmt>>,
 }
 
 impl DefineObject {
@@ -11,11 +12,16 @@ impl DefineObject {
         Self {
             name: String::new(),
             params: FxHashMap::default(),
+            block: None,
         }
     }
 
-    pub fn new(name: String, params: FxHashMap<String, Box<Expr>>) -> Self {
-        Self { name, params }
+    pub fn new(name: String, params: FxHashMap<String, Box<Expr>>, block: Box<Stmt>) -> Self {
+        Self {
+            name,
+            params,
+            block: Some(block),
+        }
     }
 
     pub fn place(&mut self, at: Vec3<f32>, ctx: &mut Context) -> VoxelGrid {
@@ -39,7 +45,39 @@ impl DefineObject {
             size: Vec3::new(1.0, 1.0, 1.0),
         };
 
-        rect.fill(&mut grid, 1); // Fill with material ID 1
+        for world in rect.iter_voxels(&grid) {
+            let local = rect.world_to_local(world);
+
+            visitor.environment.define(
+                "local".into(),
+                Value::Float3(
+                    expr_float!(local.x),
+                    expr_float!(local.y),
+                    expr_float!(local.z),
+                ),
+            );
+
+            // visitor.local = Value::Float3(
+            //     expr_float!(local.x),
+            //     expr_float!(local.y),
+            //     expr_float!(local.z),
+            // );
+
+            if let Some(block) = &self.block {
+                let rc = block.accept(&mut visitor, ctx);
+                // println!("Block executed with result: {:?}", rc);
+                if let Ok(Value::Float(v)) = rc {
+                    if v <= 0.0 {
+                        grid.set_create(world, 0);
+                    }
+                }
+            }
+            // if (local - Vec3::new(0.0, 0.0, 0.0)).magnitude() - 0.5 <= 0.0 {
+            //     grid.set_create(world, 0);
+            // }
+        }
+
+        //rect.fill(&mut grid, 1); // Fill with material ID 1
 
         grid
     }

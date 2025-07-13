@@ -47,6 +47,18 @@ macro_rules! zero_expr_float {
     };
 }
 
+#[macro_export]
+macro_rules! expr_float {
+    ($val:expr) => {
+        Box::new(Expr::Value(
+            Value::Float($val),
+            vec![],
+            vec![],
+            Location::default(),
+        ))
+    };
+}
+
 /// Statements in the AST
 #[derive(Clone, Debug)]
 pub enum Stmt {

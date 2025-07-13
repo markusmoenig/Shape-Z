@@ -9,6 +9,7 @@ pub enum Value {
     Float2(Box<Expr>, Box<Expr>),
     Float3(Box<Expr>, Box<Expr>, Box<Expr>),
     String(String),
+    Function(String, Vec<Value>, Box<Value>),
 }
 
 impl Value {

@@ -1,9 +1,9 @@
-use crate::empty_expr;
+use crate::expr_float;
 use crate::prelude::*;
 
 /// ExecuteVisitor
 pub struct ExecuteVisitor {
-    environment: Environment,
+    pub environment: Environment,
     functions: FxHashMap<String, Value>,
     break_depth: Vec<i32>,
 }
@@ -15,7 +15,6 @@ impl Visitor for ExecuteVisitor {
     {
         let mut functions: FxHashMap<String, Value> = FxHashMap::default();
 
-        /*
         functions.insert(
             "length".to_string(),
             Value::Function(
@@ -24,6 +23,8 @@ impl Visitor for ExecuteVisitor {
                 Box::new(Value::None),
             ),
         );
+
+        /*
 
         functions.insert(
             "normalize".to_string(),
@@ -285,24 +286,27 @@ impl Visitor for ExecuteVisitor {
         // ctx.add_wat(&instr);
         // ctx.add_indention();
 
-        if let Some(d) = self.break_depth.last() {
-            self.break_depth.push(d + 1);
-        }
+        // if let Some(d) = self.break_depth.last() {
+        //     self.break_depth.push(d + 1);
+        // }
+
+        let mut value = Value::None;
 
         self.environment.begin_scope(Value::None, false);
         for stmt in list {
-            stmt.accept(self, ctx)?;
+            value = stmt.accept(self, ctx)?;
+            //println!("Block statement executed with result: {:?}", rc);
         }
         self.environment.end_scope();
 
-        if let Some(d) = self.break_depth.last() {
-            self.break_depth.push(d - 1);
-        }
+        // if let Some(d) = self.break_depth.last() {
+        //     self.break_depth.push(d - 1);
+        // }
 
         // ctx.remove_indention();
         // ctx.add_wat(")");
 
-        Ok(Value::None)
+        Ok(value)
     }
 
     fn expression(
@@ -988,6 +992,12 @@ impl Visitor for ExecuteVisitor {
         }
         */
 
+        if let Some(vv) = self.environment.get(&name) {
+            rc = vv;
+        } else if let Some(Value::Function(name, args, body)) = self.functions.get(&name) {
+            rc = Value::Function(name.clone(), args.clone(), body.clone());
+        }
+
         Ok(rc)
     }
 
@@ -1002,7 +1012,7 @@ impl Visitor for ExecuteVisitor {
         let rc;
         // let instr;
 
-        println!("here in value: {:?}", value);
+        // println!("here in value: {:?}", value);
         // if swizzle.len() > 4 {
         //     return Err(RPUError::loc(
         //         format!(
@@ -1347,6 +1357,34 @@ impl Visitor for ExecuteVisitor {
                 BinaryOperator::Multiply => Value::Float(left * right),
                 BinaryOperator::Divide => Value::Float(left / right),
             },
+            // Float3 x Float
+            (Value::Float3(x, y, z), Value::Float(right)) => {
+                let x_val = x.accept(self, ctx)?.to_float().unwrap_or_default();
+                let y_val = y.accept(self, ctx)?.to_float().unwrap_or_default();
+                let z_val = z.accept(self, ctx)?.to_float().unwrap_or_default();
+                match op {
+                    BinaryOperator::Add => Value::Float3(
+                        expr_float!(x_val + right),
+                        expr_float!(y_val + right),
+                        expr_float!(z_val + right),
+                    ),
+                    BinaryOperator::Subtract => Value::Float3(
+                        expr_float!(x_val - right),
+                        expr_float!(y_val - right),
+                        expr_float!(z_val - right),
+                    ),
+                    BinaryOperator::Multiply => Value::Float3(
+                        expr_float!(x_val * right),
+                        expr_float!(y_val * right),
+                        expr_float!(z_val * right),
+                    ),
+                    BinaryOperator::Divide => Value::Float3(
+                        expr_float!(x_val / right),
+                        expr_float!(y_val / right),
+                        expr_float!(z_val / right),
+                    ),
+                }
+            }
             _ => Value::None, /*
                               // Float x Float2
                               (ASTValue::Float(_, _), ASTValue::Float2(_, _, _)) => {
@@ -1814,6 +1852,83 @@ impl Visitor for ExecuteVisitor {
         let callee = callee.accept(self, ctx)?;
         let mut rc = Value::None;
 
+        // println!(
+        //     "func_call: callee: {:?}, swizzle: {:?}, args: {:?}",
+        //     callee, swizzle, args
+        // );
+
+        if let Value::Function(name, func_args, returns) = callee {
+            if func_args.len() != args.len() {
+                // return Err(RPUError::loc(
+                //     format!(
+                //         "Function '{}' expects {} arguments, but {} were provided",
+                //         name,
+                //         func_args.len(),
+                //         args.len()
+                //     ),
+                //     loc,
+                // ));
+            }
+
+            if name == "length" {
+                let v = args[0].accept(self, ctx)?;
+
+                match v {
+                    Value::Float3(x, y, z) => {
+                        let x_val = x.accept(self, ctx)?.to_float().unwrap_or_default();
+                        let y_val = y.accept(self, ctx)?.to_float().unwrap_or_default();
+                        let z_val = z.accept(self, ctx)?.to_float().unwrap_or_default();
+
+                        let r = Vec3::new(x_val, y_val, z_val).magnitude();
+                        rc = Value::Float(r);
+                    }
+                    _ => {}
+                }
+
+                /*
+                let components = v.components();
+                if !(1..=4).contains(&components) {
+                    return Err(RPUError::loc(
+                        format!("Invalid number of components {}", components),
+                        loc,
+                    ));
+                }
+                let func_name = ctx.gen_vec_length(v.components() as u32);
+                let instr = format!("(call ${})", func_name);
+                ctx.add_wat(&instr);
+                rc = ASTValue::Float(None, 0.0);*/
+            }
+        }
+
+        /*
+        if let Value::Function(name, func_args, returns) = callee {
+            if func_args.len() != args.len() {
+                return Err(RPUError::loc(
+                    format!(
+                        "Function '{}' expects {} arguments, but {} were provided",
+                        name,
+                        func_args.len(),
+                        args.len()
+                    ),
+                    loc,
+                ));
+            }
+
+            if name == "length" {
+                let v = args[0].accept(self, ctx)?;
+                let components = v.components();
+                if !(1..=4).contains(&components) {
+                    return Err(RPUError::loc(
+                        format!("Invalid number of components {}", components),
+                        loc,
+                    ));
+                }
+                let func_name = ctx.gen_vec_length(v.components() as u32);
+                let instr = format!("(call ${})", func_name);
+                ctx.add_wat(&instr);
+                rc = ASTValue::Float(None, 0.0);
+            }
+        }*/
         /*
         if let ASTValue::Function(name, func_args, returns) = callee {
             if func_args.len() != args.len() {
