@@ -1,9 +1,17 @@
 use crate::prelude::*;
 
+#[derive(Clone)]
+pub struct ASTFunction {
+    pub name: String,
+    pub arguments: i32,
+    pub op: NodeOp,
+}
+
 /// ExecuteVisitor
 pub struct CompileVisitor {
     pub environment: Environment,
-    functions: FxHashMap<String, ASTValue>,
+    ast_functions: FxHashMap<String, ASTValue>,
+    functions: FxHashMap<String, ASTFunction>,
 }
 
 impl Visitor for CompileVisitor {
@@ -11,9 +19,18 @@ impl Visitor for CompileVisitor {
     where
         Self: Sized,
     {
-        let mut functions: FxHashMap<String, ASTValue> = FxHashMap::default();
-
+        let mut functions: FxHashMap<String, ASTFunction> = FxHashMap::default();
         functions.insert(
+            "length".to_string(),
+            ASTFunction {
+                name: "length".to_string(),
+                arguments: 1,
+                op: NodeOp::Length,
+            },
+        );
+
+        let mut ast_functions: FxHashMap<String, ASTValue> = FxHashMap::default();
+        ast_functions.insert(
             "length".to_string(),
             ASTValue::Function(
                 "length".to_string(),
@@ -21,241 +38,214 @@ impl Visitor for CompileVisitor {
                 Box::new(ASTValue::None),
             ),
         );
-
-        /*
-
-        functions.insert(
+        ast_functions.insert(
             "normalize".to_string(),
             ASTValue::Function(
                 "normalize".to_string(),
                 vec![ASTValue::None],
-                Box::new(ASTASTValue::None),
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "smoothstep".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "smoothstep".to_string(),
-                vec![ASTASTValue::None, ASTASTValue::None, ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None, ASTValue::None, ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "mix".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "mix".to_string(),
-                vec![ASTASTValue::None, ASTASTValue::None, ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None, ASTValue::None, ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "dot".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "dot".to_string(),
-                vec![ASTASTValue::None, ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None, ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "cross".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "cross".to_string(),
-                vec![ASTASTValue::None, ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None, ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "sqrt".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "sqrt".to_string(),
-                vec![ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "sin".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "sin".to_string(),
-                vec![ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "cos".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "cos".to_string(),
-                vec![ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "ceil".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "ceil".to_string(),
-                vec![ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "floor".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "floor".to_string(),
-                vec![ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "fract".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "fract".to_string(),
-                vec![ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "abs".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "abs".to_string(),
-                vec![ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "tan".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "tan".to_string(),
-                vec![ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "atan".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "atan".to_string(),
-                vec![ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "degrees".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "degrees".to_string(),
-                vec![ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "radians".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "radians".to_string(),
-                vec![ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "sign".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "sign".to_string(),
-                vec![ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "exp".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "exp".to_string(),
-                vec![ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "log".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "log".to_string(),
-                vec![ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "rand".to_string(),
-            ASTASTValue::Function("rand".to_string(), vec![], Box::new(ASTASTValue::None)),
+            ASTValue::Function("rand".to_string(), vec![], Box::new(ASTValue::None)),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "max".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "max".to_string(),
-                vec![ASTASTValue::None, ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None, ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "min".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "min".to_string(),
-                vec![ASTASTValue::None, ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None, ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "pow".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "pow".to_string(),
-                vec![ASTASTValue::None, ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None, ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "mod".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "mod".to_string(),
-                vec![ASTASTValue::None, ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None, ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "step".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "step".to_string(),
-                vec![ASTASTValue::None, ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None, ASTValue::None],
+                Box::new(ASTValue::None),
             ),
         );
-
-        functions.insert(
+        ast_functions.insert(
             "clamp".to_string(),
-            ASTASTValue::Function(
+            ASTValue::Function(
                 "clamp".to_string(),
-                vec![ASTASTValue::None, ASTASTValue::None, ASTASTValue::None],
-                Box::new(ASTASTValue::None),
+                vec![ASTValue::None, ASTValue::None, ASTValue::None],
+                Box::new(ASTValue::None),
             ),
-        );*/
+        );
 
         Self {
             environment: Environment::default(),
+            ast_functions,
             functions,
         }
     }
@@ -383,18 +373,18 @@ impl Visitor for CompileVisitor {
         // Global function definition. We write these out in the module header in gen_wat().
         if self.environment.is_global_scope() {
             ctx.globals.insert(name.to_string(), v.clone());
-            return Ok(ASTASTValue::None);
+            return Ok(ASTValue::None);
         }
 
         match &v {
-            ASTASTValue::Int(_, _) => {
+            ASTValue::Int(_, _) => {
                 let instr = format!("(local ${} i{})", name, ctx.pr);
                 ctx.wat_locals.push_str(&format!("        {}\n", instr));
 
                 let instr = format!("local.set ${}", name);
                 ctx.add_wat(&instr);
             }
-            ASTASTValue::Int2(_, _, _) => {
+            ASTValue::Int2(_, _, _) => {
                 let instr = format!("(local ${}_x i{})", name, ctx.pr);
                 ctx.wat_locals.push_str(&format!("        {}\n", instr));
                 let instr = format!("(local ${}_y i{})", name, ctx.pr);
@@ -405,7 +395,7 @@ impl Visitor for CompileVisitor {
                 let instr = format!("local.set ${}_x", name);
                 ctx.add_wat(&instr);
             }
-            ASTASTValue::Int3(_, _, _, _) => {
+            ASTValue::Int3(_, _, _, _) => {
                 let instr = format!("(local ${}_x i{})", name, ctx.pr);
                 ctx.wat_locals.push_str(&format!("        {}\n", instr));
                 let instr = format!("(local ${}_y i{})", name, ctx.pr);
@@ -420,7 +410,7 @@ impl Visitor for CompileVisitor {
                 let instr = format!("local.set ${}_x", name);
                 ctx.add_wat(&instr);
             }
-            ASTASTValue::Int4(_, _, _, _, _) => {
+            ASTValue::Int4(_, _, _, _, _) => {
                 let instr = format!("(local ${}_x i{})", name, ctx.pr);
                 ctx.wat_locals.push_str(&format!("        {}\n", instr));
                 let instr = format!("(local ${}_y i{})", name, ctx.pr);
@@ -439,14 +429,14 @@ impl Visitor for CompileVisitor {
                 let instr = format!("local.set ${}_x", name);
                 ctx.add_wat(&instr);
             }
-            ASTASTValue::Float(_, _) => {
+            ASTValue::Float(_, _) => {
                 let instr = format!("(local ${} f{})", name, ctx.pr);
                 ctx.wat_locals.push_str(&format!("        {}\n", instr));
 
                 let instr = format!("local.set ${}", name);
                 ctx.add_wat(&instr);
             }
-            ASTASTValue::Float2(_, _, _) => {
+            ASTValue::Float2(_, _, _) => {
                 let instr = format!("(local ${}_x f{})", name, ctx.pr);
                 ctx.wat_locals.push_str(&format!("        {}\n", instr));
                 let instr = format!("(local ${}_y f{})", name, ctx.pr);
@@ -457,7 +447,7 @@ impl Visitor for CompileVisitor {
                 let instr = format!("local.set ${}_x", name);
                 ctx.add_wat(&instr);
             }
-            ASTASTValue::Float3(_, _, _, _) => {
+            ASTValue::Float3(_, _, _, _) => {
                 let instr = format!("(local ${}_x f{})", name, ctx.pr);
                 ctx.wat_locals.push_str(&format!("        {}\n", instr));
                 let instr = format!("(local ${}_y f{})", name, ctx.pr);
@@ -472,7 +462,7 @@ impl Visitor for CompileVisitor {
                 let instr = format!("local.set ${}_x", name);
                 ctx.add_wat(&instr);
             }
-            ASTASTValue::Float4(_, _, _, _, _) => {
+            ASTValue::Float4(_, _, _, _, _) => {
                 let instr = format!("(local ${}_x f{})", name, ctx.pr);
                 ctx.wat_locals.push_str(&format!("        {}\n", instr));
                 let instr = format!("(local ${}_y f{})", name, ctx.pr);
@@ -491,7 +481,7 @@ impl Visitor for CompileVisitor {
                 let instr = format!("local.set ${}_x", name);
                 ctx.add_wat(&instr);
             }
-            ASTASTValue::Mat2(_, _) | ASTASTValue::Mat3(_, _) | ASTASTValue::Mat4(_, _) => {
+            ASTValue::Mat2(_, _) | ASTValue::Mat3(_, _) | ASTValue::Mat4(_, _) => {
                 let comps = v.write_definition("local", name, &ctx.pr);
                 for c in comps {
                     ctx.wat_locals.push_str(&format!("        {}\n", c));
@@ -501,7 +491,7 @@ impl Visitor for CompileVisitor {
                     ctx.add_wat(c);
                 }
             }
-            ASTASTValue::Struct(_, _, _) => {
+            ASTValue::Struct(_, _, _) => {
                 // Copy the incoming struct mem ptr to the variable
                 let comps = v.write_definition("local", name, &ctx.pr);
                 for c in comps {
@@ -582,7 +572,7 @@ impl Visitor for CompileVisitor {
         }
 
         match &v {
-            ASTASTValue::Int(_, _) | ASTASTValue::Float(_, _) => match op {
+            ASTValue::Int(_, _) | ASTValue::Float(_, _) => match op {
                 AssignmentOperator::Assign => {
                     let instr = format!("local.set ${}", name);
                     ctx.add_wat(&instr);
@@ -600,7 +590,7 @@ impl Visitor for CompileVisitor {
                     ctx.add_wat(&instr);
                 }
             },
-            ASTASTValue::Int2(_, _, _) | ASTASTValue::Float2(_, _, _) => {
+            ASTValue::Int2(_, _, _) | ASTValue::Float2(_, _, _) => {
                 if swizzle.is_empty() {
                     match op {
                         AssignmentOperator::Assign => {
@@ -668,7 +658,7 @@ impl Visitor for CompileVisitor {
                     }
                 }
             }
-            ASTASTValue::Int3(_, _, _, _) | ASTASTValue::Float3(_, _, _, _) => {
+            ASTValue::Int3(_, _, _, _) | ASTValue::Float3(_, _, _, _) => {
                 if swizzle.is_empty() {
                     match op {
                         AssignmentOperator::Assign => {
@@ -757,7 +747,7 @@ impl Visitor for CompileVisitor {
                     }
                 }
             }
-            ASTASTValue::Int4(_, _, _, _, _) | ASTASTValue::Float4(_, _, _, _, _) => {
+            ASTValue::Int4(_, _, _, _, _) | ASTValue::Float4(_, _, _, _, _) => {
                 if swizzle.is_empty() {
                     match op {
                         AssignmentOperator::Assign => {
@@ -867,7 +857,7 @@ impl Visitor for CompileVisitor {
                     }
                 }
             }
-            ASTASTValue::Struct(struct_name, _, _) => {
+            ASTValue::Struct(struct_name, _, _) => {
                 if field_path.is_empty() {
                     // We got an incoming complete struct, just copy the mem ptr
                     // TODO Check if the struct types are the same
@@ -945,12 +935,12 @@ impl Visitor for CompileVisitor {
                 rc = ctx.create_value_from_swizzle(&v, swizzle.len());
             }
             match &v {
-                ASTASTValue::Int(_, _) | ASTASTValue::Float(_, _) => {
+                ASTValue::Int(_, _) | ASTValue::Float(_, _) => {
                     let instr = format!("{}.get ${}", scope, name);
                     ctx.add_wat(&instr);
                     rc = v.clone();
                 }
-                ASTASTValue::Int2(_, _, _) | ASTASTValue::Float2(_, _, _) => {
+                ASTValue::Int2(_, _, _) | ASTValue::Float2(_, _, _) => {
                     if swizzle.is_empty() {
                         let instr = format!("{}.get ${}_x", scope, name);
                         ctx.add_wat(&instr);
@@ -961,7 +951,7 @@ impl Visitor for CompileVisitor {
                         process_swizzle(&v, swizzle, scope, &name, ctx);
                     }
                 }
-                ASTASTValue::Int3(_, _, _, _) | ASTASTValue::Float3(_, _, _, _) => {
+                ASTValue::Int3(_, _, _, _) | ASTValue::Float3(_, _, _, _) => {
                     if swizzle.is_empty() {
                         let instr = format!("{}.get ${}_x", scope, name);
                         ctx.add_wat(&instr);
@@ -974,7 +964,7 @@ impl Visitor for CompileVisitor {
                         process_swizzle(&v, swizzle, scope, &name, ctx);
                     }
                 }
-                ASTASTValue::Int4(_, _, _, _, _) | ASTASTValue::Float4(_, _, _, _, _) => {
+                ASTValue::Int4(_, _, _, _, _) | ASTValue::Float4(_, _, _, _, _) => {
                     if swizzle.is_empty() {
                         let instr = format!("{}.get ${}_x", scope, name);
                         ctx.add_wat(&instr);
@@ -989,7 +979,7 @@ impl Visitor for CompileVisitor {
                         process_swizzle(&v, swizzle, scope, &name, ctx);
                     }
                 }
-                ASTASTValue::Mat2(_, _) | ASTASTValue::Mat3(_, _) | ASTASTValue::Mat4(_, _) => {
+                ASTValue::Mat2(_, _) | ASTValue::Mat3(_, _) | ASTValue::Mat4(_, _) => {
                     let instr = format!("{}.get", scope);
                     let comps = v.write_access(&instr, &name);
 
@@ -999,14 +989,14 @@ impl Visitor for CompileVisitor {
 
                     rc = v;
                 }
-                ASTASTValue::Struct(struct_name, _, _) => {
+                ASTValue::Struct(struct_name, _, _) => {
                     rc = ctx.access_struct(&name, struct_name, field_path, false, loc)?;
                 }
 
                 _ => {}
             }
-        } else if let Some(ASTASTValue::Function(name, args, body)) = self.functions.get(&name) {
-            rc = ASTASTValue::Function(name.clone(), args.clone(), body.clone());
+        } else if let Some(ASTValue::Function(name, args, body)) = self.functions.get(&name) {
+            rc = ASTValue::Function(name.clone(), args.clone(), body.clone());
         } else {
             return Err(RPUError::loc(format!("Unknown identifier '{}'", name), loc));
         }
@@ -1022,7 +1012,7 @@ impl Visitor for CompileVisitor {
 
         if let Some(vv) = self.environment.get(&name) {
             rc = vv;
-        } else if let Some(ASTValue::Function(name, args, body)) = self.functions.get(&name) {
+        } else if let Some(ASTValue::Function(name, args, body)) = self.ast_functions.get(&name) {
             rc = ASTValue::Function(name.clone(), args.clone(), body.clone());
         }
 
@@ -1212,17 +1202,20 @@ impl Visitor for CompileVisitor {
     ) -> Result<ASTValue, RuntimeError> {
         let callee = callee.accept(self, ctx)?;
 
-        if let ASTValue::Function(name, func_args, _returns) = callee {
-            if func_args.len() == args.len() {
-                if name == "length" {
-                    _ = args[0].accept(self, ctx)?;
-                    ctx.emit(NodeOp::Length);
+        let functions = self.functions.clone();
+        if let ASTValue::Function(name, _func_args, _returns) = callee {
+            if let Some(func) = &self.functions.get(&name).cloned() {
+                if func.arguments as usize == args.len() {
+                    for arg in args {
+                        _ = arg.accept(self, ctx)?;
+                    }
+                    ctx.emit(func.op.clone());
+                } else {
+                    return Err(RuntimeError::new(
+                        format!("Wrong amount of arguments for '{}'", name),
+                        loc,
+                    ));
                 }
-            } else {
-                return Err(RuntimeError::new(
-                    format!("Wrong amount of arguments for '{}'", name),
-                    loc,
-                ));
             }
         }
 
@@ -1266,7 +1259,7 @@ impl Visitor for CompileVisitor {
         /*
                 self.functions.insert(
                     name.to_string(),
-                    ASTASTValue::Function(name.to_string(), args.to_vec(), Box::new(returns.clone())),
+                    ASTValue::Function(name.to_string(), args.to_vec(), Box::new(returns.clone())),
                 );
 
                 let mut params = String::new();
@@ -1281,14 +1274,14 @@ impl Visitor for CompileVisitor {
                     }
 
                     match param {
-                        ASTASTValue::Int(name, _) => {
+                        ASTValue::Int(name, _) => {
                             params += &format!(
                                 "(param ${} i{})",
                                 name.clone().unwrap(),
                                 ctx.precision.describe()
                             );
                         }
-                        ASTASTValue::Int2(name, _, _) => {
+                        ASTValue::Int2(name, _, _) => {
                             params += &format!(
                                 "(param ${}_x i{}) (param ${}_y i{})",
                                 name.clone().unwrap(),
@@ -1297,7 +1290,7 @@ impl Visitor for CompileVisitor {
                                 ctx.precision.describe()
                             );
                         }
-                        ASTASTValue::Int3(name, _, _, _) => {
+                        ASTValue::Int3(name, _, _, _) => {
                             params += &format!(
                                 "(param ${}_x i{}) (param ${}_y i{}) (param ${}_z i{})",
                                 name.clone().unwrap(),
@@ -1308,7 +1301,7 @@ impl Visitor for CompileVisitor {
                                 ctx.precision.describe()
                             );
                         }
-                        ASTASTValue::Int4(name, _, _, _, _) => {
+                        ASTValue::Int4(name, _, _, _, _) => {
                             params += &format!(
                                 "(param ${}_x i{}) (param ${}_y i{}) (param ${}_z i{}) (param ${}_w i{})",
                                 name.clone().unwrap(),
@@ -1321,14 +1314,14 @@ impl Visitor for CompileVisitor {
                                 ctx.precision.describe()
                             );
                         }
-                        ASTASTValue::Float(name, _) => {
+                        ASTValue::Float(name, _) => {
                             params += &format!(
                                 "(param ${} f{})",
                                 name.clone().unwrap(),
                                 ctx.precision.describe()
                             );
                         }
-                        ASTASTValue::Float2(name, _, _) => {
+                        ASTValue::Float2(name, _, _) => {
                             params += &format!(
                                 "(param ${}_x f{}) (param ${}_y f{})",
                                 name.clone().unwrap(),
@@ -1337,7 +1330,7 @@ impl Visitor for CompileVisitor {
                                 ctx.precision.describe()
                             );
                         }
-                        ASTASTValue::Float3(name, _, _, _) => {
+                        ASTValue::Float3(name, _, _, _) => {
                             params += &format!(
                                 "(param ${}_x f{}) (param ${}_y f{}) (param ${}_z f{})",
                                 name.clone().unwrap(),
@@ -1348,7 +1341,7 @@ impl Visitor for CompileVisitor {
                                 ctx.precision.describe()
                             );
                         }
-                        ASTASTValue::Float4(name, _, _, _, _) => {
+                        ASTValue::Float4(name, _, _, _, _) => {
                             params += &format!(
                                 "(param ${}_x f{}) (param ${}_y f{}) (param ${}_z f{}) (param ${}_w f{})",
                                 name.clone().unwrap(),
@@ -1361,7 +1354,7 @@ impl Visitor for CompileVisitor {
                                 ctx.precision.describe()
                             );
                         }
-                        ASTASTValue::Struct(_, param_name, _) => {
+                        ASTValue::Struct(_, param_name, _) => {
                             params += &format!("(param ${} i32)", param_name.clone().unwrap());
                         }
                         _ => {}
@@ -1389,7 +1382,7 @@ impl Visitor for CompileVisitor {
 
                 ctx.wat.push_str("__LOCALS__");
 
-                let mut last_value = ASTASTValue::None;
+                let mut last_value = ASTValue::None;
                 for stmt in body {
                     last_value = stmt.accept(self, ctx)?;
                 }
