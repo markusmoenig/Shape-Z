@@ -1,35 +1,35 @@
 use crate::prelude::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 
 pub enum OutputTarget {
     Globals,
-    Init,
+    Custom,
     Definitions(String),
-    // Function(String),
 }
 
 #[derive(Debug, Clone)]
 pub struct Program {
     pub globals: Vec<NodeOp>,
-    pub definitons: FxHashMap<String, Vec<NodeOp>>,
+    pub custom: Vec<NodeOp>,
+    pub definitons: FxHashMap<String, Defined>,
     pub functions: FxHashMap<String, Vec<NodeOp>>,
-    pub init: Vec<NodeOp>, // optional setup code
+
+    pub grid: Arc<RwLock<VoxelGrid>>,
 }
 
 impl Program {
-    pub fn new() -> Self {
+    pub fn new(size: Vec3<i32>, density: usize) -> Self {
         Self {
             globals: Vec::new(),
+            custom: Vec::new(),
             definitons: FxHashMap::default(),
             functions: FxHashMap::default(),
-            init: Vec::new(),
-        }
-    }
-}
 
-impl Default for Program {
-    fn default() -> Self {
-        Self::new()
+            grid: Arc::new(RwLock::new(VoxelGrid::new(
+                [size.x as F, size.y as F, size.z as F],
+                density,
+            ))),
+        }
     }
 }

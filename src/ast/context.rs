@@ -2,39 +2,33 @@ use crate::prelude::*;
 
 #[derive(Clone, Debug)]
 pub struct Context {
-    pub current_target: OutputTarget,
+    current_target: OutputTarget,
     pub program: Program,
-    // / To generate code from expressions on the fly during AST parsing.
-    // pub code: Vec<NodeOp>,
-
-    // pub density: usize,
-
-    // pub definitions: FxHashMap<String, DefineObject>,
-}
-
-impl Default for Context {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl Context {
-    pub fn new() -> Self {
+    pub fn new(size: Vec3<i32>, density: usize) -> Self {
         Self {
             current_target: OutputTarget::Globals,
-            program: Program::default(),
+            program: Program::new(size, density),
         }
+    }
+
+    pub fn set_target(&mut self, target: OutputTarget) {
+        self.current_target = target;
+        self.program.custom.clear();
     }
 
     pub fn emit(&mut self, op: NodeOp) {
         match &self.current_target {
             OutputTarget::Globals => self.program.globals.push(op),
-            OutputTarget::Init => self.program.init.push(op),
+            OutputTarget::Custom => self.program.custom.push(op),
             OutputTarget::Definitions(name) => {
                 self.program
                     .definitons
                     .entry(name.clone())
                     .or_default()
+                    .body
                     .push(op);
             }
         }

@@ -58,6 +58,7 @@ pub enum TokenType {
     Const,
     Struct,
     Define,
+    Place,
     In,
     Out,
     Inout,
@@ -142,6 +143,7 @@ impl Scanner {
         keywords.insert("struct", TokenType::Struct);
 
         keywords.insert("define", TokenType::Define);
+        keywords.insert("place", TokenType::Place);
 
         keywords.insert("in", TokenType::In);
         keywords.insert("out", TokenType::Out);

@@ -75,6 +75,9 @@ impl Parser {
         if self.match_token(vec![TokenType::Define]) {
             return self.define_declaration();
         }
+        if self.match_token(vec![TokenType::Place]) {
+            return self.place_declaration();
+        }
 
         self.expression_statement()
     }
@@ -110,21 +113,48 @@ impl Parser {
             self.current_line,
         )?;
 
-        /*
-        self.consume(
-            TokenType::RightBrace,
-            "Expected '}' after define body",
-            self.current_line,
-        )?;*/
-
         // println!("[Parser] Define declaration: {}, {:?}", id, params);
 
         let block = self.block()?;
 
         Ok(Stmt::Define(
-            DefineObject::new(id, params, Box::new(block)),
+            Defined::new(id, params, Box::new(block)),
             self.create_loc(line),
         ))
+    }
+
+    fn place_declaration(&mut self) -> Result<Stmt, ParseError> {
+        let line = self.current_line;
+        self.consume(
+            TokenType::Identifier,
+            "Expected identifier after 'place''",
+            self.current_line,
+        )?;
+
+        let id = self.previous().unwrap().lexeme.clone();
+        let mut params = FxHashMap::default();
+
+        while self.match_token(vec![TokenType::Identifier]) {
+            let id = self.previous().unwrap().lexeme.clone();
+
+            self.consume(
+                TokenType::Equal,
+                "Expected '=' after define identifier",
+                self.current_line,
+            )?;
+
+            let value = self.expression()?;
+
+            params.insert(id, Box::new(value));
+        }
+
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' after place statement",
+            line,
+        )?;
+
+        Ok(Stmt::Place(id, params, self.create_loc(line)))
     }
 
     fn block(&mut self) -> Result<Stmt, ParseError> {
@@ -1214,8 +1244,8 @@ impl Parser {
     /// Create a location for the given line number.
     fn create_loc(&self, line: usize) -> Location {
         Location {
-            file: "main".to_string(),
             line,
+            path: self.path.clone(),
         }
     }
 }

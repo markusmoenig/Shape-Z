@@ -1,6 +1,6 @@
 pub mod compile;
 pub mod context;
-pub mod defineobject;
+pub mod defined;
 pub mod environment;
 pub mod error;
 pub mod idverifier;
@@ -10,6 +10,7 @@ pub mod scanner;
 pub mod value;
 
 use crate::prelude::*;
+use std::path::PathBuf;
 
 #[macro_export]
 macro_rules! empty_expr {
@@ -74,7 +75,8 @@ pub enum Stmt {
     Print(Box<Expr>, Location),
     Block(Vec<Box<Stmt>>, Location),
     Expression(Box<Expr>, Location),
-    Define(DefineObject, Location),
+    Define(Defined, Location),
+    Place(String, FxHashMap<String, Box<Expr>>, Location),
     VarDeclaration(String, ASTValue, Box<Expr>, Location),
     StructDeclaration(String, Vec<(String, ASTValue)>, Location),
     FunctionDeclaration(
@@ -242,7 +244,15 @@ pub trait Visitor {
 
     fn define(
         &mut self,
-        define_context: &DefineObject,
+        define_context: &Defined,
+        loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError>;
+
+    fn place(
+        &mut self,
+        id: &String,
+        params: &FxHashMap<String, Box<Expr>>,
         loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError>;
@@ -431,6 +441,7 @@ impl Stmt {
             Stmt::Block(list, loc) => visitor.block(list, loc, ctx),
             Stmt::Expression(expression, loc) => visitor.expression(expression, loc, ctx),
             Stmt::Define(define_context, loc) => visitor.define(define_context, loc, ctx),
+            Stmt::Place(id, params, loc) => visitor.place(id, params, loc, ctx),
             Stmt::VarDeclaration(name, static_type, initializer, loc) => {
                 visitor.var_declaration(name, static_type, initializer, loc, ctx)
             }
@@ -497,19 +508,19 @@ impl Expr {
 /// Location in the source code
 #[derive(Clone, Debug)]
 pub struct Location {
-    pub file: String,
     pub line: usize,
+    pub path: PathBuf,
 }
 
 impl Default for Location {
     fn default() -> Self {
-        Self::new("".to_string(), 0)
+        Self::new(0, PathBuf::default())
     }
 }
 
 impl Location {
-    pub fn new(file: String, line: usize) -> Self {
-        Location { file, line }
+    pub fn new(line: usize, path: PathBuf) -> Self {
+        Location { line, path }
     }
 
     pub fn describe(&self) -> String {

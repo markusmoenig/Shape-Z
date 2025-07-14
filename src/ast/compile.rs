@@ -1,11 +1,9 @@
-use crate::expr_float;
 use crate::prelude::*;
 
 /// ExecuteVisitor
 pub struct CompileVisitor {
     pub environment: Environment,
     functions: FxHashMap<String, ASTValue>,
-    break_depth: Vec<i32>,
 }
 
 impl Visitor for CompileVisitor {
@@ -259,7 +257,6 @@ impl Visitor for CompileVisitor {
         Self {
             environment: Environment::default(),
             functions,
-            break_depth: vec![],
         }
     }
 
@@ -320,14 +317,41 @@ impl Visitor for CompileVisitor {
 
     fn define(
         &mut self,
-        define_object: &DefineObject,
+        define_object: &Defined,
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        //expression.accept(self, ctx)
+        let mut cpy = define_object.clone();
 
-        // ctx.definitions
-        //     .insert(define_object.name.clone(), define_object.clone());
+        if let Some(size) = define_object.params.get("size") {
+            ctx.set_target(OutputTarget::Custom);
+            _ = size.accept(self, ctx)?;
+
+            cpy.size = ctx.program.custom.clone();
+        }
+
+        ctx.program.definitons.insert(cpy.name.clone(), cpy);
+        ctx.set_target(OutputTarget::Definitions(define_object.name.clone()));
+
+        if let Some(block) = &define_object.block {
+            block.accept(self, ctx)?;
+        }
+
+        ctx.set_target(OutputTarget::Globals);
+
+        Ok(ASTValue::None)
+    }
+
+    fn place(
+        &mut self,
+        id: &String,
+        _params: &FxHashMap<String, Box<Expr>>,
+        _loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError> {
+        if ctx.program.definitons.contains_key(id) {
+            ctx.emit(NodeOp::Place(id.clone()));
+        }
 
         Ok(ASTValue::None)
     }
@@ -992,6 +1016,10 @@ impl Visitor for CompileVisitor {
         }
         */
 
+        if name == "local" {
+            ctx.emit(NodeOp::Local);
+        }
+
         if let Some(vv) = self.environment.get(&name) {
             rc = vv;
         } else if let Some(ASTValue::Function(name, args, body)) = self.functions.get(&name) {
@@ -1016,7 +1044,13 @@ impl Visitor for CompileVisitor {
             ASTValue::Float(f) => {
                 ctx.emit(NodeOp::Push(Value::from_float(*f)));
             }
+            ASTValue::Float3(x, y, z) => {
+                let x = x.accept(self, ctx)?.to_float().unwrap_or_default();
+                let y = y.accept(self, ctx)?.to_float().unwrap_or_default();
+                let z = z.accept(self, ctx)?.to_float().unwrap_or_default();
 
+                ctx.emit(NodeOp::Pack3);
+            }
             _ => {}
         };
 
@@ -1170,435 +1204,37 @@ impl Visitor for CompileVisitor {
     fn func_call(
         &mut self,
         callee: &Expr,
-        swizzle: &[u8],
+        _swizzle: &[u8],
         _field_path: &[String],
         args: &[Box<Expr>],
         loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
         let callee = callee.accept(self, ctx)?;
-        let mut rc = ASTValue::None;
 
-        // println!(
-        //     "func_call: callee: {:?}, swizzle: {:?}, args: {:?}",
-        //     callee, swizzle, args
-        // );
-
-        if let ASTValue::Function(name, func_args, returns) = callee {
-            if func_args.len() != args.len() {
-                // return Err(RPUError::loc(
-                //     format!(
-                //         "Function '{}' expects {} arguments, but {} were provided",
-                //         name,
-                //         func_args.len(),
-                //         args.len()
-                //     ),
-                //     loc,
-                // ));
-            }
-
-            if name == "length" {
-                let v = args[0].accept(self, ctx)?;
-
-                match v {
-                    ASTValue::Float3(x, y, z) => {
-                        let x_val = x.accept(self, ctx)?.to_float().unwrap_or_default();
-                        let y_val = y.accept(self, ctx)?.to_float().unwrap_or_default();
-                        let z_val = z.accept(self, ctx)?.to_float().unwrap_or_default();
-
-                        let r = Vec3::new(x_val, y_val, z_val).magnitude();
-                        rc = ASTValue::Float(r);
-                    }
-                    _ => {}
+        if let ASTValue::Function(name, func_args, _returns) = callee {
+            if func_args.len() == args.len() {
+                if name == "length" {
+                    _ = args[0].accept(self, ctx)?;
+                    ctx.emit(NodeOp::Length);
                 }
-
-                /*
-                let components = v.components();
-                if !(1..=4).contains(&components) {
-                    return Err(RPUError::loc(
-                        format!("Invalid number of components {}", components),
-                        loc,
-                    ));
-                }
-                let func_name = ctx.gen_vec_length(v.components() as u32);
-                let instr = format!("(call ${})", func_name);
-                ctx.add_wat(&instr);
-                rc = ASTASTValue::Float(None, 0.0);*/
+            } else {
+                return Err(RuntimeError::new(
+                    format!("Wrong amount of arguments for '{}'", name),
+                    loc,
+                ));
             }
         }
 
-        /*
-        if let ASTValue::Function(name, func_args, returns) = callee {
-            if func_args.len() != args.len() {
-                return Err(RPUError::loc(
-                    format!(
-                        "Function '{}' expects {} arguments, but {} were provided",
-                        name,
-                        func_args.len(),
-                        args.len()
-                    ),
-                    loc,
-                ));
-            }
-
-            if name == "length" {
-                let v = args[0].accept(self, ctx)?;
-                let components = v.components();
-                if !(1..=4).contains(&components) {
-                    return Err(RPUError::loc(
-                        format!("Invalid number of components {}", components),
-                        loc,
-                    ));
-                }
-                let func_name = ctx.gen_vec_length(v.components() as u32);
-                let instr = format!("(call ${})", func_name);
-                ctx.add_wat(&instr);
-                rc = ASTASTValue::Float(None, 0.0);
-            }
-        }*/
-        /*
-        if let ASTASTValue::Function(name, func_args, returns) = callee {
-            if func_args.len() != args.len() {
-                return Err(RPUError::loc(
-                    format!(
-                        "Function '{}' expects {} arguments, but {} were provided",
-                        name,
-                        func_args.len(),
-                        args.len()
-                    ),
-                    loc,
-                ));
-            }
-
-            if name == "length" {
-                let v = args[0].accept(self, ctx)?;
-                let components = v.components();
-                if !(1..=4).contains(&components) {
-                    return Err(RPUError::loc(
-                        format!("Invalid number of components {}", components),
-                        loc,
-                    ));
-                }
-                let func_name = ctx.gen_vec_length(v.components() as u32);
-                let instr = format!("(call ${})", func_name);
-                ctx.add_wat(&instr);
-                rc = ASTASTValue::Float(None, 0.0);
-            } else if name == "normalize" {
-                let v = args[0].accept(self, ctx)?;
-                let components = v.components();
-                if !(1..=4).contains(&components) {
-                    return Err(RPUError::loc(
-                        format!("Invalid number of components {}", components),
-                        loc,
-                    ));
-                }
-                let func_name = ctx.gen_vec_normalize(v.components() as u32);
-                let instr = format!("(call ${})", func_name);
-                ctx.add_wat(&instr);
-                rc = v;
-            } else if name == "rand" {
-                if !args.is_empty() {
-                    return Err(RPUError::loc("'rand' does not take any arguments", loc));
-                }
-                let instr = "(call $_rpu_rand)";
-                ctx.add_wat(instr);
-                ctx.imports_hash.insert("$_rpu_rand".to_string());
-                rc = ASTASTValue::Float(None, 0.0);
-            } else if name == "sqrt"
-                || name == "sin"
-                || name == "cos"
-                || name == "ceil"
-                || name == "floor"
-                || name == "fract"
-                || name == "abs"
-                || name == "tan"
-                || name == "atan"
-                || name == "degrees"
-                || name == "radians"
-                || name == "sign"
-                || name == "exp"
-                || name == "log"
-            {
-                let v = args[0].accept(self, ctx)?;
-                let components = v.components();
-                if !(1..=4).contains(&components) {
-                    return Err(RPUError::loc(
-                        format!("Invalid number of components '{}'", components),
-                        loc,
-                    ));
-                }
-                if !v.is_float_based() {
-                    return Err(RPUError::loc(
-                        format!("'{}' expects a float based parameter", name),
-                        loc,
-                    ));
-                }
-                let func_name = ctx.gen_vec_operation(v.components() as u32, &name);
-                let instr = format!("(call ${})", func_name);
-                ctx.add_wat(&instr);
-                rc = v;
-            } else if name == "max"
-                || name == "min"
-                || name == "pow"
-                || name == "mod"
-                || name == "step"
-            {
-                let v = args[0].accept(self, ctx)?;
-
-                if func_args.len() != args.len() {
-                    return Err(RPUError::loc(
-                        format!(
-                            "Function '{}' expects {} arguments, but {} were provided",
-                            name,
-                            func_args.len(),
-                            args.len()
-                        ),
-                        loc,
-                    ));
-                }
-
-                let components = v.components();
-                if !(1..=4).contains(&components) {
-                    return Err(RPUError::loc(
-                        format!("Invalid number of components '{}'", components),
-                        loc,
-                    ));
-                }
-                if !v.is_float_based() {
-                    return Err(RPUError::loc(
-                        format!("'{}' expects a float based parameter", name),
-                        loc,
-                    ));
-                }
-
-                let b = args[1].accept(self, ctx)?;
-                if b.components() != 1 {
-                    return Err(RPUError::loc(
-                        format!("Invalid second parameter for '{}' (scalars only)", name),
-                        loc,
-                    ));
-                }
-
-                let func_name = ctx.gen_vec_operation_scalar(v.components() as u32, &name);
-                let instr = format!("(call ${})", func_name);
-                ctx.add_wat(&instr);
-                rc = v;
-            } else if name == "clamp" {
-                let v = args[0].accept(self, ctx)?;
-
-                if func_args.len() != args.len() {
-                    return Err(RPUError::loc(
-                        format!(
-                            "Function '{}' expects {} arguments, but {} were provided",
-                            name,
-                            func_args.len(),
-                            args.len()
-                        ),
-                        loc,
-                    ));
-                }
-
-                let components = v.components();
-                if !(1..=4).contains(&components) {
-                    return Err(RPUError::loc(
-                        format!("Invalid number of components '{}'", components),
-                        loc,
-                    ));
-                }
-                if !v.is_float_based() {
-                    return Err(RPUError::loc(
-                        format!("'{}' expects a float based parameter", name),
-                        loc,
-                    ));
-                }
-
-                let b = args[1].accept(self, ctx)?;
-                if b.components() != 1 {
-                    return Err(RPUError::loc(
-                        format!("Invalid second parameter for '{}' (scalars only)", name),
-                        loc,
-                    ));
-                }
-
-                let _ = args[2].accept(self, ctx)?;
-                if b.components() != 1 {
-                    return Err(RPUError::loc(
-                        format!("Invalid second parameter for '{}' (scalars only)", name),
-                        loc,
-                    ));
-                }
-
-                let func_name = ctx.gen_vec_operation_scalar_scalar(v.components() as u32, &name);
-                let instr = format!("(call ${})", func_name);
-                ctx.add_wat(&instr);
-                rc = v;
-            } else if name == "smoothstep" {
-                let a1 = args[0].accept(self, ctx)?;
-                let components = a1.components();
-                if !(1..=4).contains(&components) {
-                    return Err(RPUError::loc(
-                        format!("Invalid number of components {}", components),
-                        loc,
-                    ));
-                }
-                let a2 = args[1].accept(self, ctx)?;
-
-                if a1.to_type() != a2.to_type() || !a1.is_float_based() {
-                    return Err(RPUError::loc(
-                        format!(
-                            "'smoothstep' expects the first two arguments to be the same float type, but '{}' and '{}' were provided",
-                            a1.to_type(),
-                            a2.to_type()
-                        ),
-                        loc,
-                    ));
-                }
-
-                let a3 = args[2].accept(self, ctx)?;
-                if a3.to_type() != "float" {
-                    return Err(RPUError::loc(
-                        format!(
-                            "'smoothstep' expects the third argument to be of type 'float', but '{}' was provided",
-                            a3.to_type()
-                        ),
-                        loc,
-                    ));
-                }
-
-                let func_name = ctx.gen_vec_smoothstep(components as u32);
-
-                let instr = format!("(call ${})", func_name);
-                ctx.add_wat(&instr);
-                rc = a1;
-            } else if name == "mix" {
-                let a1 = args[0].accept(self, ctx)?;
-                let components = a1.components();
-                if !(1..=4).contains(&components) {
-                    return Err(RPUError::loc(
-                        format!("Invalid number of components {}", components),
-                        loc,
-                    ));
-                }
-                let a2 = args[1].accept(self, ctx)?;
-
-                if a1.to_type() != a2.to_type() || !a1.is_float_based() {
-                    return Err(RPUError::loc(
-                        format!(
-                            "'mix' expects the first two arguments to be the same float type, but '{}' and '{}' were provided",
-                            a1.to_type(),
-                            a2.to_type()
-                        ),
-                        loc,
-                    ));
-                }
-
-                let a3 = args[2].accept(self, ctx)?;
-                if a3.to_type() != "float" {
-                    return Err(RPUError::loc(
-                        format!(
-                            "'mix' expects the third argument to be of type 'float', but '{}' was provided",
-                            a3.to_type()
-                        ),
-                        loc,
-                    ));
-                }
-
-                let func_name = ctx.gen_vec_mix(components as u32);
-
-                let instr = format!("(call ${})", func_name);
-                ctx.add_wat(&instr);
-                rc = a1;
-            } else if name == "dot" {
-                let a1 = args[0].accept(self, ctx)?;
-                let components = a1.components();
-                if !(2..=4).contains(&components) {
-                    return Err(RPUError::loc(
-                        format!("Invalid number of components {} for 'dot'", components),
-                        loc,
-                    ));
-                }
-                let a2 = args[1].accept(self, ctx)?;
-
-                if a1.to_type() != a2.to_type() || !a1.is_float_based() {
-                    return Err(RPUError::loc(
-                        format!(
-                            "'dot' expects the first two arguments to be the same float type, but '{}' and '{}' were provided",
-                            a1.to_type(),
-                            a2.to_type()
-                        ),
-                        loc,
-                    ));
-                }
-
-                let func_name = ctx.gen_vec_dot_product(components as u32);
-
-                let instr = format!("(call ${})", func_name);
-                ctx.add_wat(&instr);
-                rc = ASTASTValue::Float(None, 0.0);
-            } else if name == "cross" {
-                let a1 = args[0].accept(self, ctx)?;
-                let components = a1.components();
-                if components != 3 {
-                    return Err(RPUError::loc(
-                        format!("Invalid number of components {} for 'dot'", components),
-                        loc,
-                    ));
-                }
-                let a2 = args[1].accept(self, ctx)?;
-
-                if a1.to_type() != a2.to_type() || !a1.is_float_based() {
-                    return Err(RPUError::loc(
-                        format!(
-                            "'dot' expects the first two arguments to be the same float type, but '{}' and '{}' were provided",
-                            a1.to_type(),
-                            a2.to_type()
-                        ),
-                        loc,
-                    ));
-                }
-
-                let func_name = ctx.gen_vec_cross_product();
-
-                let instr = format!("(call ${})", func_name);
-                ctx.add_wat(&instr);
-                rc = a1;
-            } else {
-                for index in 0..args.len() {
-                    let rc = args[index].accept(self, ctx)?;
-                    if rc.to_type() != func_args[index].to_type() {
-                        return Err(RPUError::loc(
-                            format!(
-                                "Function '{}' expects argument {} to be of type '{}', but '{}' was provided",
-                                name,
-                                index,
-                                func_args[index].to_type(),
-                                rc.to_type()
-                            ),
-                            loc,
-                        ));
-                    }
-                }
-
-                let instr = format!("(call ${})", name);
-                ctx.add_wat(&instr);
-                rc = *returns;
-            }
-
-            if !swizzle.is_empty() {
-                ctx.swizzle_it(&rc, swizzle, loc)?;
-                rc = ctx.create_value_from_swizzle(&rc, swizzle.len());
-            }
-        }*/
-
-        Ok(rc)
+        Ok(ASTValue::None)
     }
 
     fn struct_declaration(
         &mut self,
-        name: &str,
-        fields: &[(String, ASTValue)],
+        _name: &str,
+        _fields: &[(String, ASTValue)],
         _loc: &Location,
-        ctx: &mut Context,
+        _ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
         /*
         let mut size: usize = 0;

@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use std::{fmt, path::PathBuf};
 
 /// Represents a parser error.
@@ -39,4 +40,39 @@ impl fmt::Display for ParseError {
 }
 
 #[derive(Debug)]
-pub struct RuntimeError {}
+pub struct RuntimeError {
+    pub message: String,
+    pub line: usize,
+    pub path: PathBuf,
+}
+
+impl RuntimeError {
+    pub fn new<M>(message: M, loc: &Location) -> Self
+    where
+        M: Into<String>,
+    {
+        Self {
+            message: message.into(),
+            line: loc.line,
+            path: loc.path.clone(),
+        }
+    }
+}
+
+impl fmt::Display for RuntimeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.line > 0 {
+            if let Some(file) = self.path.to_str() {
+                write!(f, "{} in {} at line {}.", self.message, file, self.line)
+            } else {
+                write!(f, "{} in <unknown file>.", self.message)
+            }
+        } else {
+            if let Some(file) = self.path.to_str() {
+                write!(f, "{}: \"{}\".", self.message, file)
+            } else {
+                write!(f, "{} in <unknown file>.", self.message)
+            }
+        }
+    }
+}

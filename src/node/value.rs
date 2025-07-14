@@ -8,6 +8,11 @@ impl Value {
     // Constructor
 
     #[inline]
+    pub fn zero() -> Self {
+        Self([0.0, 0.0, 0.0])
+    }
+
+    #[inline]
     pub fn from_float(x: f32) -> Self {
         Self([x, x, x])
     }
@@ -26,6 +31,28 @@ impl Value {
     #[inline]
     pub fn from_vec3(v: Vec3<f32>) -> Self {
         Self([v.x, v.y, v.z])
+    }
+
+    #[inline]
+    pub fn from_components(x: f32, y: f32, z: f32) -> Self {
+        Self([x, y, z])
+    }
+
+    // Getter
+
+    #[inline]
+    pub fn x(&self) -> f32 {
+        self.0[0]
+    }
+
+    #[inline]
+    pub fn y(&self) -> f32 {
+        self.0[1]
+    }
+
+    #[inline]
+    pub fn z(&self) -> f32 {
+        self.0[2]
     }
 
     // Conversion
@@ -91,7 +118,7 @@ impl Value {
     #[inline]
     pub fn length(self) -> Self {
         let len = (self.0[0].powi(2) + self.0[1].powi(2) + self.0[2].powi(2)).sqrt();
-        Value([len, 0.0, 0.0])
+        Value([len, len, len])
     }
 
     #[inline]
