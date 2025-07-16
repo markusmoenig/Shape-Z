@@ -72,8 +72,11 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> Result<Stmt, ParseError> {
-        if self.match_token(vec![TokenType::Define]) {
-            return self.define_declaration();
+        if self.match_token(vec![TokenType::Voxel]) {
+            return self.voxel_declaration();
+        }
+        if self.match_token(vec![TokenType::Shape]) {
+            return self.shape_declaration();
         }
         if self.match_token(vec![TokenType::Place]) {
             return self.place_declaration();
@@ -82,11 +85,12 @@ impl Parser {
         self.expression_statement()
     }
 
-    fn define_declaration(&mut self) -> Result<Stmt, ParseError> {
+    /// Voxel declaration
+    fn voxel_declaration(&mut self) -> Result<Stmt, ParseError> {
         let line = self.current_line;
         self.consume(
             TokenType::Identifier,
-            "Expected identifier after 'define''",
+            "Expected identifier after 'voxel''",
             self.current_line,
         )?;
 
@@ -98,7 +102,7 @@ impl Parser {
 
             self.consume(
                 TokenType::Equal,
-                "Expected '=' after define identifier",
+                "Expected '=' after voxel identifier",
                 self.current_line,
             )?;
 
@@ -109,20 +113,70 @@ impl Parser {
 
         self.consume(
             TokenType::LeftBrace,
-            "Expected '{' after define header",
+            "Expected '{' after voxel header",
             self.current_line,
         )?;
 
-        // println!("[Parser] Define declaration: {}, {:?}", id, params);
-
         let block = self.block()?;
 
-        Ok(Stmt::Define(
-            Defined::new(id, params, Box::new(block)),
+        Ok(Stmt::Voxel(
+            VoxelD::new(id, params, Box::new(block)),
             self.create_loc(line),
         ))
     }
 
+    /// Shape declaration
+    fn shape_declaration(&mut self) -> Result<Stmt, ParseError> {
+        let line = self.current_line;
+        self.consume(
+            TokenType::Identifier,
+            "Expected identifier after 'shape''",
+            self.current_line,
+        )?;
+
+        let mut valid_shape_ids = vec!["Rect"];
+
+        let id = self.previous().unwrap().lexeme.clone();
+
+        if !valid_shape_ids.contains(&id.as_str()) {
+            return Err(ParseError::new(
+                format!("Invalid shape id: {:?}", id),
+                line,
+                &self.path,
+            ));
+        }
+
+        let mut params = FxHashMap::default();
+
+        while self.match_token(vec![TokenType::Identifier]) {
+            let id = self.previous().unwrap().lexeme.clone();
+
+            self.consume(
+                TokenType::Equal,
+                "Expected '=' after voxel identifier",
+                self.current_line,
+            )?;
+
+            let value = self.expression()?;
+
+            params.insert(id, Box::new(value));
+        }
+
+        self.consume(
+            TokenType::LeftBrace,
+            "Expected '{' after shape header",
+            self.current_line,
+        )?;
+
+        let block = self.block()?;
+
+        Ok(Stmt::Shape(
+            ShapeD::new(id, params, Box::new(block)),
+            self.create_loc(line),
+        ))
+    }
+
+    /// Place declaration
     fn place_declaration(&mut self) -> Result<Stmt, ParseError> {
         let line = self.current_line;
         self.consume(
@@ -168,8 +222,7 @@ impl Parser {
                     statements.push(Box::new(stmt));
                 }
                 Err(error) => {
-                    println!("{}", error);
-                    break;
+                    return Err(error);
                 }
             }
         }

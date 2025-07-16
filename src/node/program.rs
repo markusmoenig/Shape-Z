@@ -5,14 +5,15 @@ use crate::prelude::*;
 pub enum OutputTarget {
     Globals,
     Custom,
-    Definitions(String),
+    // Name of the Voxel, Recursion Index
+    Voxels(String, Vec<usize>),
 }
 
 #[derive(Debug, Clone)]
 pub struct Program {
     pub globals: Vec<NodeOp>,
     pub custom: Vec<NodeOp>,
-    pub definitons: FxHashMap<String, Defined>,
+    pub voxels: FxHashMap<String, VoxelD>,
     pub functions: FxHashMap<String, Vec<NodeOp>>,
 
     pub grid: Arc<RwLock<VoxelGrid>>,
@@ -23,7 +24,7 @@ impl Program {
         Self {
             globals: Vec::new(),
             custom: Vec::new(),
-            definitons: FxHashMap::default(),
+            voxels: FxHashMap::default(),
             functions: FxHashMap::default(),
 
             grid: Arc::new(RwLock::new(VoxelGrid::new(

@@ -1,10 +1,10 @@
 pub mod compile;
 pub mod context;
-pub mod defined;
 pub mod environment;
 pub mod error;
 pub mod idverifier;
 pub mod module;
+pub mod obectd;
 pub mod parser;
 pub mod scanner;
 pub mod value;
@@ -75,7 +75,8 @@ pub enum Stmt {
     Print(Box<Expr>, Location),
     Block(Vec<Box<Stmt>>, Location),
     Expression(Box<Expr>, Location),
-    Define(Defined, Location),
+    Voxel(VoxelD, Location),
+    Shape(ShapeD, Location),
     Place(String, FxHashMap<String, Box<Expr>>, Location),
     VarDeclaration(String, ASTValue, Box<Expr>, Location),
     StructDeclaration(String, Vec<(String, ASTValue)>, Location),
@@ -242,9 +243,16 @@ pub trait Visitor {
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError>;
 
-    fn define(
+    fn voxel(
         &mut self,
-        define_context: &Defined,
+        objectd: &VoxelD,
+        loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError>;
+
+    fn shape(
+        &mut self,
+        objectd: &ShapeD,
         loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError>;
@@ -440,7 +448,8 @@ impl Stmt {
             Stmt::Print(expression, loc) => visitor.print(expression, loc, ctx),
             Stmt::Block(list, loc) => visitor.block(list, loc, ctx),
             Stmt::Expression(expression, loc) => visitor.expression(expression, loc, ctx),
-            Stmt::Define(define_context, loc) => visitor.define(define_context, loc, ctx),
+            Stmt::Voxel(objectd, loc) => visitor.voxel(objectd, loc, ctx),
+            Stmt::Shape(objectd, loc) => visitor.shape(objectd, loc, ctx),
             Stmt::Place(id, params, loc) => visitor.place(id, params, loc, ctx),
             Stmt::VarDeclaration(name, static_type, initializer, loc) => {
                 visitor.var_declaration(name, static_type, initializer, loc, ctx)

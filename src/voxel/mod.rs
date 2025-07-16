@@ -6,6 +6,7 @@ pub mod ray;
 pub mod rect;
 pub mod renderbuffer;
 pub mod renderer;
+pub mod shape;
 pub mod tile;
 
 use crate::F;

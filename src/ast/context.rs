@@ -2,7 +2,7 @@ use crate::prelude::*;
 
 #[derive(Clone, Debug)]
 pub struct Context {
-    current_target: OutputTarget,
+    pub current_target: OutputTarget,
     pub program: Program,
 }
 
@@ -23,14 +23,20 @@ impl Context {
         match &self.current_target {
             OutputTarget::Globals => self.program.globals.push(op),
             OutputTarget::Custom => self.program.custom.push(op),
-            OutputTarget::Definitions(name) => {
-                self.program
-                    .definitons
-                    .entry(name.clone())
-                    .or_default()
-                    .body
-                    .push(op);
+            OutputTarget::Voxels(_, rec) => {
+                let rec = rec.clone();
+                if let Some(voxel) = self.get_output_voxel() {
+                    voxel.emit(op, rec);
+                }
             }
+        }
+    }
+
+    pub fn get_output_voxel(&mut self) -> Option<&mut VoxelD> {
+        if let OutputTarget::Voxels(id, _) = &self.current_target {
+            self.program.voxels.get_mut(id)
+        } else {
+            None
         }
     }
 

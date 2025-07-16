@@ -305,9 +305,9 @@ impl Visitor for CompileVisitor {
         expression.accept(self, ctx)
     }
 
-    fn define(
+    fn voxel(
         &mut self,
-        define_object: &Defined,
+        define_object: &VoxelD,
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
@@ -320,14 +320,67 @@ impl Visitor for CompileVisitor {
             cpy.size = ctx.program.custom.clone();
         }
 
-        ctx.program.definitons.insert(cpy.name.clone(), cpy);
-        ctx.set_target(OutputTarget::Definitions(define_object.name.clone()));
+        ctx.program.voxels.insert(cpy.name.clone(), cpy);
+        ctx.set_target(OutputTarget::Voxels(define_object.name.clone(), vec![]));
 
         if let Some(block) = &define_object.block {
             block.accept(self, ctx)?;
         }
 
         ctx.set_target(OutputTarget::Globals);
+
+        Ok(ASTValue::None)
+    }
+
+    fn shape(
+        &mut self,
+        objectd: &ShapeD,
+        _loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError> {
+        let shape_index = if let Some(voxel) = ctx.get_output_voxel() {
+            voxel.shapes.len()
+        } else {
+            0
+        };
+
+        if objectd.name == "Rect" {
+            let shape = Rect::new();
+
+            if let Some(voxel) = ctx.get_output_voxel() {
+                voxel.shapes.push(Box::new(shape));
+            }
+        }
+
+        let target_cpy = ctx.current_target.clone();
+
+        if let OutputTarget::Voxels(id, rec) = &ctx.current_target {
+            let mut rec = rec.clone();
+            rec.push(shape_index);
+            ctx.set_target(OutputTarget::Voxels(id.clone(), rec));
+        }
+
+        if let Some(block) = &objectd.block {
+            block.accept(self, ctx)?;
+        }
+
+        ctx.set_target(target_cpy);
+
+        // if let Some(size) = define_object.params.get("size") {
+        //     ctx.set_target(OutputTarget::Custom);
+        //     _ = size.accept(self, ctx)?;
+
+        //     cpy.size = ctx.program.custom.clone();
+        // }
+
+        // ctx.program.definitons.insert(cpy.name.clone(), cpy);
+        // ctx.set_target(OutputTarget::Definitions(define_object.name.clone()));
+
+        // if let Some(block) = &define_object.block {
+        //     block.accept(self, ctx)?;
+        // }
+
+        // ctx.set_target(OutputTarget::Globals);
 
         Ok(ASTValue::None)
     }
@@ -339,7 +392,7 @@ impl Visitor for CompileVisitor {
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        if ctx.program.definitons.contains_key(id) {
+        if ctx.program.voxels.contains_key(id) {
             ctx.emit(NodeOp::Place(id.clone()));
         }
 

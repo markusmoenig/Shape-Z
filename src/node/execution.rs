@@ -72,7 +72,7 @@ impl Execution {
     }
 
     pub fn place(&mut self, id: &String, program: &mut Program) {
-        let defined = match program.definitons.get(id) {
+        let defined = match program.voxels.get(id) {
             Some(defined) => defined.clone(),
             None => return,
         };

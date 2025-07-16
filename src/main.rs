@@ -32,11 +32,11 @@ pub mod prelude {
 
     pub use crate::ast::compile::CompileVisitor;
     pub use crate::ast::context::Context;
-    pub use crate::ast::defined::Defined;
     pub use crate::ast::environment::Environment;
     pub use crate::ast::error::{ParseError, RuntimeError};
     pub use crate::ast::idverifier::IdVerifier;
     pub use crate::ast::module::Module;
+    pub use crate::ast::obectd::*;
     pub use crate::ast::parser::Parser;
     pub use crate::ast::scanner::{Scanner, Token, TokenType};
     pub use crate::ast::value::*;
@@ -55,6 +55,7 @@ pub mod prelude {
     pub use crate::voxel::renderer::Renderer;
     pub use crate::voxel::renderer::model::Model;
     pub use crate::voxel::renderer::pbr::PBR;
+    pub use crate::voxel::shape::{Shape, rect::Rect};
     pub use crate::voxel::tile::Tile;
     pub use crate::voxel::{Coord, Face, HitRecord, HitType};
 }
