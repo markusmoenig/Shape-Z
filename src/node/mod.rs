@@ -7,6 +7,7 @@ pub mod value;
 pub enum NodeOp {
     Place(String),
     Push(Value),
+    World,
     Local,
     Pack3,
     Add,

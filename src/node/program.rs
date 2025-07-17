@@ -16,6 +16,7 @@ pub struct Program {
     pub voxels: FxHashMap<String, VoxelD>,
     pub functions: FxHashMap<String, Vec<NodeOp>>,
 
+    /// The output grid
     pub grid: Arc<RwLock<VoxelGrid>>,
 }
 

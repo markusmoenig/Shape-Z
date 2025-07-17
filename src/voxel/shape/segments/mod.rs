@@ -1,5 +1,6 @@
 use crate::prelude::*;
 
+pub mod back;
 pub mod left;
 
 pub trait Segment: std::fmt::Debug {
@@ -17,6 +18,12 @@ pub trait Segment: std::fmt::Debug {
 
     /// Emit a bytecode recursively.
     fn emit(&mut self, op: &NodeOp, id: &Uuid);
+
+    /// Add a segment to the given element.
+    fn add_segment(&mut self, segment: &Box<dyn Segment>, id: &Uuid);
+
+    /// Execute the bytecode of the segment.
+    fn execute(&self, execution: &mut Execution, program: &mut Program);
 
     /*
     /// Emit an instruction. Needed as segments can contain recursive pattern based instructions, like

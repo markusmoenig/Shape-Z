@@ -57,7 +57,9 @@ pub mod prelude {
     pub use crate::voxel::renderer::Renderer;
     pub use crate::voxel::renderer::model::Model;
     pub use crate::voxel::renderer::pbr::PBR;
-    pub use crate::voxel::shape::{Shape, rect::Rect, segments::Segment, segments::left::Left};
+    pub use crate::voxel::shape::{
+        Shape, rect::Rect, segments::Segment, segments::back::Back, segments::left::Left,
+    };
     pub use crate::voxel::tile::Tile;
     pub use crate::voxel::{Coord, Face, HitRecord, HitType};
 }
@@ -78,6 +80,10 @@ fn main() {
     let mut buffer = Arc::new(Mutex::new(RenderBuffer::new(800, 800)));
     let palette = Arc::new(RwLock::new(Palette::default()));
     let tracer = tracer::Tracer::new();
+
+    palette.write().unwrap().materials[0].base_color = Vec3::new(1.0, 0.0, 0.0);
+    palette.write().unwrap().materials[1].base_color = Vec3::new(0.0, 1.0, 0.0);
+    palette.write().unwrap().materials[2].base_color = Vec3::new(0.0, 0.0, 1.0);
 
     {
         // let mut c = camera.write().unwrap();

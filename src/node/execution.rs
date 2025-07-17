@@ -1,7 +1,22 @@
 use crate::prelude::*;
 
 pub struct Execution {
+    /// The world coordinate of the current voxel
+    pub world: Value,
+    /// The segment transformed local coordinate
     pub local: Value,
+    /// The segment computed u value
+    pub u: Value,
+    /// The segment computed v value
+    pub v: Value,
+    /// The segment computed d (depth) value
+    pub d: Value,
+
+    /// The current bbox of the model space. Gets subdivided by segments during
+    /// execution.
+    pub bbox: Aabb<f32>,
+
+    /// The execution stack.
     pub stack: Vec<Value>,
 }
 
@@ -14,7 +29,15 @@ impl Default for Execution {
 impl Execution {
     pub fn new() -> Self {
         Self {
+            world: Value::zero(),
             local: Value::zero(),
+            u: Value::zero(),
+            v: Value::zero(),
+            d: Value::zero(),
+            bbox: Aabb {
+                min: Vec3::zero(),
+                max: Vec3::one(),
+            },
             stack: Vec::with_capacity(32),
         }
     }
@@ -29,6 +52,9 @@ impl Execution {
                     let y = self.stack.pop().unwrap();
                     let x = self.stack.pop().unwrap();
                     self.stack.push(Value::from_components(x.x(), y.x(), z.x()));
+                }
+                NodeOp::World => {
+                    self.stack.push(self.world);
                 }
                 NodeOp::Local => {
                     self.stack.push(self.local);
@@ -60,19 +86,15 @@ impl Execution {
                 NodeOp::Abs => {
                     let a = self.stack.pop().unwrap();
                     self.stack.push(a.abs());
-                } // NodeOp::CallShape(name) => {
-                  //     if let Some(shape_code) = self.program.definitons.get(name) {
-                  //         self.execute(shape_code);
-                  //     } else {
-                  //         panic!("Undefined shape: {}", name);
-                  //     }
-                  // }
+                }
             }
         }
     }
 
+    /// Place a voxel box into the world. We first model into a separate grid
+    /// and than merge back into the program grid.
     pub fn place(&mut self, id: &String, program: &mut Program) {
-        let defined = match program.voxels.get(id) {
+        let voxel = match program.voxels.get(id) {
             Some(defined) => defined.clone(),
             None => return,
         };
@@ -82,7 +104,7 @@ impl Execution {
         let mut execution = Execution::default();
 
         let mut size = Vec3::new(1.0, 1.0, 1.0);
-        execution.execute(&defined.size, program);
+        execution.execute(&voxel.size, program);
         if let Some(value) = execution.stack.last() {
             size = value.as_vec3();
         }
@@ -96,42 +118,32 @@ impl Execution {
             let local = rect.world_to_local(world);
 
             execution.stack.clear();
-            execution.local = Value::from_vec3(local);
-            execution.execute(&defined.body, program);
 
-            if let Some(value) = execution.stack.last() {
-                if value.x() < 0.0 {
-                    grid.set_create(world, 1);
-                }
+            // Set up the voxel coordinates
+            execution.world = Value::from_vec3(world);
+            execution.local = Value::from_vec3(local);
+
+            // Inital bbox for the grid which the shapes adhere to and segments subdivide.
+            execution.bbox = Aabb {
+                min: -size / 2.0,
+                max: size / 2.0,
+            };
+
+            // Execute the voxel body
+            execution.execute(&voxel.body, program);
+
+            // Recursively execute voxels shapes
+            for shape in voxel.shapes.iter() {
+                shape.execute(&mut execution, program);
             }
 
-            // visitor.environment.define(
-            //     "local".into(),
-            //     ASTValue::Float3(
-            //         expr_float!(local.x),
-            //         expr_float!(local.y),
-            //         expr_float!(local.z),
-            //     ),
-            // );
-
-            // visitor.local = Value::Float3(
-            //     expr_float!(local.x),
-            //     expr_float!(local.y),
-            //     expr_float!(local.z),
-            // );
-
-            // if let Some(block) = &self.block {
-            //     let rc = block.accept(&mut visitor, ctx);
-            //     // println!("Block executed with result: {:?}", rc);
-            //     if let Ok(ASTValue::Float(v)) = rc {
-            //         if v <= 0.0 {
-            //             grid.set_create(world, 0);
-            //         }
-            //     }
-            // }
-            // if (local - Vec3::new(0.0, 0.0, 0.0)).magnitude() - 0.5 <= 0.0 {
-            //     grid.set_create(world, 0);
-            // }
+            // Set the result.
+            if let Some(value) = execution.stack.last() {
+                let result = value.x();
+                if result >= 0.0 {
+                    grid.set_create(world, result as u8);
+                }
+            }
         }
 
         program.grid.write().unwrap().merge(&grid);

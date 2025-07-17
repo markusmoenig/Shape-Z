@@ -35,7 +35,22 @@ impl Shape for Rect {
         if self.uuid == *id {
             println!("rect got a segment {:?}", segment.name());
             self.segments.push(segment.clone());
+        } else {
+            for child in self.segments.iter_mut() {
+                child.add_segment(segment, id);
+            }
         }
+    }
+
+    fn execute(&self, execution: &mut Execution, program: &mut Program) {
+        let cl = execution.bbox.clone();
+
+        execution.execute(&self.body, program);
+        for segment in self.segments.iter() {
+            segment.execute(execution, program);
+        }
+
+        execution.bbox = cl;
     }
 
     fn clone_box(&self) -> Box<dyn Shape> {

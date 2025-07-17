@@ -1,14 +1,14 @@
 use crate::prelude::*;
 
 #[derive(Clone, Debug)]
-pub struct Left {
+pub struct Back {
     uuid: Uuid,
     pub body: Vec<NodeOp>,
 
     pub childs: Vec<Box<dyn Segment>>,
 }
 
-impl Segment for Left {
+impl Segment for Back {
     fn new() -> Self {
         Self {
             uuid: Uuid::new_v4(),
@@ -22,17 +22,13 @@ impl Segment for Left {
     }
 
     fn name(&self) -> &'static str {
-        "left"
+        "back"
     }
 
     fn emit(&mut self, op: &NodeOp, id: &Uuid) {
         if self.uuid == *id {
-            println!("left got something {:?}", op);
+            println!("back got something {:?}", op);
             self.body.push(op.clone());
-        } else {
-            for child in self.childs.iter_mut() {
-                child.emit(op, id);
-            }
         }
     }
 
@@ -44,17 +40,17 @@ impl Segment for Left {
     }
 
     fn execute(&self, execution: &mut Execution, program: &mut Program) {
-        let old_max_x = execution.bbox.max.x;
+        let old_max_z = execution.bbox.max.z;
 
         let local = execution.local.as_vec3();
 
         let thickness = 0.1;
-        execution.bbox.max.x = execution.bbox.min.x + thickness;
+        execution.bbox.max.z = execution.bbox.min.z + thickness;
 
         if execution.bbox.contains_point(local) {
-            execution.u = Value::from_float(local.z - execution.bbox.min.z); // u = Z
+            execution.u = Value::from_float(local.x - execution.bbox.min.x); // u = X
             execution.v = Value::from_float(local.y - execution.bbox.min.y); // v = Y
-            execution.d = Value::from_float(local.x - execution.bbox.min.x); // d = X (depth)
+            execution.d = Value::from_float(local.z - execution.bbox.min.z); // d = Z (depth)
 
             execution.execute(&self.body, program);
             for child in self.childs.iter() {
@@ -62,7 +58,7 @@ impl Segment for Left {
             }
         }
 
-        execution.bbox.max.x = old_max_x;
+        execution.bbox.max.z = old_max_z;
     }
 
     fn clone_box(&self) -> Box<dyn Segment> {

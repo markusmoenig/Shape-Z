@@ -389,10 +389,16 @@ impl Visitor for CompileVisitor {
     ) -> Result<ASTValue, RuntimeError> {
         let mut segment_id: Uuid = Uuid::new_v4();
 
-        if objectd.name == "Left" {
-            let segment: Box<dyn Segment> = Box::new(Left::new());
-            segment_id = segment.id();
+        let mut segment: Option<Box<dyn Segment>> = None;
 
+        if objectd.name == "Left" {
+            segment = Some(Box::new(Left::new()));
+        } else if objectd.name == "Back" {
+            segment = Some(Box::new(Back::new()));
+        }
+
+        if let Some(segment) = segment {
+            segment_id = segment.id();
             if let OutputTarget::Voxels(id, uuid) = &ctx.current_target {
                 if let Some(voxel) = ctx.program.voxels.get_mut(id) {
                     voxel.add_segment(&segment, uuid);

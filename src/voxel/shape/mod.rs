@@ -18,6 +18,9 @@ pub trait Shape: std::fmt::Debug {
     /// Add a segment to the given element.
     fn add_segment(&mut self, segment: &Box<dyn Segment>, id: &Uuid);
 
+    /// Execute the bytecode of the shape recursively.
+    fn execute(&self, execution: &mut Execution, program: &mut Program);
+
     fn clone_box(&self) -> Box<dyn Shape>;
 
     /*
