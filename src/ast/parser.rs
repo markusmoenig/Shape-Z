@@ -78,6 +78,9 @@ impl Parser {
         if self.match_token(vec![TokenType::Shape]) {
             return self.shape_declaration();
         }
+        if self.match_token(vec![TokenType::Segment]) {
+            return self.segment_declaration();
+        }
         if self.match_token(vec![TokenType::Place]) {
             return self.place_declaration();
         }
@@ -134,7 +137,7 @@ impl Parser {
             self.current_line,
         )?;
 
-        let mut valid_shape_ids = vec!["Rect"];
+        let valid_shape_ids = vec!["Rect"];
 
         let id = self.previous().unwrap().lexeme.clone();
 
@@ -172,6 +175,57 @@ impl Parser {
 
         Ok(Stmt::Shape(
             ShapeD::new(id, params, Box::new(block)),
+            self.create_loc(line),
+        ))
+    }
+
+    /// Segment declaration
+    fn segment_declaration(&mut self) -> Result<Stmt, ParseError> {
+        let line = self.current_line;
+        self.consume(
+            TokenType::Identifier,
+            "Expected identifier after 'segment''",
+            self.current_line,
+        )?;
+
+        // let valid_shape_ids = vec!["Rect"];
+
+        let id = self.previous().unwrap().lexeme.clone();
+
+        // if !valid_shape_ids.contains(&id.as_str()) {
+        //     return Err(ParseError::new(
+        //         format!("Invalid shape id: {:?}", id),
+        //         line,
+        //         &self.path,
+        //     ));
+        // }
+
+        let mut params = FxHashMap::default();
+
+        while self.match_token(vec![TokenType::Identifier]) {
+            let id = self.previous().unwrap().lexeme.clone();
+
+            self.consume(
+                TokenType::Equal,
+                "Expected '=' after voxel identifier",
+                self.current_line,
+            )?;
+
+            let value = self.expression()?;
+
+            params.insert(id, Box::new(value));
+        }
+
+        self.consume(
+            TokenType::LeftBrace,
+            "Expected '{' after segment header",
+            self.current_line,
+        )?;
+
+        let block = self.block()?;
+
+        Ok(Stmt::Segment(
+            SegmentD::new(id, params, Box::new(block)),
             self.create_loc(line),
         ))
     }

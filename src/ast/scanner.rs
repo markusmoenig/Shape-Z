@@ -59,6 +59,7 @@ pub enum TokenType {
     Struct,
     Voxel,
     Shape,
+    Segment,
     Place,
     In,
     Out,
@@ -145,6 +146,7 @@ impl Scanner {
 
         keywords.insert("voxel", TokenType::Voxel);
         keywords.insert("shape", TokenType::Shape);
+        keywords.insert("segment", TokenType::Segment);
         keywords.insert("place", TokenType::Place);
 
         keywords.insert("in", TokenType::In);

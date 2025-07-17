@@ -5,8 +5,8 @@ use crate::prelude::*;
 pub enum OutputTarget {
     Globals,
     Custom,
-    // Name of the Voxel, Recursion Index
-    Voxels(String, Vec<usize>),
+    // Name of the Voxel, id of the recursive element (Shape, Segment, Pattern)
+    Voxels(String, Uuid),
 }
 
 #[derive(Debug, Clone)]

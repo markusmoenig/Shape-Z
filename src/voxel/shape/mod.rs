@@ -1,33 +1,22 @@
 use crate::prelude::*;
 
+pub mod segments;
+
 pub mod rect;
-
-pub trait Segment {
-    fn new() -> Self
-    where
-        Self: Sized;
-
-    /// Returns the name of the segment.
-    fn name(&self) -> &'static str;
-
-    /// Emit an instruction. Needed as segments can contain recursive pattern based instructions, like
-    /// a bricks pattern can subdefine brick() and cement().
-    fn emit(&mut self, op: NodeOp);
-
-    /// Returns true if the segment contains the given local coordinat
-    fn contains(&self, local_coord: Vec3<f32>) -> bool;
-
-    /// Applies the local coordinate to the virtual machine, i.e. sets up all pattern uvs etc. and executes the segments byte code.
-    fn exec(&self, local_coord: Vec3<f32>, program: &mut Program) -> Option<Value>;
-}
 
 pub trait Shape: std::fmt::Debug {
     fn new() -> Self
     where
         Self: Sized;
 
-    /// Emit a bytecode
-    fn emit(&mut self, op: NodeOp, depth: u32, rec: Vec<usize>);
+    /// Returns the id of the shape.
+    fn id(&self) -> Uuid;
+
+    /// Emit a bytecode recursively to the segments of the shape.
+    fn emit(&mut self, op: &NodeOp, id: &Uuid);
+
+    /// Add a segment to the given element.
+    fn add_segment(&mut self, segment: &Box<dyn Segment>, id: &Uuid);
 
     fn clone_box(&self) -> Box<dyn Shape>;
 

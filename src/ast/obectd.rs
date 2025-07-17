@@ -2,6 +2,7 @@ use crate::prelude::*;
 
 #[derive(Clone, Debug)]
 pub struct VoxelD {
+    pub id: Uuid,
     pub name: String,
     pub params: FxHashMap<String, Box<Expr>>,
     pub block: Option<Box<Stmt>>,
@@ -21,6 +22,7 @@ impl Default for VoxelD {
 impl VoxelD {
     pub fn empty() -> Self {
         Self {
+            id: Uuid::new_v4(),
             name: String::new(),
             params: FxHashMap::default(),
             block: None,
@@ -34,6 +36,7 @@ impl VoxelD {
 
     pub fn new(name: String, params: FxHashMap<String, Box<Expr>>, block: Box<Stmt>) -> Self {
         Self {
+            id: Uuid::new_v4(),
             name,
             params,
             block: Some(block),
@@ -45,13 +48,21 @@ impl VoxelD {
         }
     }
 
-    pub fn emit(&mut self, op: NodeOp, rec: Vec<usize>) {
-        if rec.is_empty() {
+    /// Recursively emit the op to all shapes.
+    pub fn emit(&mut self, op: NodeOp, id: &Uuid) {
+        if *id == self.id {
             self.body.push(op);
         } else {
-            if let Some(shape) = self.shapes.get_mut(rec[0]) {
-                shape.emit(op, 0, rec);
+            for shape in &mut self.shapes {
+                shape.emit(&op, id);
             }
+        }
+    }
+
+    /// Add a segment
+    pub fn add_segment(&mut self, segment: &Box<dyn Segment>, id: &Uuid) {
+        for shape in &mut self.shapes {
+            shape.add_segment(segment, id);
         }
     }
 }
@@ -74,6 +85,47 @@ impl Default for ShapeD {
 }
 
 impl ShapeD {
+    pub fn empty() -> Self {
+        Self {
+            name: String::new(),
+            params: FxHashMap::default(),
+            block: None,
+
+            size: vec![NodeOp::Push(Value::from_components(1.0, 1.0, 1.0))],
+            body: vec![],
+        }
+    }
+
+    pub fn new(name: String, params: FxHashMap<String, Box<Expr>>, block: Box<Stmt>) -> Self {
+        Self {
+            name,
+            params,
+            block: Some(block),
+
+            size: vec![NodeOp::Push(Value::from_components(1.0, 1.0, 1.0))],
+            body: vec![],
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct SegmentD {
+    pub name: String,
+    pub params: FxHashMap<String, Box<Expr>>,
+    pub block: Option<Box<Stmt>>,
+
+    pub size: Vec<NodeOp>,
+
+    pub body: Vec<NodeOp>,
+}
+
+impl Default for SegmentD {
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
+impl SegmentD {
     pub fn empty() -> Self {
         Self {
             name: String::new(),

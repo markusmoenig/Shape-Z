@@ -23,10 +23,9 @@ impl Context {
         match &self.current_target {
             OutputTarget::Globals => self.program.globals.push(op),
             OutputTarget::Custom => self.program.custom.push(op),
-            OutputTarget::Voxels(_, rec) => {
-                let rec = rec.clone();
-                if let Some(voxel) = self.get_output_voxel() {
-                    voxel.emit(op, rec);
+            OutputTarget::Voxels(name, id) => {
+                if let Some(voxel) = self.program.voxels.get_mut(name) {
+                    voxel.emit(op, id);
                 }
             }
         }

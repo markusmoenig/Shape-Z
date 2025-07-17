@@ -25,6 +25,8 @@ pub mod prelude {
 
     pub use vek::{Aabb, Vec2, Vec3, Vec4};
 
+    pub use uuid::Uuid;
+
     pub use crate::node::execution::*;
     pub use crate::node::program::*;
     pub use crate::node::value::Value;
@@ -55,7 +57,7 @@ pub mod prelude {
     pub use crate::voxel::renderer::Renderer;
     pub use crate::voxel::renderer::model::Model;
     pub use crate::voxel::renderer::pbr::PBR;
-    pub use crate::voxel::shape::{Shape, rect::Rect};
+    pub use crate::voxel::shape::{Shape, rect::Rect, segments::Segment, segments::left::Left};
     pub use crate::voxel::tile::Tile;
     pub use crate::voxel::{Coord, Face, HitRecord, HitType};
 }

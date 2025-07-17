@@ -305,15 +305,16 @@ impl Visitor for CompileVisitor {
         expression.accept(self, ctx)
     }
 
+    /// Create a voxel box
     fn voxel(
         &mut self,
-        define_object: &VoxelD,
+        objectd: &VoxelD,
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        let mut cpy = define_object.clone();
+        let mut cpy = objectd.clone();
 
-        if let Some(size) = define_object.params.get("size") {
+        if let Some(size) = objectd.params.get("size") {
             ctx.set_target(OutputTarget::Custom);
             _ = size.accept(self, ctx)?;
 
@@ -321,9 +322,9 @@ impl Visitor for CompileVisitor {
         }
 
         ctx.program.voxels.insert(cpy.name.clone(), cpy);
-        ctx.set_target(OutputTarget::Voxels(define_object.name.clone(), vec![]));
+        ctx.set_target(OutputTarget::Voxels(objectd.name.clone(), objectd.id));
 
-        if let Some(block) = &define_object.block {
+        if let Some(block) = &objectd.block {
             block.accept(self, ctx)?;
         }
 
@@ -332,20 +333,17 @@ impl Visitor for CompileVisitor {
         Ok(ASTValue::None)
     }
 
+    /// Create a shape
     fn shape(
         &mut self,
         objectd: &ShapeD,
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        let shape_index = if let Some(voxel) = ctx.get_output_voxel() {
-            voxel.shapes.len()
-        } else {
-            0
-        };
-
+        let mut shape_id: Uuid = Uuid::new_v4();
         if objectd.name == "Rect" {
             let shape = Rect::new();
+            shape_id = shape.id();
 
             if let Some(voxel) = ctx.get_output_voxel() {
                 voxel.shapes.push(Box::new(shape));
@@ -354,10 +352,8 @@ impl Visitor for CompileVisitor {
 
         let target_cpy = ctx.current_target.clone();
 
-        if let OutputTarget::Voxels(id, rec) = &ctx.current_target {
-            let mut rec = rec.clone();
-            rec.push(shape_index);
-            ctx.set_target(OutputTarget::Voxels(id.clone(), rec));
+        if let OutputTarget::Voxels(id, _) = &ctx.current_target {
+            ctx.set_target(OutputTarget::Voxels(id.clone(), shape_id));
         }
 
         if let Some(block) = &objectd.block {
@@ -381,6 +377,40 @@ impl Visitor for CompileVisitor {
         // }
 
         // ctx.set_target(OutputTarget::Globals);
+
+        Ok(ASTValue::None)
+    }
+
+    fn segment(
+        &mut self,
+        objectd: &SegmentD,
+        _loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError> {
+        let mut segment_id: Uuid = Uuid::new_v4();
+
+        if objectd.name == "Left" {
+            let segment: Box<dyn Segment> = Box::new(Left::new());
+            segment_id = segment.id();
+
+            if let OutputTarget::Voxels(id, uuid) = &ctx.current_target {
+                if let Some(voxel) = ctx.program.voxels.get_mut(id) {
+                    voxel.add_segment(&segment, uuid);
+                }
+            }
+        }
+
+        let target_cpy = ctx.current_target.clone();
+
+        if let OutputTarget::Voxels(id, _) = &ctx.current_target {
+            ctx.set_target(OutputTarget::Voxels(id.clone(), segment_id));
+        }
+
+        if let Some(block) = &objectd.block {
+            block.accept(self, ctx)?;
+        }
+
+        ctx.set_target(target_cpy);
 
         Ok(ASTValue::None)
     }

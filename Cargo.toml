@@ -6,9 +6,9 @@ license = "MIT"
 authors = ["Markus Moenig"]
 description = "Shape Processing Language"
 
-# [[bin]]
-# name = "shpz"
-# path = "src/main.rs"
+[[bin]]
+name = "shpz"
+path = "src/main.rs"
 
 [dependencies]
 
@@ -17,8 +17,11 @@ fontdue = "0.9.3"
 indexmap = { version = "2", features = ["serde"], default-features = true }
 vek = { version = "0.17.1", default-features = true }
 regex = "1.11.1"
-# lazy_static = "1.5.0"
 rand = "0.9"
 num_cpus = "1.16.0"
 rustc-hash = "1.1.0"
 image = "0.25.1"
+
+[dependencies.uuid]
+version = "1.17.0"
+features = ["v4"]
