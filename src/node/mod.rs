@@ -5,6 +5,7 @@ pub mod value;
 
 #[derive(Debug, Clone)]
 pub enum NodeOp {
+    If(Vec<NodeOp>, Option<Vec<NodeOp>>),
     Place(String),
     Push(Value),
     World,
@@ -16,4 +17,14 @@ pub enum NodeOp {
     Div,
     Length,
     Abs,
+    Eq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+    And,
+    Or,
+    Not,
+    Neg,
 }

@@ -45,6 +45,14 @@ impl Execution {
     pub fn execute(&mut self, code: &[NodeOp], program: &mut Program) {
         for op in code {
             match op {
+                NodeOp::If(then_code, else_code) => {
+                    let value = self.stack.pop().unwrap().truthy();
+                    if value {
+                        self.execute(then_code, program);
+                    } else if let Some(else_code) = else_code {
+                        self.execute(else_code, program);
+                    }
+                }
                 NodeOp::Place(id) => self.place(id, program),
                 NodeOp::Push(v) => self.stack.push(*v),
                 NodeOp::Pack3 => {
@@ -59,6 +67,7 @@ impl Execution {
                 NodeOp::Local => {
                     self.stack.push(self.local);
                 }
+                // Math
                 NodeOp::Add => {
                     let b = self.stack.pop().unwrap();
                     let a = self.stack.pop().unwrap();
@@ -86,6 +95,60 @@ impl Execution {
                 NodeOp::Abs => {
                     let a = self.stack.pop().unwrap();
                     self.stack.push(a.abs());
+                }
+                // Comparison
+                NodeOp::Eq => {
+                    let b = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(Value::from_bool(a.x() == b.x()));
+                }
+                NodeOp::Ne => {
+                    let b = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(Value::from_bool(a.x() != b.x()));
+                }
+                NodeOp::Lt => {
+                    let b = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(Value::from_bool(a.x() < b.x()));
+                }
+                NodeOp::Le => {
+                    let b = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(Value::from_bool(a.x() <= b.x()));
+                }
+                NodeOp::Gt => {
+                    let b = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(Value::from_bool(a.x() > b.x()));
+                }
+                NodeOp::Ge => {
+                    let b = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(Value::from_bool(a.x() >= b.x()));
+                }
+                // Logical
+                NodeOp::And => {
+                    let b = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack
+                        .push(Value::from_bool(a.x() != 0.0 && b.x() != 0.0));
+                }
+                NodeOp::Or => {
+                    let b = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack
+                        .push(Value::from_bool(a.x() != 0.0 || b.x() != 0.0));
+                }
+                // Unary
+                NodeOp::Not => {
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(Value::from_bool(a.x() == 0.0));
+                }
+                NodeOp::Neg => {
+                    let a = self.stack.pop().unwrap();
+                    self.stack
+                        .push(Value::from_components(-a.x(), -a.y(), -a.z()));
                 }
             }
         }

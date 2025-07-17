@@ -362,22 +362,6 @@ impl Visitor for CompileVisitor {
 
         ctx.set_target(target_cpy);
 
-        // if let Some(size) = define_object.params.get("size") {
-        //     ctx.set_target(OutputTarget::Custom);
-        //     _ = size.accept(self, ctx)?;
-
-        //     cpy.size = ctx.program.custom.clone();
-        // }
-
-        // ctx.program.definitons.insert(cpy.name.clone(), cpy);
-        // ctx.set_target(OutputTarget::Definitions(define_object.name.clone()));
-
-        // if let Some(block) = &define_object.block {
-        //     block.accept(self, ctx)?;
-        // }
-
-        // ctx.set_target(OutputTarget::Globals);
-
         Ok(ASTValue::None)
     }
 
@@ -1111,9 +1095,9 @@ impl Visitor for CompileVisitor {
     fn value(
         &mut self,
         value: ASTValue,
-        swizzle: &[u8],
+        _swizzle: &[u8],
         _field_path: &[String],
-        loc: &Location,
+        _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
         match &value {
@@ -1138,19 +1122,19 @@ impl Visitor for CompileVisitor {
 
     fn unary(
         &mut self,
-        _op: &UnaryOperator,
+        op: &UnaryOperator,
         expr: &Expr,
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        let v = expr.accept(self, ctx)?;
+        _ = expr.accept(self, ctx)?;
 
-        // !, - have the same behavior right now.
-        // let func_name = ctx.gen_vec_operation(v.components() as u32, "neg");
-        // let instr = format!("(call ${})", func_name);
-        // ctx.add_wat(&instr);
+        match op {
+            UnaryOperator::Negate => ctx.emit(NodeOp::Not),
+            UnaryOperator::Minus => ctx.emit(NodeOp::Neg),
+        }
 
-        Ok(v)
+        Ok(ASTValue::None)
     }
 
     fn equality(
@@ -1158,38 +1142,16 @@ impl Visitor for CompileVisitor {
         left: &Expr,
         op: &EqualityOperator,
         right: &Expr,
-        loc: &Location,
+        _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        let left_value = left.accept(self, ctx)?;
-        let right_value = right.accept(self, ctx)?;
+        _ = left.accept(self, ctx)?;
+        _ = right.accept(self, ctx)?;
 
-        /*
-        if left_value.to_type() != right_value.to_type() {
-            return Err(RPUError::loc(
-                format!(
-                    "Type mismatch for '{}' operator: '{}' and '{}'",
-                    op.describe(),
-                    left_value.to_type(),
-                    right_value.to_type()
-                ),
-                loc,
-            ));
+        match op {
+            EqualityOperator::NotEqual => ctx.emit(NodeOp::Ne),
+            EqualityOperator::Equal => ctx.emit(NodeOp::Eq),
         }
-
-        let instr = if !left_value.is_float_based() {
-            match op {
-                EqualityOperator::NotEqual => format!("(i{}.ne)", ctx.pr),
-                EqualityOperator::Equal => format!("(i{}.eq)", ctx.pr),
-            }
-        } else {
-            match op {
-                EqualityOperator::NotEqual => format!("(f{}.ne)", ctx.pr),
-                EqualityOperator::Equal => format!("(f{}.eq)", ctx.pr),
-            }
-        };
-        ctx.add_wat(&instr);
-        */
 
         Ok(ASTValue::None)
     }
@@ -1199,46 +1161,20 @@ impl Visitor for CompileVisitor {
         left: &Expr,
         op: &ComparisonOperator,
         right: &Expr,
-        loc: &Location,
+        _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        let left_value = left.accept(self, ctx)?;
-        let right_value = right.accept(self, ctx)?;
+        _ = left.accept(self, ctx)?;
+        _ = right.accept(self, ctx)?;
 
-        /*
-        if left_value.to_type() != right_value.to_type() {
-            return Err(RPUError::loc(
-                format!(
-                    "Type mismatch for '{}' operator: '{}' and '{}'",
-                    op.describe(),
-                    left_value.to_type(),
-                    right_value.to_type()
-                ),
-                loc,
-            ));
+        match op {
+            ComparisonOperator::Greater => ctx.emit(NodeOp::Gt),
+            ComparisonOperator::GreaterEqual => ctx.emit(NodeOp::Ge),
+            ComparisonOperator::Less => ctx.emit(NodeOp::Lt),
+            ComparisonOperator::LessEqual => ctx.emit(NodeOp::Le),
         }
 
-        let is_float_based = left_value.is_float_based();
-
-        let instr = if !is_float_based {
-            match op {
-                ComparisonOperator::Greater => format!("(i{}.gt_s)", ctx.pr),
-                ComparisonOperator::GreaterEqual => format!("(i{}.ge_s)", ctx.pr),
-                ComparisonOperator::Less => format!("(i{}.lt_s)", ctx.pr),
-                ComparisonOperator::LessEqual => format!("(i{}.le_s)", ctx.pr),
-            }
-        } else {
-            match op {
-                ComparisonOperator::Greater => format!("(f{}.gt)", ctx.pr),
-                ComparisonOperator::GreaterEqual => format!("(f{}.ge)", ctx.pr),
-                ComparisonOperator::Less => format!("(f{}.lt)", ctx.pr),
-                ComparisonOperator::LessEqual => format!("(f{}.le)", ctx.pr),
-            }
-        };
-
-        ctx.add_wat(&instr);*/
-
-        Ok(left_value)
+        Ok(ASTValue::None)
     }
 
     fn binary(
@@ -1532,6 +1468,28 @@ impl Visitor for CompileVisitor {
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
+        _ = cond.accept(self, ctx)?;
+
+        let target_cpy = ctx.current_target.clone();
+
+        ctx.set_target(OutputTarget::Custom);
+
+        _ = then_stmt.accept(self, ctx)?;
+        let then_code = ctx.program.custom.clone();
+
+        ctx.set_target(OutputTarget::Custom);
+
+        let mut else_code = None;
+
+        if let Some(else_stmt) = else_stmt {
+            _ = else_stmt.accept(self, ctx)?;
+            else_code = Some(ctx.program.custom.clone());
+        }
+
+        ctx.set_target(target_cpy);
+
+        ctx.emit(NodeOp::If(then_code, else_code));
+
         /*
         ctx.add_line();
         let _rc = cond.accept(self, ctx)?;
@@ -1581,9 +1539,9 @@ impl Visitor for CompileVisitor {
 
     fn ternary(
         &mut self,
-        cond: &Expr,
+        _cond: &Expr,
         then_expr: &Expr,
-        else_expr: &Expr,
+        _else_expr: &Expr,
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
@@ -1661,12 +1619,12 @@ impl Visitor for CompileVisitor {
 
     fn for_stmt(
         &mut self,
-        init: &[Box<Stmt>],
-        conditions: &[Box<Expr>],
-        incr: &[Box<Expr>],
-        body_stmt: &Stmt,
+        _init: &[Box<Stmt>],
+        _conditions: &[Box<Expr>],
+        _incr: &[Box<Expr>],
+        _body_stmt: &Stmt,
         _loc: &Location,
-        ctx: &mut Context,
+        _ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
         /*
         ctx.add_line();
@@ -1717,10 +1675,10 @@ impl Visitor for CompileVisitor {
 
     fn while_stmt(
         &mut self,
-        cond: &Expr,
-        body_stmt: &Stmt,
+        _cond: &Expr,
+        _body_stmt: &Stmt,
         _loc: &Location,
-        ctx: &mut Context,
+        _ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
         /*
                 ctx.add_line();
@@ -1759,7 +1717,11 @@ impl Visitor for CompileVisitor {
         Ok(ASTValue::None)
     }
 
-    fn break_stmt(&mut self, _loc: &Location, ctx: &mut Context) -> Result<ASTValue, RuntimeError> {
+    fn break_stmt(
+        &mut self,
+        _loc: &Location,
+        _ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError> {
         // if let Some(d) = self.break_depth.last() {
         //     let instr = format!("(br {})", d);
         //     ctx.add_wat(&instr);
@@ -1779,17 +1741,14 @@ impl Visitor for CompileVisitor {
         let _l = left.accept(self, ctx)?;
         let _r = right.accept(self, ctx)?;
 
-        /*
         match op {
             LogicalOperator::And => {
-                let instr = "(i32.and)".to_string();
-                ctx.add_wat(&instr);
+                ctx.emit(NodeOp::And);
             }
             LogicalOperator::Or => {
-                let instr = "(i32.or)".to_string();
-                ctx.add_wat(&instr);
+                ctx.emit(NodeOp::Or);
             }
-        }*/
+        }
 
         Ok(ASTValue::None)
     }

@@ -13,6 +13,11 @@ impl Value {
     }
 
     #[inline]
+    pub fn one() -> Self {
+        Self([1.0, 1.0, 1.0])
+    }
+
+    #[inline]
     pub fn from_float(x: f32) -> Self {
         Self([x, x, x])
     }
@@ -124,5 +129,10 @@ impl Value {
     #[inline]
     pub fn abs(self) -> Self {
         Value([self.0[0].abs(), self.0[1].abs(), self.0[2].abs()])
+    }
+
+    #[inline]
+    pub fn truthy(self) -> bool {
+        self.0[0] != 0.0
     }
 }

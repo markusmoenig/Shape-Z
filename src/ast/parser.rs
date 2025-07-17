@@ -85,7 +85,7 @@ impl Parser {
             return self.place_declaration();
         }
 
-        self.expression_statement()
+        self.statement()
     }
 
     /// Voxel declaration
@@ -290,11 +290,52 @@ impl Parser {
         Ok(Stmt::Block(statements, self.create_loc(line)))
     }
 
+    fn statement(&mut self) -> Result<Stmt, ParseError> {
+        if self.match_token(vec![TokenType::If]) {
+            self.if_statement()
+        }
+        /*
+        else if self.match_token(vec![TokenType::Print]) {
+            self.print_statement()
+        } else if self.match_token(vec![TokenType::While]) {
+            self.while_statement()
+        } else if self.match_token(vec![TokenType::For]) {
+            self.for_statement()
+        } else if self.match_token(vec![TokenType::Return]) {
+            self.return_statement()
+        } else if self.match_token(vec![TokenType::Break]) {
+            self.break_statement()
+        }*/
+        else if self.match_token(vec![TokenType::LeftBrace]) {
+            self.block()
+        } else {
+            self.expression_statement()
+        }
+    }
+
     fn expression_statement(&mut self) -> Result<Stmt, ParseError> {
         let value: Expr = self.expression()?;
         let line = self.current_line;
         self.consume(TokenType::Semicolon, "Expect ';' after expression", line)?;
         Ok(Stmt::Expression(Box::new(value), self.create_loc(line)))
+    }
+
+    fn if_statement(&mut self) -> Result<Stmt, ParseError> {
+        let line = self.current_line;
+        let condition = self.expression()?;
+        let then_branch = self.statement()?;
+        let else_branch = if self.match_token(vec![TokenType::Else]) {
+            Some(Box::new(self.statement()?))
+        } else {
+            None
+        };
+
+        Ok(Stmt::If(
+            Box::new(condition),
+            Box::new(then_branch),
+            else_branch,
+            self.create_loc(line),
+        ))
     }
 
     fn expression(&mut self) -> Result<Expr, ParseError> {
