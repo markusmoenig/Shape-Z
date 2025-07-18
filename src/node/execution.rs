@@ -105,6 +105,46 @@ impl Execution {
                     let a = self.stack.pop().unwrap();
                     self.stack.push(a.abs());
                 }
+                NodeOp::Sin => {
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(Value::from_float(a.as_float().sin()));
+                }
+                NodeOp::Cos => {
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(Value::from_float(a.as_float().cos()));
+                }
+                NodeOp::Tan => {
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(Value::from_float(a.as_float().tan()));
+                }
+                NodeOp::Floor => {
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(Value::from_float(a.as_float().floor()));
+                }
+                NodeOp::Ceil => {
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(Value::from_float(a.as_float().ceil()));
+                }
+                NodeOp::Fract => {
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(Value::from_float(a.as_float().fract()));
+                }
+                NodeOp::Mod => {
+                    let b = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack
+                        .push(Value::from_float(a.as_float() % b.as_float()));
+                }
+                NodeOp::Radians => {
+                    let a = self.stack.pop().unwrap();
+                    self.stack
+                        .push(Value::from_float(a.as_float().to_radians()));
+                }
+                NodeOp::Degrees => {
+                    let a = self.stack.pop().unwrap();
+                    self.stack
+                        .push(Value::from_float(a.as_float().to_degrees()));
+                }
                 // Comparison
                 NodeOp::Eq => {
                     let b = self.stack.pop().unwrap();
@@ -231,6 +271,24 @@ impl Execution {
                     }
 
                     self.bbox.max.z = old_max_z;
+                }
+                NodeOp::SegmentBottom(body) => {
+                    let old_max_y = self.bbox.max.y;
+
+                    let local = self.local.as_vec3();
+
+                    let thickness = 0.1;
+                    self.bbox.max.y = self.bbox.min.y + thickness;
+
+                    if self.bbox.contains_point(local) {
+                        self.u = Value::from_float(local.x - self.bbox.min.x); // u = X
+                        self.v = Value::from_float(local.z - self.bbox.min.z); // v = Z
+                        self.d = Value::from_float(local.y - self.bbox.min.y); // d = Y (depth from floor)
+
+                        self.execute(body, program);
+                    }
+
+                    self.bbox.max.y = old_max_y;
                 }
                 // Pattern
                 NodeOp::PatternModulo(even, odd) => {

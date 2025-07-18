@@ -169,6 +169,7 @@ pub enum BinaryOperator {
     Subtract,
     Multiply,
     Divide,
+    Mod,
 }
 
 impl BinaryOperator {
@@ -178,6 +179,7 @@ impl BinaryOperator {
             BinaryOperator::Subtract => "-",
             BinaryOperator::Multiply => "*",
             BinaryOperator::Divide => "/",
+            BinaryOperator::Mod => "%",
         }
     }
 }

@@ -28,6 +28,78 @@ impl Visitor for CompileVisitor {
                 op: NodeOp::Length,
             },
         );
+        functions.insert(
+            "abs".to_string(),
+            ASTFunction {
+                name: "abs".to_string(),
+                arguments: 1,
+                op: NodeOp::Abs,
+            },
+        );
+        functions.insert(
+            "sin".to_string(),
+            ASTFunction {
+                name: "sin".to_string(),
+                arguments: 1,
+                op: NodeOp::Sin,
+            },
+        );
+        functions.insert(
+            "cos".to_string(),
+            ASTFunction {
+                name: "cos".to_string(),
+                arguments: 1,
+                op: NodeOp::Cos,
+            },
+        );
+        functions.insert(
+            "tan".to_string(),
+            ASTFunction {
+                name: "tan".to_string(),
+                arguments: 1,
+                op: NodeOp::Tan,
+            },
+        );
+        functions.insert(
+            "floor".to_string(),
+            ASTFunction {
+                name: "floor".to_string(),
+                arguments: 1,
+                op: NodeOp::Floor,
+            },
+        );
+        functions.insert(
+            "ceil".to_string(),
+            ASTFunction {
+                name: "ceil".to_string(),
+                arguments: 1,
+                op: NodeOp::Ceil,
+            },
+        );
+        functions.insert(
+            "fract".to_string(),
+            ASTFunction {
+                name: "fract".to_string(),
+                arguments: 1,
+                op: NodeOp::Ceil,
+            },
+        );
+        functions.insert(
+            "radians".to_string(),
+            ASTFunction {
+                name: "radians".to_string(),
+                arguments: 1,
+                op: NodeOp::Radians,
+            },
+        );
+        functions.insert(
+            "degrees".to_string(),
+            ASTFunction {
+                name: "degrees".to_string(),
+                arguments: 1,
+                op: NodeOp::Degrees,
+            },
+        );
 
         let mut ast_functions: FxHashMap<String, ASTValue> = FxHashMap::default();
         ast_functions.insert(
@@ -269,29 +341,13 @@ impl Visitor for CompileVisitor {
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        // let instr = "(block".to_string();
-        // ctx.add_wat(&instr);
-        // ctx.add_indention();
-
-        // if let Some(d) = self.break_depth.last() {
-        //     self.break_depth.push(d + 1);
-        // }
-
         let mut value = ASTValue::None;
 
         self.environment.begin_scope(ASTValue::None, false);
         for stmt in list {
             value = stmt.accept(self, ctx)?;
-            //println!("Block statement executed with result: {:?}", rc);
         }
         self.environment.end_scope();
-
-        // if let Some(d) = self.break_depth.last() {
-        //     self.break_depth.push(d - 1);
-        // }
-
-        // ctx.remove_indention();
-        // ctx.add_wat(")");
 
         Ok(value)
     }
@@ -357,32 +413,10 @@ impl Visitor for CompileVisitor {
             }
         }
 
-        /*
-        let mut shape_id: Uuid = Uuid::new_v4();
-        if objectd.name == "Rect" {
-            let shape = Rect::new();
-            shape_id = shape.id();
-
-            if let Some(voxel) = ctx.get_output_voxel() {
-                voxel.shapes.push(Box::new(shape));
-            }
-        }
-
-        let target_cpy = ctx.current_target.clone();
-
-        if let OutputTarget::Voxels(id, _) = &ctx.current_target {
-            ctx.set_target(OutputTarget::Voxels(id.clone(), shape_id));
-        }
-
-        if let Some(block) = &objectd.block {
-            block.accept(self, ctx)?;
-        }
-
-        */
-
         Ok(ASTValue::None)
     }
 
+    // Create a segment
     fn segment(
         &mut self,
         objectd: &SegmentD,
@@ -402,45 +436,17 @@ impl Visitor for CompileVisitor {
                 "Back" => {
                     ctx.emit(NodeOp::SegmentBack(code));
                 }
+                "Bottom" => {
+                    ctx.emit(NodeOp::SegmentBottom(code));
+                }
                 _ => {}
             }
         }
 
-        /*
-        let mut segment_id: Uuid = Uuid::new_v4();
-
-        let mut segment: Option<Box<dyn Segment>> = None;
-
-        if objectd.name == "Left" {
-            segment = Some(Box::new(Left::new()));
-        } else if objectd.name == "Back" {
-            segment = Some(Box::new(Back::new()));
-        }
-
-        if let Some(segment) = segment {
-            segment_id = segment.id();
-            if let OutputTarget::Voxels(id, uuid) = &ctx.current_target {
-                if let Some(voxel) = ctx.program.voxels.get_mut(id) {
-                    voxel.add_segment(&segment, uuid);
-                }
-            }
-        }
-
-        let target_cpy = ctx.current_target.clone();
-
-        if let OutputTarget::Voxels(id, _) = &ctx.current_target {
-            ctx.set_target(OutputTarget::Voxels(id.clone(), segment_id));
-        }
-
-        if let Some(block) = &objectd.block {
-            block.accept(self, ctx)?;
-        }
-
-        */
-
         Ok(ASTValue::None)
     }
 
+    // Create a pattern
     fn pattern(
         &mut self,
         objectd: &PatternD,
@@ -1272,6 +1278,9 @@ impl Visitor for CompileVisitor {
             BinaryOperator::Divide => {
                 ctx.emit(NodeOp::Div);
             }
+            BinaryOperator::Mod => {
+                ctx.emit(NodeOp::Mod);
+            }
             _ => {}
         }
 
@@ -1298,7 +1307,6 @@ impl Visitor for CompileVisitor {
     ) -> Result<ASTValue, RuntimeError> {
         let callee = callee.accept(self, ctx)?;
 
-        let functions = self.functions.clone();
         if let ASTValue::Function(name, _func_args, _returns) = callee {
             if let Some(func) = &self.functions.get(&name).cloned() {
                 if func.arguments as usize == args.len() {

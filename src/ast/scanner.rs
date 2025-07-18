@@ -17,6 +17,7 @@ pub enum TokenType {
     Dollar,
     Colon,
     TernaryOperator,
+    Percent,
 
     LineFeed,
     Space,
@@ -188,6 +189,7 @@ impl Scanner {
             b'/' => self.make_token(TokenType::Slash),
             b'*' => self.make_token(TokenType::Star),
             b':' => self.make_token(TokenType::Colon),
+            b'%' => self.make_token(TokenType::Percent),
             b'!' if self.matches(b'=') => self.make_token(TokenType::BangEqual),
             b'!' => self.make_token(TokenType::Bang),
             b'&' if self.matches(b'&') => self.make_token(TokenType::And),

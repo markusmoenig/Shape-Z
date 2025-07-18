@@ -1427,6 +1427,7 @@ impl Parser {
             TokenType::Minus => BinaryOperator::Subtract,
             TokenType::Star => BinaryOperator::Multiply,
             TokenType::Slash => BinaryOperator::Divide,
+            TokenType::Percent => BinaryOperator::Mod,
             _ => unreachable!(),
         }
     }
