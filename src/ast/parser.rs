@@ -137,7 +137,7 @@ impl Parser {
             self.current_line,
         )?;
 
-        let valid_shape_ids = vec!["Rect"];
+        let valid_shape_ids = vec!["Rect", "Disc"];
 
         let id = self.previous().unwrap().lexeme.clone();
 
@@ -293,6 +293,8 @@ impl Parser {
     fn statement(&mut self) -> Result<Stmt, ParseError> {
         if self.match_token(vec![TokenType::If]) {
             self.if_statement()
+        } else if self.match_token(vec![TokenType::Pattern]) {
+            self.pattern_statement()
         }
         /*
         else if self.match_token(vec![TokenType::Print]) {
@@ -334,6 +336,67 @@ impl Parser {
             Box::new(condition),
             Box::new(then_branch),
             else_branch,
+            self.create_loc(line),
+        ))
+    }
+
+    fn pattern_statement(&mut self) -> Result<Stmt, ParseError> {
+        let line = self.current_line;
+        self.consume(
+            TokenType::Identifier,
+            "Expected identifier after 'pattern''",
+            self.current_line,
+        )?;
+        let id = self.previous().unwrap().lexeme.clone();
+
+        let mut params = FxHashMap::default();
+
+        while self.match_token(vec![TokenType::Identifier]) {
+            let id = self.previous().unwrap().lexeme.clone();
+
+            self.consume(
+                TokenType::Equal,
+                "Expected '=' after voxel identifier",
+                self.current_line,
+            )?;
+
+            let value = self.expression()?;
+
+            params.insert(id, Box::new(value));
+        }
+
+        self.consume(
+            TokenType::LeftBrace,
+            "Expected '{' after pattern header",
+            self.current_line,
+        )?;
+
+        // -- Read Body Statements
+
+        let mut blocks = FxHashMap::default();
+
+        while self.match_token(vec![TokenType::Identifier]) {
+            let id = self.previous().unwrap().lexeme.clone();
+
+            self.consume(
+                TokenType::LeftBrace,
+                "Expected '{' after pattern identifier",
+                self.current_line,
+            )?;
+
+            let block = self.block()?;
+
+            blocks.insert(id, Box::new(block));
+        }
+
+        self.consume(
+            TokenType::RightBrace,
+            "Expected '}' after pattern block",
+            self.current_line,
+        )?;
+
+        Ok(Stmt::Pattern(
+            PatternD::new(id, params, blocks),
             self.create_loc(line),
         ))
     }
@@ -1112,7 +1175,12 @@ impl Parser {
                     //     field_path = self.get_field_path_at_current();
                     // }
                 }
-                if token.lexeme == "local" {
+                if token.lexeme == "local"
+                    || token.lexeme == "world"
+                    || token.lexeme == "u"
+                    || token.lexeme == "v"
+                    || token.lexeme == "d"
+                {
                     Ok(Expr::Variable(
                         token.lexeme.clone(),
                         swizzle,

@@ -78,6 +78,7 @@ pub enum Stmt {
     Voxel(VoxelD, Location),
     Shape(ShapeD, Location),
     Segment(SegmentD, Location),
+    Pattern(PatternD, Location),
     Place(String, FxHashMap<String, Box<Expr>>, Location),
     VarDeclaration(String, ASTValue, Box<Expr>, Location),
     StructDeclaration(String, Vec<(String, ASTValue)>, Location),
@@ -261,6 +262,13 @@ pub trait Visitor {
     fn segment(
         &mut self,
         objectd: &SegmentD,
+        loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError>;
+
+    fn pattern(
+        &mut self,
+        objectd: &PatternD,
         loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError>;
@@ -459,6 +467,7 @@ impl Stmt {
             Stmt::Voxel(objectd, loc) => visitor.voxel(objectd, loc, ctx),
             Stmt::Shape(objectd, loc) => visitor.shape(objectd, loc, ctx),
             Stmt::Segment(objectd, loc) => visitor.segment(objectd, loc, ctx),
+            Stmt::Pattern(objectd, loc) => visitor.pattern(objectd, loc, ctx),
             Stmt::Place(id, params, loc) => visitor.place(id, params, loc, ctx),
             Stmt::VarDeclaration(name, static_type, initializer, loc) => {
                 visitor.var_declaration(name, static_type, initializer, loc, ctx)

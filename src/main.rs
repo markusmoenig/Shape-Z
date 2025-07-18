@@ -44,7 +44,6 @@ pub mod prelude {
     pub use crate::ast::value::*;
     pub use crate::ast::*;
 
-    pub use crate::voxel::brushshape::BrushShape;
     pub use crate::voxel::camera::Camera;
     pub use crate::voxel::camera::iso::Iso;
     pub use crate::voxel::camera::orbit::Orbit;
@@ -57,9 +56,6 @@ pub mod prelude {
     pub use crate::voxel::renderer::Renderer;
     pub use crate::voxel::renderer::model::Model;
     pub use crate::voxel::renderer::pbr::PBR;
-    pub use crate::voxel::shape::{
-        Shape, rect::Rect, segments::Segment, segments::back::Back, segments::left::Left,
-    };
     pub use crate::voxel::tile::Tile;
     pub use crate::voxel::{Coord, Face, HitRecord, HitType};
 }

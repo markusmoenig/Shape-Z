@@ -322,7 +322,7 @@ impl Visitor for CompileVisitor {
         }
 
         ctx.program.voxels.insert(cpy.name.clone(), cpy);
-        ctx.set_target(OutputTarget::Voxels(objectd.name.clone(), objectd.id));
+        ctx.set_target(OutputTarget::Voxels(objectd.name.clone()));
 
         if let Some(block) = &objectd.block {
             block.accept(self, ctx)?;
@@ -340,6 +340,24 @@ impl Visitor for CompileVisitor {
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
+        ctx.add_custom_target();
+        if let Some(block) = &objectd.block {
+            block.accept(self, ctx)?;
+        }
+
+        if let Some(code) = ctx.take_last_custom_target() {
+            match objectd.name.as_str() {
+                "Rect" => {
+                    ctx.emit(NodeOp::ShapeRect(code));
+                }
+                "Disc" => {
+                    ctx.emit(NodeOp::ShapeDisc(code));
+                }
+                _ => {}
+            }
+        }
+
+        /*
         let mut shape_id: Uuid = Uuid::new_v4();
         if objectd.name == "Rect" {
             let shape = Rect::new();
@@ -360,7 +378,7 @@ impl Visitor for CompileVisitor {
             block.accept(self, ctx)?;
         }
 
-        ctx.set_target(target_cpy);
+        */
 
         Ok(ASTValue::None)
     }
@@ -371,6 +389,24 @@ impl Visitor for CompileVisitor {
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
+        ctx.add_custom_target();
+        if let Some(block) = &objectd.block {
+            block.accept(self, ctx)?;
+        }
+
+        if let Some(code) = ctx.take_last_custom_target() {
+            match objectd.name.as_str() {
+                "Left" => {
+                    ctx.emit(NodeOp::SegmentLeft(code));
+                }
+                "Back" => {
+                    ctx.emit(NodeOp::SegmentBack(code));
+                }
+                _ => {}
+            }
+        }
+
+        /*
         let mut segment_id: Uuid = Uuid::new_v4();
 
         let mut segment: Option<Box<dyn Segment>> = None;
@@ -400,7 +436,36 @@ impl Visitor for CompileVisitor {
             block.accept(self, ctx)?;
         }
 
-        ctx.set_target(target_cpy);
+        */
+
+        Ok(ASTValue::None)
+    }
+
+    fn pattern(
+        &mut self,
+        objectd: &PatternD,
+        _loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError> {
+        let mut codes = FxHashMap::default();
+
+        // Compile all blocks
+        for (name, stmts) in &objectd.blocks {
+            ctx.add_custom_target();
+            _ = stmts.accept(self, ctx)?;
+            if let Some(code) = ctx.take_last_custom_target() {
+                codes.insert(name.clone(), code);
+            }
+        }
+
+        match objectd.name.as_str() {
+            "Modulo" => {
+                let even = codes.get("even".into()).cloned();
+                let odd = codes.get("odd".into()).cloned();
+                ctx.emit(NodeOp::PatternModulo(even, odd));
+            }
+            _ => {}
+        }
 
         Ok(ASTValue::None)
     }
@@ -1081,9 +1146,15 @@ impl Visitor for CompileVisitor {
 
         if name == "local" {
             ctx.emit(NodeOp::Local);
-        }
-
-        if let Some(vv) = self.environment.get(&name) {
+        } else if name == "world" {
+            ctx.emit(NodeOp::World);
+        } else if name == "u" {
+            ctx.emit(NodeOp::U);
+        } else if name == "v" {
+            ctx.emit(NodeOp::V);
+        } else if name == "d" {
+            ctx.emit(NodeOp::D);
+        } else if let Some(vv) = self.environment.get(&name) {
             rc = vv;
         } else if let Some(ASTValue::Function(name, args, body)) = self.ast_functions.get(&name) {
             rc = ASTValue::Function(name.clone(), args.clone(), body.clone());
@@ -1468,72 +1539,26 @@ impl Visitor for CompileVisitor {
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        _ = cond.accept(self, ctx)?;
-
-        let target_cpy = ctx.current_target.clone();
-
-        ctx.set_target(OutputTarget::Custom);
-
+        ctx.add_custom_target();
         _ = then_stmt.accept(self, ctx)?;
-        let then_code = ctx.program.custom.clone();
-
-        ctx.set_target(OutputTarget::Custom);
+        let mut then_code = vec![];
+        if let Some(code) = ctx.take_last_custom_target() {
+            then_code = code;
+        }
 
         let mut else_code = None;
 
         if let Some(else_stmt) = else_stmt {
+            ctx.add_custom_target();
             _ = else_stmt.accept(self, ctx)?;
-            else_code = Some(ctx.program.custom.clone());
+            if let Some(code) = ctx.take_last_custom_target() {
+                else_code = Some(code);
+            }
         }
 
-        ctx.set_target(target_cpy);
-
+        _ = cond.accept(self, ctx)?;
         ctx.emit(NodeOp::If(then_code, else_code));
 
-        /*
-        ctx.add_line();
-        let _rc = cond.accept(self, ctx)?;
-
-        let instr = "(if".to_string();
-        ctx.add_wat(&instr);
-        ctx.add_indention();
-
-        let instr = "(then".to_string();
-        ctx.add_wat(&instr);
-        ctx.add_indention();
-
-        if let Some(d) = self.break_depth.last() {
-            self.break_depth.push(d + 2);
-        }
-
-        let _ = then_stmt.accept(self, ctx)?;
-
-        ctx.remove_indention();
-        ctx.add_wat(")");
-
-        if let Some(d) = self.break_depth.last() {
-            self.break_depth.push(d - 2);
-        }
-
-        if let Some(es) = else_stmt {
-            if let Some(d) = self.break_depth.last() {
-                self.break_depth.push(d + 2);
-            }
-            let instr = "(else".to_string();
-            ctx.add_wat(&instr);
-            ctx.add_indention();
-            let _ = es.accept(self, ctx)?;
-            ctx.remove_indention();
-            ctx.add_wat(")");
-            if let Some(d) = self.break_depth.last() {
-                self.break_depth.push(d - 2);
-            }
-        }
-
-        ctx.remove_indention();
-        ctx.add_wat(")");
-        //ctx.add_line();
-        */
         Ok(ASTValue::None)
     }
 

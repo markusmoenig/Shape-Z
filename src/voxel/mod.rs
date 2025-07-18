@@ -1,4 +1,3 @@
-pub mod brushshape;
 pub mod camera;
 pub mod grid;
 pub mod palette;
@@ -6,7 +5,6 @@ pub mod ray;
 pub mod rect;
 pub mod renderbuffer;
 pub mod renderer;
-pub mod shape;
 pub mod tile;
 
 use crate::F;
