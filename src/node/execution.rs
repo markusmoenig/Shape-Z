@@ -64,6 +64,21 @@ impl Execution {
                 NodeOp::Store(index) => {
                     self.variables[*index] = self.stack.pop().unwrap();
                 }
+                NodeOp::Component(swizzle) => match swizzle {
+                    0 => {
+                        let v = self.stack.pop().unwrap();
+                        self.stack.push(Value::from_float(v.x()));
+                    }
+                    1 => {
+                        let v = self.stack.pop().unwrap();
+                        self.stack.push(Value::from_float(v.y()));
+                    }
+                    2 => {
+                        let v = self.stack.pop().unwrap();
+                        self.stack.push(Value::from_float(v.z()));
+                    }
+                    _ => {}
+                },
                 NodeOp::Push(v) => self.stack.push(*v),
                 NodeOp::Pack3 => {
                     let z = self.stack.pop().unwrap();

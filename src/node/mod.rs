@@ -7,6 +7,7 @@ pub mod value;
 pub enum NodeOp {
     Load(usize),
     Store(usize),
+    Component(u8),
     If(Vec<NodeOp>, Option<Vec<NodeOp>>),
     Place(String),
     Push(Value),

@@ -316,7 +316,7 @@ impl Visitor for CompileVisitor {
     fn variable(
         &mut self,
         name: String,
-        _swizzle: &[u8],
+        swizzle: &[u8],
         _field_path: &[String],
         _loc: &Location,
         ctx: &mut Context,
@@ -334,6 +334,9 @@ impl Visitor for CompileVisitor {
         } else {
             if let Some(index) = ctx.variables.get(&name) {
                 ctx.emit(NodeOp::Load(*index as usize));
+                if !swizzle.is_empty() {
+                    ctx.emit(NodeOp::Component(swizzle[0]));
+                }
             }
         }
 
