@@ -4,15 +4,18 @@ use crate::prelude::*;
 pub struct Context {
     pub current_target: OutputTarget,
     pub custom_targets: Vec<Vec<NodeOp>>,
+
+    pub variables: FxHashMap<String, u32>,
     pub program: Program,
 }
 
 impl Context {
-    pub fn new(size: Vec3<i32>, density: usize) -> Self {
+    pub fn new(size: Vec3<i32>, density: usize, variables: FxHashMap<String, u32>) -> Self {
         Self {
             current_target: OutputTarget::Globals,
             custom_targets: vec![],
             program: Program::new(size, density),
+            variables,
         }
     }
 

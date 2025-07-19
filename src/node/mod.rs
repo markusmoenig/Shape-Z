@@ -5,6 +5,8 @@ pub mod value;
 
 #[derive(Debug, Clone)]
 pub enum NodeOp {
+    Load(usize),
+    Store(usize),
     If(Vec<NodeOp>, Option<Vec<NodeOp>>),
     Place(String),
     Push(Value),

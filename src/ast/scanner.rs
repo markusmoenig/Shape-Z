@@ -63,6 +63,9 @@ pub enum TokenType {
     Segment,
     Pattern,
     Place,
+
+    Let,
+
     In,
     Out,
     Inout,
@@ -151,6 +154,8 @@ impl Scanner {
         keywords.insert("segment", TokenType::Segment);
         keywords.insert("pattern", TokenType::Pattern);
         keywords.insert("place", TokenType::Place);
+
+        keywords.insert("let", TokenType::Let);
 
         keywords.insert("in", TokenType::In);
         keywords.insert("out", TokenType::Out);

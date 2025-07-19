@@ -101,7 +101,9 @@ fn main() {
     // Compile the AST
 
     let mut visitor = CompileVisitor::new();
-    let mut ctx = Context::new(size, density);
+    let mut ctx = Context::new(size, density, module.variables);
+
+    // println!("{:?}", ctx.variables);
 
     for statement in module.stmts {
         match statement.accept(&mut visitor, &mut ctx) {
@@ -119,7 +121,7 @@ fn main() {
 
     let _start: u128 = tracer.get_time();
 
-    let mut execution = Execution::new();
+    let mut execution = Execution::new(ctx.variables.len());
     execution.execute(&ctx.program.globals.clone(), &mut ctx.program);
 
     ctx.program.grid.write().unwrap().update_bboxes();

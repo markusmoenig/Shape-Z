@@ -1,6 +1,8 @@
 use crate::prelude::*;
 
 pub struct Execution {
+    pub variables: Vec<Value>,
+
     /// The world coordinate of the current voxel
     pub world: Value,
     /// The segment transformed local coordinate
@@ -20,15 +22,26 @@ pub struct Execution {
     pub stack: Vec<Value>,
 }
 
-impl Default for Execution {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl Execution {
-    pub fn new() -> Self {
+    pub fn new(var_size: usize) -> Self {
         Self {
+            variables: vec![Value::zero(); var_size],
+            world: Value::zero(),
+            local: Value::zero(),
+            u: Value::zero(),
+            v: Value::zero(),
+            d: Value::zero(),
+            bbox: Aabb {
+                min: Vec3::zero(),
+                max: Vec3::one(),
+            },
+            stack: Vec::with_capacity(32),
+        }
+    }
+
+    pub fn new_from_var(execution: &Execution) -> Self {
+        Self {
+            variables: execution.variables.clone(),
             world: Value::zero(),
             local: Value::zero(),
             u: Value::zero(),
@@ -45,6 +58,19 @@ impl Execution {
     pub fn execute(&mut self, code: &[NodeOp], program: &mut Program) {
         for op in code {
             match op {
+                NodeOp::Load(index) => {
+                    self.stack.push(self.variables[*index]);
+                }
+                NodeOp::Store(index) => {
+                    self.variables[*index] = self.stack.pop().unwrap();
+                }
+                NodeOp::Push(v) => self.stack.push(*v),
+                NodeOp::Pack3 => {
+                    let z = self.stack.pop().unwrap();
+                    let y = self.stack.pop().unwrap();
+                    let x = self.stack.pop().unwrap();
+                    self.stack.push(Value::from_components(x.x(), y.x(), z.x()));
+                }
                 NodeOp::If(then_code, else_code) => {
                     let value = self.stack.pop().unwrap().truthy();
                     if value {
@@ -54,13 +80,6 @@ impl Execution {
                     }
                 }
                 NodeOp::Place(id) => self.place(id, program),
-                NodeOp::Push(v) => self.stack.push(*v),
-                NodeOp::Pack3 => {
-                    let z = self.stack.pop().unwrap();
-                    let y = self.stack.pop().unwrap();
-                    let x = self.stack.pop().unwrap();
-                    self.stack.push(Value::from_components(x.x(), y.x(), z.x()));
-                }
                 NodeOp::World => {
                     self.stack.push(self.world);
                 }
@@ -325,7 +344,7 @@ impl Execution {
 
         let mut grid = VoxelGrid::empty(program.grid.read().unwrap().density);
 
-        let mut execution = Execution::default();
+        let mut execution = Execution::new_from_var(&self);
 
         let mut size = Vec3::new(1.0, 1.0, 1.0);
         execution.execute(&voxel.size, program);

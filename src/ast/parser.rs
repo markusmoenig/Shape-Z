@@ -8,6 +8,9 @@ pub struct Parser {
     current_line: usize,
     path: PathBuf,
     verifier: IdVerifier,
+
+    variable_counter: u32,
+    variable_map: FxHashMap<String, u32>,
 }
 
 impl Default for Parser {
@@ -24,6 +27,9 @@ impl Parser {
             current_line: 0,
             path: PathBuf::new(),
             verifier: IdVerifier::default(),
+
+            variable_counter: 0,
+            variable_map: FxHashMap::default(),
         }
     }
 
@@ -66,7 +72,13 @@ impl Parser {
             statements.push(Box::new(stmt));
         }
 
-        let module = Module::new(name, source, self.path.clone(), statements);
+        let module = Module::new(
+            name,
+            source,
+            self.path.clone(),
+            statements,
+            self.variable_map.clone(),
+        );
 
         Ok(module)
     }
@@ -84,8 +96,69 @@ impl Parser {
         if self.match_token(vec![TokenType::Place]) {
             return self.place_declaration();
         }
+        if self.match_token(vec![TokenType::Let]) {
+            return self.var_declaration();
+        }
 
         self.statement()
+    }
+
+    fn var_declaration(&mut self) -> Result<Stmt, ParseError> {
+        let line = self.current_line;
+        let var_name = self
+            .consume(TokenType::Identifier, "Expect variable name", line)?
+            .lexeme;
+        _ = self.verifier.define_var(&var_name, false)?;
+        self.variable_map
+            .insert(var_name.clone(), self.variable_counter);
+        self.variable_counter += 1;
+
+        let mut initializer = None;
+        if self.match_token(vec![TokenType::Equal]) {
+            initializer = Some(self.expression()?);
+        }
+
+        let init = if let Some(i) = initializer {
+            Box::new(i)
+        } else {
+            return Err(ParseError::new(
+                "Variable declaration cannot be empty",
+                line,
+                &self.path,
+            ));
+        };
+
+        /*
+        if self.check(TokenType::Comma) {
+            self.consume(
+                TokenType::Comma,
+                &format!(
+                    "Expect ',' after variable declaration, found '{}'",
+                    self.lexeme(),
+                ),
+                line,
+            )?;
+            self.open_var_declaration = Some(static_type.clone());
+        } else {
+            self.open_var_declaration = None;
+            if !self.inside_for_initializer {
+                self.consume(
+                    TokenType::Semicolon,
+                    &format!(
+                        "Expect ';' after variable declaration, found '{}'",
+                        self.lexeme(),
+                    ),
+                    line,
+                )?;
+            }
+        }*/
+
+        Ok(Stmt::VarDeclaration(
+            var_name,
+            ASTValue::None,
+            init,
+            self.create_loc(line),
+        ))
     }
 
     /// Voxel declaration
@@ -1189,7 +1262,7 @@ impl Parser {
                     ))
                 } else if let Some(var_name) = self.verifier.get_var_name(&token.lexeme) {
                     Ok(Expr::Variable(
-                        var_name,
+                        token.lexeme,
                         swizzle,
                         field_path,
                         self.create_loc(token.line),
