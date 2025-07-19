@@ -50,7 +50,7 @@ pub mod prelude {
     pub use crate::voxel::camera::orbit::Orbit;
     pub use crate::voxel::camera::pinhole::Pinhole;
     pub use crate::voxel::grid::VoxelGrid;
-    pub use crate::voxel::palette::{Material, Palette};
+    pub use crate::voxel::material::Material;
     pub use crate::voxel::ray::Ray;
     pub use crate::voxel::rect::VoxelRect;
     pub use crate::voxel::renderbuffer::RenderBuffer;

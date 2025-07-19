@@ -207,21 +207,32 @@ impl Visitor for CompileVisitor {
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        ctx.add_custom_target();
-        if let Some(block) = &objectd.block {
-            block.accept(self, ctx)?;
+        // Parameters
+
+        let mut depth = vec![];
+        if let Some(depth_ast) = objectd.params.get("depth") {
+            ctx.add_custom_target();
+            _ = depth_ast.accept(self, ctx)?;
+            if let Some(code) = ctx.take_last_custom_target() {
+                depth = code;
+            }
         }
 
+        // Body
+        ctx.add_custom_target();
+        if let Some(block) = &objectd.block {
+            _ = block.accept(self, ctx)?;
+        }
         if let Some(code) = ctx.take_last_custom_target() {
             match objectd.name.as_str() {
                 "Left" => {
-                    ctx.emit(NodeOp::SegmentLeft(code));
+                    ctx.emit(NodeOp::SegmentLeft(depth, code));
                 }
                 "Back" => {
-                    ctx.emit(NodeOp::SegmentBack(code));
+                    ctx.emit(NodeOp::SegmentBack(depth, code));
                 }
-                "Bottom" => {
-                    ctx.emit(NodeOp::SegmentBottom(code));
+                "Floor" => {
+                    ctx.emit(NodeOp::SegmentFloor(depth, code));
                 }
                 _ => {}
             }
@@ -254,6 +265,11 @@ impl Visitor for CompileVisitor {
                 let odd = codes.get("odd".into()).cloned();
                 ctx.emit(NodeOp::PatternModulo(even, odd));
             }
+            "Bricks" => {
+                let brick = codes.get("brick".into()).cloned();
+                let cement = codes.get("cement".into()).cloned();
+                ctx.emit(NodeOp::PatternBricks(brick, cement));
+            }
             _ => {}
         }
 
@@ -278,10 +294,21 @@ impl Visitor for CompileVisitor {
 
                 match name.as_str() {
                     "albedo" => material_ops.push(NodeOp::MaterialAlbedo),
+                    "subsurface" => material_ops.push(NodeOp::MaterialSubsurface),
+                    "metallic" => material_ops.push(NodeOp::MaterialMetallic),
+                    "specular" => material_ops.push(NodeOp::MaterialSpecular),
                     "roughness" => material_ops.push(NodeOp::MaterialRoughness),
-                    // "metallic" => material_ops.push(NodeOp::MaterialMetallic),
-                    // "emission" => material_ops.push(NodeOp::MaterialEmission),
-                    // Add more as needed
+                    "anisotropic" => material_ops.push(NodeOp::MaterialAnisotropic),
+                    "sheen" => material_ops.push(NodeOp::MaterialSheen),
+                    "sheen_tint" => material_ops.push(NodeOp::MaterialSheenTint),
+                    "clearcoat" => material_ops.push(NodeOp::MaterialClearcoat),
+                    "clearcoat_gloss" => material_ops.push(NodeOp::MaterialClearcoatGloss),
+                    "ior" => material_ops.push(NodeOp::MaterialIOR),
+                    "transmission" => material_ops.push(NodeOp::MaterialTransmission),
+                    "transmission_roughness" => {
+                        material_ops.push(NodeOp::MaterialTransmissionRoughness)
+                    }
+                    "emission" => material_ops.push(NodeOp::MaterialEmission),
                     other => {
                         return Err(RuntimeError::new(
                             format!("Unknown material property: {}", other),

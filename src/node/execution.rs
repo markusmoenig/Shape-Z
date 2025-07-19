@@ -320,14 +320,19 @@ impl Execution {
                     self.bbox = bbox_backup;
                 }
                 // Segments
-                NodeOp::SegmentLeft(body) => {
+                NodeOp::SegmentLeft(depth, body) => {
                     let old_max_x = self.bbox.max.x;
 
                     let local = self.local.as_vec3();
 
-                    let thickness = 0.1;
-                    self.bbox.max.x = self.bbox.min.x + thickness;
+                    let thickness = if depth.is_empty() {
+                        0.1
+                    } else {
+                        self.execute(depth, program);
+                        self.stack.pop().unwrap().as_float()
+                    };
 
+                    self.bbox.max.x = self.bbox.min.x + thickness;
                     if self.bbox.contains_point(local) {
                         self.u = Value::from_float(local.z - self.bbox.min.z); // u = Z
                         self.v = Value::from_float(local.y - self.bbox.min.y); // v = Y
@@ -338,14 +343,19 @@ impl Execution {
 
                     self.bbox.max.x = old_max_x;
                 }
-                NodeOp::SegmentBack(body) => {
+                NodeOp::SegmentBack(depth, body) => {
                     let old_max_z = self.bbox.max.z;
 
                     let local = self.local.as_vec3();
 
-                    let thickness = 0.1;
-                    self.bbox.max.z = self.bbox.min.z + thickness;
+                    let thickness = if depth.is_empty() {
+                        0.1
+                    } else {
+                        self.execute(depth, program);
+                        self.stack.pop().unwrap().as_float()
+                    };
 
+                    self.bbox.max.z = self.bbox.min.z + thickness;
                     if self.bbox.contains_point(local) {
                         self.u = Value::from_float(local.x - self.bbox.min.x); // u = X
                         self.v = Value::from_float(local.y - self.bbox.min.y); // v = Y
@@ -356,14 +366,19 @@ impl Execution {
 
                     self.bbox.max.z = old_max_z;
                 }
-                NodeOp::SegmentBottom(body) => {
+                NodeOp::SegmentFloor(depth, body) => {
                     let old_max_y = self.bbox.max.y;
 
                     let local = self.local.as_vec3();
 
-                    let thickness = 0.1;
-                    self.bbox.max.y = self.bbox.min.y + thickness;
+                    let thickness = if depth.is_empty() {
+                        0.1
+                    } else {
+                        self.execute(depth, program);
+                        self.stack.pop().unwrap().as_float()
+                    };
 
+                    self.bbox.max.y = self.bbox.min.y + thickness;
                     if self.bbox.contains_point(local) {
                         self.u = Value::from_float(local.x - self.bbox.min.x); // u = X
                         self.v = Value::from_float(local.z - self.bbox.min.z); // v = Z
@@ -395,15 +410,102 @@ impl Execution {
                         }
                     }
                 }
+                NodeOp::PatternBricks(br, ce) => {
+                    fn s_box(p: Vec2<f32>, b: Vec2<f32>, r: f32) -> f32 {
+                        let d = p.map(|v| v.abs()) - b + Vec2::new(r, r);
+                        d.x.max(d.y).min(0.0) + (d.map(|v| v.max(0.0))).magnitude() - r
+                    }
+
+                    let round = 0.1;
+                    let brick_size = Vec2::new(0.3, 0.1);
+                    let gap = 0.02;
+                    let cell = brick_size + Vec2::broadcast(gap);
+
+                    let mut u = Vec2::new(self.u.x(), self.v.x()) / cell;
+                    u.x += 0.5 * ((u.y.floor() as i32 % 2) as f32);
+
+                    let p = u.map(|v| v.fract()) - 0.5;
+                    let rc = s_box(p, brick_size / cell * 0.5, round);
+
+                    if rc < 0.0 {
+                        if let Some(br) = br {
+                            self.execute(br, program);
+                        }
+                    } else {
+                        if let Some(ce) = ce {
+                            self.execute(ce, program);
+                        }
+                    }
+                }
                 // Material Write Instructions
                 NodeOp::MaterialAlbedo => {
                     if let Some(top) = self.stack.last() {
                         self.material.base_color = top.as_vec3();
                     }
                 }
+                NodeOp::MaterialSubsurface => {
+                    if let Some(top) = self.stack.last() {
+                        self.material.subsurface = top.as_float();
+                    }
+                }
+                NodeOp::MaterialMetallic => {
+                    if let Some(top) = self.stack.last() {
+                        self.material.metallic = top.as_float();
+                    }
+                }
+                NodeOp::MaterialSpecular => {
+                    if let Some(top) = self.stack.last() {
+                        self.material.specular = top.as_float();
+                    }
+                }
                 NodeOp::MaterialRoughness => {
                     if let Some(top) = self.stack.last() {
                         self.material.roughness = top.as_float();
+                    }
+                }
+                NodeOp::MaterialAnisotropic => {
+                    if let Some(top) = self.stack.last() {
+                        self.material.anisotropic = top.as_float();
+                    }
+                }
+                NodeOp::MaterialSheen => {
+                    if let Some(top) = self.stack.last() {
+                        self.material.sheen = top.as_float();
+                    }
+                }
+                NodeOp::MaterialSheenTint => {
+                    if let Some(top) = self.stack.last() {
+                        self.material.sheen_tint = top.as_float();
+                    }
+                }
+                NodeOp::MaterialClearcoat => {
+                    if let Some(top) = self.stack.last() {
+                        self.material.clearcoat = top.as_float();
+                    }
+                }
+                NodeOp::MaterialClearcoatGloss => {
+                    if let Some(top) = self.stack.last() {
+                        self.material.clearcoat_gloss = top.as_float();
+                    }
+                }
+                NodeOp::MaterialIOR => {
+                    if let Some(top) = self.stack.last() {
+                        self.material.ior = top.as_float();
+                    }
+                }
+                NodeOp::MaterialTransmission => {
+                    if let Some(top) = self.stack.last() {
+                        self.material.transmission = top.as_float();
+                    }
+                }
+                NodeOp::MaterialTransmissionRoughness => {
+                    if let Some(top) = self.stack.last() {
+                        self.material.transmission_roughness = top.as_float();
+                    }
+                }
+                NodeOp::MaterialEmission => {
+                    if let Some(top) = self.stack.last() {
+                        self.material.emission_color = top.as_vec3();
                     }
                 }
             }
