@@ -1332,7 +1332,7 @@ impl Parser {
                         field_path,
                         self.create_loc(token.line),
                     ))
-                } else if let Some(material) = self.materials.get_index_of(&token.lexeme) {
+                } else if let Some(_) = self.materials.get_index_of(&token.lexeme) {
                     Ok(Expr::MaterialReference(
                         token.lexeme.clone(),
                         self.create_loc(token.line),

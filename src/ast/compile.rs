@@ -267,8 +267,6 @@ impl Visitor for CompileVisitor {
         loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        println!("material {} ", objectd.name);
-
         let mut material_ops: Vec<NodeOp> = vec![];
 
         // Compile all blocks
@@ -499,9 +497,9 @@ impl Visitor for CompileVisitor {
                 ctx.emit(NodeOp::Push(Value::from_float(*f)));
             }
             ASTValue::Float3(x, y, z) => {
-                let x = x.accept(self, ctx)?.to_float().unwrap_or_default();
-                let y = y.accept(self, ctx)?.to_float().unwrap_or_default();
-                let z = z.accept(self, ctx)?.to_float().unwrap_or_default();
+                _ = x.accept(self, ctx)?.to_float().unwrap_or_default();
+                _ = y.accept(self, ctx)?.to_float().unwrap_or_default();
+                _ = z.accept(self, ctx)?.to_float().unwrap_or_default();
 
                 ctx.emit(NodeOp::Pack3);
             }
@@ -595,7 +593,6 @@ impl Visitor for CompileVisitor {
             BinaryOperator::Mod => {
                 ctx.emit(NodeOp::Mod);
             }
-            _ => {}
         }
 
         Ok(ASTValue::None)
@@ -666,191 +663,28 @@ impl Visitor for CompileVisitor {
 
     fn func_declaration(
         &mut self,
-        name: &str,
-        args: &[ASTValue],
-        body: &[Box<Stmt>],
-        returns: &ASTValue,
-        export: &bool,
-        loc: &Location,
-        ctx: &mut Context,
+        _name: &str,
+        _args: &[ASTValue],
+        _body: &[Box<Stmt>],
+        _returns: &ASTValue,
+        _export: &bool,
+        _loc: &Location,
+        _ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        /*
-                self.functions.insert(
-                    name.to_string(),
-                    ASTValue::Function(name.to_string(), args.to_vec(), Box::new(returns.clone())),
-                );
+        // Keeping this around for possible later function support
 
-                let mut params = String::new();
-
-                ctx.clear_locals();
-                self.environment.begin_scope(returns.clone(), true);
-
-                for param in args {
-                    // Save the param into the environment
-                    if let Some(name) = param.name() {
-                        self.environment.define(name, param.clone());
-                    }
-
-                    match param {
-                        ASTValue::Int(name, _) => {
-                            params += &format!(
-                                "(param ${} i{})",
-                                name.clone().unwrap(),
-                                ctx.precision.describe()
-                            );
-                        }
-                        ASTValue::Int2(name, _, _) => {
-                            params += &format!(
-                                "(param ${}_x i{}) (param ${}_y i{})",
-                                name.clone().unwrap(),
-                                ctx.precision.describe(),
-                                name.clone().unwrap(),
-                                ctx.precision.describe()
-                            );
-                        }
-                        ASTValue::Int3(name, _, _, _) => {
-                            params += &format!(
-                                "(param ${}_x i{}) (param ${}_y i{}) (param ${}_z i{})",
-                                name.clone().unwrap(),
-                                ctx.precision.describe(),
-                                name.clone().unwrap(),
-                                ctx.precision.describe(),
-                                name.clone().unwrap(),
-                                ctx.precision.describe()
-                            );
-                        }
-                        ASTValue::Int4(name, _, _, _, _) => {
-                            params += &format!(
-                                "(param ${}_x i{}) (param ${}_y i{}) (param ${}_z i{}) (param ${}_w i{})",
-                                name.clone().unwrap(),
-                                ctx.precision.describe(),
-                                name.clone().unwrap(),
-                                ctx.precision.describe(),
-                                name.clone().unwrap(),
-                                ctx.precision.describe(),
-                                name.clone().unwrap(),
-                                ctx.precision.describe()
-                            );
-                        }
-                        ASTValue::Float(name, _) => {
-                            params += &format!(
-                                "(param ${} f{})",
-                                name.clone().unwrap(),
-                                ctx.precision.describe()
-                            );
-                        }
-                        ASTValue::Float2(name, _, _) => {
-                            params += &format!(
-                                "(param ${}_x f{}) (param ${}_y f{})",
-                                name.clone().unwrap(),
-                                ctx.precision.describe(),
-                                name.clone().unwrap(),
-                                ctx.precision.describe()
-                            );
-                        }
-                        ASTValue::Float3(name, _, _, _) => {
-                            params += &format!(
-                                "(param ${}_x f{}) (param ${}_y f{}) (param ${}_z f{})",
-                                name.clone().unwrap(),
-                                ctx.precision.describe(),
-                                name.clone().unwrap(),
-                                ctx.precision.describe(),
-                                name.clone().unwrap(),
-                                ctx.precision.describe()
-                            );
-                        }
-                        ASTValue::Float4(name, _, _, _, _) => {
-                            params += &format!(
-                                "(param ${}_x f{}) (param ${}_y f{}) (param ${}_z f{}) (param ${}_w f{})",
-                                name.clone().unwrap(),
-                                ctx.precision.describe(),
-                                name.clone().unwrap(),
-                                ctx.precision.describe(),
-                                name.clone().unwrap(),
-                                ctx.precision.describe(),
-                                name.clone().unwrap(),
-                                ctx.precision.describe()
-                            );
-                        }
-                        ASTValue::Struct(_, param_name, _) => {
-                            params += &format!("(param ${} i32)", param_name.clone().unwrap());
-                        }
-                        _ => {}
-                    }
-                }
-
-                let mut return_type = String::new();
-
-                if let Some(r) = returns.to_wat_type(&ctx.pr) {
-                    return_type = format!("(result {})", r);
-                }
-
-                let export_str = if *export {
-                    format!(" (export \"{}\")", name)
-                } else {
-                    "".to_string()
-                };
-
-                let instr = format!("(func ${}{} {} {}", name, export_str, params, return_type);
-
-                ctx.add_line();
-                ctx.add_wat(&format!(";; function '{}'", name));
-                ctx.add_wat(&instr);
-                ctx.add_indention();
-
-                ctx.wat.push_str("__LOCALS__");
-
-                let mut last_value = ASTValue::None;
-                for stmt in body {
-                    last_value = stmt.accept(self, ctx)?;
-                }
-
-                if let Some(ret) = self.environment.get_return() {
-                    if ret.to_type() != "void" && last_value.to_type() != ret.to_type() {
-                        return Err(RPUError::loc(
-                            format!("Function '{}' does not end with a 'return' statement", name),
-                            loc,
-                        ));
-                    }
-                }
-
-                self.environment.end_scope();
-
-                ctx.wat = ctx.wat.replace("__LOCALS__", &ctx.wat_locals);
-                ctx.wat_locals = String::new();
-
-                ctx.remove_indention();
-                ctx.add_wat(")");
-        */
         Ok(ASTValue::None)
     }
 
     fn return_stmt(
         &mut self,
-        expr: &Expr,
-        loc: &Location,
-        ctx: &mut Context,
+        _expr: &Expr,
+        _loc: &Location,
+        _ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        let rc = expr.accept(self, ctx)?;
+        // let rc = expr.accept(self, ctx)?;
 
-        /*
-        if let Some(ret) = self.environment.get_return() {
-            if rc.to_type() != ret.to_type() {
-                return Err(RPUError::loc(
-                    format!(
-                        "Invalid return type '{}', should be '{}'",
-                        rc.to_type(),
-                        ret.to_type()
-                    ),
-                    loc,
-                ));
-            }
-        }
-
-        ctx.add_wat("(return)");
-        */
-
-        Ok(rc)
+        Ok(ASTValue::None)
     }
 
     fn if_stmt(
