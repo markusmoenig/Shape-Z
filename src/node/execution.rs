@@ -64,27 +64,72 @@ impl Execution {
                 NodeOp::Store(index) => {
                     self.variables[*index] = self.stack.pop().unwrap();
                 }
-                NodeOp::Component(swizzle) => match swizzle {
-                    0 => {
-                        let v = self.stack.pop().unwrap();
-                        self.stack.push(Value::from_float(v.x()));
+                NodeOp::Swap => {
+                    let b = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(b);
+                    self.stack.push(a);
+                }
+                NodeOp::GetComponents(swizzle) => {
+                    let v = self.stack.pop().unwrap();
+                    let mut result = vec![];
+
+                    for &index in swizzle {
+                        let f = match index {
+                            0 => v.x(),
+                            1 => v.y(),
+                            2 => v.z(),
+                            _ => continue,
+                        };
+                        result.push(f);
                     }
-                    1 => {
-                        let v = self.stack.pop().unwrap();
-                        self.stack.push(Value::from_float(v.y()));
+
+                    // Push as single Value: scalar or vector depending on result length
+                    let pushed = match result.as_slice() {
+                        [x] => Value::from_float(*x),
+                        [x, y] => Value::from_vec2(Vec2::new(*x, *y)),
+                        [x, y, z] => Value::from_vec3(Vec3::new(*x, *y, *z)),
+                        _ => Value::from_float(0.0),
+                    };
+
+                    self.stack.push(pushed);
+                }
+                NodeOp::SetComponents(swizzle) => {
+                    let value = self.stack.pop().unwrap();
+                    let mut target = self.stack.pop().unwrap();
+
+                    let components = match swizzle.len() {
+                        1 => vec![value.x()],
+                        2 => vec![value.x(), value.y()],
+                        3 => vec![value.x(), value.y(), value.z()],
+                        _ => vec![],
+                    };
+
+                    for (i, &idx) in swizzle.iter().enumerate() {
+                        if i >= components.len() {
+                            break;
+                        }
+                        match idx {
+                            0 => target.0[0] = components[i],
+                            1 => target.0[1] = components[i],
+                            2 => target.0[2] = components[i],
+                            _ => {}
+                        }
                     }
-                    2 => {
-                        let v = self.stack.pop().unwrap();
-                        self.stack.push(Value::from_float(v.z()));
-                    }
-                    _ => {}
-                },
+
+                    self.stack.push(target);
+                }
                 NodeOp::Push(v) => self.stack.push(*v),
                 NodeOp::Pack3 => {
                     let z = self.stack.pop().unwrap();
                     let y = self.stack.pop().unwrap();
                     let x = self.stack.pop().unwrap();
                     self.stack.push(Value::from_components(x.x(), y.x(), z.x()));
+                }
+                NodeOp::Dup => {
+                    if let Some(top) = self.stack.last() {
+                        self.stack.push(top.clone());
+                    }
                 }
                 NodeOp::If(then_code, else_code) => {
                     let value = self.stack.pop().unwrap().truthy();

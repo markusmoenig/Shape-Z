@@ -296,23 +296,99 @@ impl Visitor for CompileVisitor {
     fn variable_assignment(
         &mut self,
         name: String,
-        _op: &AssignmentOperator,
-        _swizzle: &[u8],
+        op: &AssignmentOperator,
+        swizzle: &[u8],
         _field_path: &[String],
         expression: &Expr,
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        _ = expression.accept(self, ctx)?;
+        _ = expression.accept(self, ctx)?; // RHS is now on stack
 
-        if let Some(index) = ctx.variables.get(&name) {
-            ctx.emit(NodeOp::Store(*index as usize));
+        if let Some(&index) = ctx.variables.get(&name) {
+            let index = index as usize;
+            if swizzle.is_empty() {
+                // Non-swizzled assignment
+                match op {
+                    AssignmentOperator::Assign => {
+                        ctx.emit(NodeOp::Store(index));
+                    }
+                    AssignmentOperator::AddAssign => {
+                        ctx.emit(NodeOp::Load(index));
+                        ctx.emit(NodeOp::Swap);
+                        ctx.emit(NodeOp::Add);
+                        ctx.emit(NodeOp::Store(index));
+                    }
+                    AssignmentOperator::SubtractAssign => {
+                        ctx.emit(NodeOp::Load(index));
+                        ctx.emit(NodeOp::Swap);
+                        ctx.emit(NodeOp::Sub);
+                        ctx.emit(NodeOp::Store(index));
+                    }
+                    AssignmentOperator::MultiplyAssign => {
+                        ctx.emit(NodeOp::Load(index));
+                        ctx.emit(NodeOp::Swap);
+                        ctx.emit(NodeOp::Mul);
+                        ctx.emit(NodeOp::Store(index));
+                    }
+                    AssignmentOperator::DivideAssign => {
+                        ctx.emit(NodeOp::Load(index));
+                        ctx.emit(NodeOp::Swap);
+                        ctx.emit(NodeOp::Div);
+                        ctx.emit(NodeOp::Store(index));
+                    }
+                }
+            } else {
+                // Swizzled assignment
+                match op {
+                    AssignmentOperator::Assign => {
+                        ctx.emit(NodeOp::Load(index));
+                        ctx.emit(NodeOp::Swap);
+                        ctx.emit(NodeOp::SetComponents(swizzle.into()));
+                        ctx.emit(NodeOp::Store(index));
+                    }
+                    AssignmentOperator::AddAssign => {
+                        ctx.emit(NodeOp::Load(index));
+                        ctx.emit(NodeOp::Dup);
+                        ctx.emit(NodeOp::GetComponents(swizzle.to_vec()));
+                        ctx.emit(NodeOp::Swap);
+                        ctx.emit(NodeOp::Add);
+                        ctx.emit(NodeOp::SetComponents(swizzle.to_vec()));
+                        ctx.emit(NodeOp::Store(index));
+                    }
+                    AssignmentOperator::SubtractAssign => {
+                        ctx.emit(NodeOp::Load(index));
+                        ctx.emit(NodeOp::Dup);
+                        ctx.emit(NodeOp::GetComponents(swizzle.into()));
+                        ctx.emit(NodeOp::Swap);
+                        ctx.emit(NodeOp::Sub);
+                        ctx.emit(NodeOp::SetComponents(swizzle.into()));
+                        ctx.emit(NodeOp::Store(index));
+                    }
+                    AssignmentOperator::MultiplyAssign => {
+                        ctx.emit(NodeOp::Load(index));
+                        ctx.emit(NodeOp::Dup);
+                        ctx.emit(NodeOp::GetComponents(swizzle.into()));
+                        ctx.emit(NodeOp::Swap);
+                        ctx.emit(NodeOp::Mul);
+                        ctx.emit(NodeOp::SetComponents(swizzle.into()));
+                        ctx.emit(NodeOp::Store(index));
+                    }
+                    AssignmentOperator::DivideAssign => {
+                        ctx.emit(NodeOp::Load(index));
+                        ctx.emit(NodeOp::Dup);
+                        ctx.emit(NodeOp::GetComponents(swizzle.into()));
+                        ctx.emit(NodeOp::Swap);
+                        ctx.emit(NodeOp::Div);
+                        ctx.emit(NodeOp::SetComponents(swizzle.into()));
+                        ctx.emit(NodeOp::Store(index));
+                    }
+                }
+            }
         }
-        // self.environment.assign(&name, v);
 
         Ok(ASTValue::None)
     }
-
     fn variable(
         &mut self,
         name: String,
@@ -335,7 +411,7 @@ impl Visitor for CompileVisitor {
             if let Some(index) = ctx.variables.get(&name) {
                 ctx.emit(NodeOp::Load(*index as usize));
                 if !swizzle.is_empty() {
-                    ctx.emit(NodeOp::Component(swizzle[0]));
+                    ctx.emit(NodeOp::GetComponents(swizzle.to_vec()));
                 }
             }
         }
