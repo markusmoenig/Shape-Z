@@ -37,7 +37,7 @@ impl Renderer for Model {
         uv: Vec2<F>,
         resolution: Vec2<F>,
         grid: &VoxelGrid,
-        palette: &Palette,
+        _materials: &[Vec<NodeOp>],
         camera: &Box<dyn Camera>,
     ) -> Vec4<F> {
         let mut rng = rand::rng();
@@ -60,10 +60,10 @@ impl Renderer for Model {
                 let c = self.background_color;
                 Vec4::new(c.x, c.y, c.z, 1.0)
             }
-            HitType::Voxel(m) => {
+            HitType::Voxel(_m) => {
                 // -------------- palette lookup --------------------------------------
-                let mat = palette.get(m);
-                let mut color = mat.base_color; // linear 0-1
+                //let mat = palette.get(m);
+                let mut color = Vec3::zero(); //mat.base_color; // linear 0-1
 
                 // -------------- basic diffuse lighting ------------------------------
                 let light_dir = Vec3::new(-0.5, 1.0, -0.5).normalized();

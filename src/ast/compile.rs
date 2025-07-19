@@ -260,6 +260,64 @@ impl Visitor for CompileVisitor {
         Ok(ASTValue::None)
     }
 
+    // Create a material
+    fn material(
+        &mut self,
+        objectd: &MaterialD,
+        loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError> {
+        println!("material {} ", objectd.name);
+
+        let mut material_ops: Vec<NodeOp> = vec![];
+
+        // Compile all blocks
+        for (name, stmts) in &objectd.blocks {
+            ctx.add_custom_target();
+            _ = stmts.accept(self, ctx)?;
+            if let Some(codes) = ctx.take_last_custom_target() {
+                material_ops.extend(codes);
+
+                match name.as_str() {
+                    "albedo" => material_ops.push(NodeOp::MaterialAlbedo),
+                    "roughness" => material_ops.push(NodeOp::MaterialRoughness),
+                    // "metallic" => material_ops.push(NodeOp::MaterialMetallic),
+                    // "emission" => material_ops.push(NodeOp::MaterialEmission),
+                    // Add more as needed
+                    other => {
+                        return Err(RuntimeError::new(
+                            format!("Unknown material property: {}", other),
+                            loc,
+                        ));
+                    }
+                }
+            }
+        }
+
+        ctx.materials.insert(objectd.name.clone(), material_ops);
+
+        Ok(ASTValue::None)
+    }
+
+    // A material reference, we add the index of the material to the code.
+    fn material_reference(
+        &mut self,
+        name: &String,
+        loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError> {
+        if let Some(index) = ctx.materials.get_index_of(name) {
+            ctx.emit(NodeOp::Push(Value::from_float(index as f32)));
+        } else {
+            return Err(RuntimeError::new(
+                format!("Unknown material: {}", name),
+                loc,
+            ));
+        }
+
+        Ok(ASTValue::None)
+    }
+
     fn place(
         &mut self,
         id: &String,

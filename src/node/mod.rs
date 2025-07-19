@@ -51,4 +51,6 @@ pub enum NodeOp {
     SegmentBack(Vec<NodeOp>),
     SegmentBottom(Vec<NodeOp>),
     PatternModulo(Option<Vec<NodeOp>>, Option<Vec<NodeOp>>),
+    MaterialAlbedo,
+    MaterialRoughness,
 }

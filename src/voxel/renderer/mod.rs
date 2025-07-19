@@ -20,7 +20,7 @@ pub trait Renderer: Send + Sync {
         uv: Vec2<F>,
         resolution: Vec2<F>,
         grid: &VoxelGrid,
-        palette: &Palette,
+        materials: &[Vec<NodeOp>],
         camera: &Box<dyn Camera>,
     ) -> Vec4<F> {
         Vec4::zero()

@@ -55,7 +55,7 @@ impl Tracer {
         &self,
         buffer: &mut Arc<Mutex<RenderBuffer>>,
         grid: &Arc<RwLock<VoxelGrid>>,
-        palette: &Arc<RwLock<Palette>>,
+        materials: &Arc<RwLock<Vec<Vec<NodeOp>>>>,
         renderer: &Arc<Box<dyn Renderer>>,
         camera: &Arc<RwLock<Box<dyn Camera>>>,
     ) {
@@ -73,7 +73,7 @@ impl Tracer {
 
         // let ft_arc = Arc::clone(&ft);
         let grid_arc = Arc::clone(grid);
-        let palette_arc = Arc::clone(palette);
+        let materials_arc = Arc::clone(materials);
         let renderer_arc = Arc::clone(renderer);
         // let camera_arc = Arc::clone(camera);
 
@@ -82,7 +82,7 @@ impl Tracer {
         for _ in 0..num_cpus {
             // let ft = Arc::clone(&ft_arc);
             let grid = Arc::clone(&grid_arc);
-            let palette = Arc::clone(&palette_arc);
+            let materials = Arc::clone(&materials_arc);
             let renderer = Arc::clone(&renderer_arc);
             let camera = Arc::clone(camera);
 
@@ -102,8 +102,7 @@ impl Tracer {
 
                         let grid_guard = grid.read().unwrap();
                         let grid_ref: &VoxelGrid = &grid_guard;
-                        let palette_guard = palette.read().unwrap();
-                        let palette_ref: &Palette = &palette_guard;
+                        let material_guard = materials.read().unwrap();
                         let camera_guard = camera.read().unwrap();
                         let camera_ref = &camera_guard;
 
@@ -126,7 +125,7 @@ impl Tracer {
                                     uv,
                                     screen_size,
                                     grid_ref,
-                                    palette_ref,
+                                    &material_guard,
                                     camera_ref,
                                 );
                                 tile_buffer.set(w, h, p.into_array());

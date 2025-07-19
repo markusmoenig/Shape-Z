@@ -25,6 +25,7 @@ pub mod prelude {
 
     pub use vek::{Aabb, Vec2, Vec3, Vec4};
 
+    pub use indexmap::IndexMap;
     pub use uuid::Uuid;
 
     pub use crate::node::execution::*;
@@ -74,12 +75,12 @@ fn main() {
     let camera: Arc<RwLock<Box<dyn Camera>>> = Arc::new(RwLock::new(Box::new(Iso::new())));
     let renderer: Arc<Box<dyn Renderer>> = Arc::new(Box::new(PBR::new()));
     let mut buffer = Arc::new(Mutex::new(RenderBuffer::new(800, 800)));
-    let palette = Arc::new(RwLock::new(Palette::default()));
+    // let palette = Arc::new(RwLock::new(Palette::default()));
     let tracer = tracer::Tracer::new();
 
-    palette.write().unwrap().materials[0].base_color = Vec3::new(1.0, 0.0, 0.0);
-    palette.write().unwrap().materials[1].base_color = Vec3::new(0.0, 1.0, 0.0);
-    palette.write().unwrap().materials[2].base_color = Vec3::new(0.0, 0.0, 1.0);
+    // palette.write().unwrap().materials[0].base_color = Vec3::new(1.0, 0.0, 0.0);
+    // palette.write().unwrap().materials[1].base_color = Vec3::new(0.0, 1.0, 0.0);
+    // palette.write().unwrap().materials[2].base_color = Vec3::new(0.0, 0.0, 1.0);
 
     {
         // let mut c = camera.write().unwrap();
@@ -124,6 +125,8 @@ fn main() {
     let mut execution = Execution::new(ctx.variables.len());
     execution.execute(&ctx.program.globals.clone(), &mut ctx.program);
 
+    let materials: Arc<RwLock<Vec<Vec<NodeOp>>>> =
+        Arc::new(RwLock::new(ctx.materials.values().cloned().collect()));
     ctx.program.grid.write().unwrap().update_bboxes();
 
     let _stop = tracer.get_time();
@@ -131,7 +134,13 @@ fn main() {
 
     // Render the output grid
 
-    tracer.render(&mut buffer, &ctx.program.grid, &palette, &renderer, &camera);
+    tracer.render(
+        &mut buffer,
+        &ctx.program.grid,
+        &materials,
+        &renderer,
+        &camera,
+    );
 
     // Save the rendered image
 

@@ -1,3 +1,5 @@
+use std::ops::Index;
+
 use crate::prelude::*;
 
 #[derive(Clone, Debug)]
@@ -6,6 +8,8 @@ pub struct Context {
     pub custom_targets: Vec<Vec<NodeOp>>,
 
     pub variables: FxHashMap<String, u32>,
+    pub materials: IndexMap<String, Vec<NodeOp>>,
+
     pub program: Program,
 }
 
@@ -16,6 +20,7 @@ impl Context {
             custom_targets: vec![],
             program: Program::new(size, density),
             variables,
+            materials: IndexMap::default(),
         }
     }
 

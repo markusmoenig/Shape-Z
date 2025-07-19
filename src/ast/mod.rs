@@ -75,6 +75,7 @@ pub enum Stmt {
     Print(Box<Expr>, Location),
     Block(Vec<Box<Stmt>>, Location),
     Expression(Box<Expr>, Location),
+    Material(MaterialD, Location),
     Voxel(VoxelD, Location),
     Shape(ShapeD, Location),
     Segment(SegmentD, Location),
@@ -97,6 +98,7 @@ pub enum Stmt {
 /// Expressions in the AST
 #[derive(Clone, Debug)]
 pub enum Expr {
+    MaterialReference(String, Location),
     Value(ASTValue, Vec<u8>, Vec<String>, Location),
     Logical(Box<Expr>, LogicalOperator, Box<Expr>, Location),
     Unary(UnaryOperator, Box<Expr>, Location),
@@ -243,6 +245,20 @@ pub trait Visitor {
     fn expression(
         &mut self,
         expression: &Expr,
+        loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError>;
+
+    fn material(
+        &mut self,
+        objectd: &MaterialD,
+        loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError>;
+
+    fn material_reference(
+        &mut self,
+        name: &String,
         loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError>;
@@ -466,6 +482,7 @@ impl Stmt {
             Stmt::Print(expression, loc) => visitor.print(expression, loc, ctx),
             Stmt::Block(list, loc) => visitor.block(list, loc, ctx),
             Stmt::Expression(expression, loc) => visitor.expression(expression, loc, ctx),
+            Stmt::Material(objectd, loc) => visitor.material(objectd, loc, ctx),
             Stmt::Voxel(objectd, loc) => visitor.voxel(objectd, loc, ctx),
             Stmt::Shape(objectd, loc) => visitor.shape(objectd, loc, ctx),
             Stmt::Segment(objectd, loc) => visitor.segment(objectd, loc, ctx),
@@ -493,6 +510,7 @@ impl Expr {
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
         match self {
+            Expr::MaterialReference(name, loc) => visitor.material_reference(name, loc, ctx),
             Expr::Value(value, swizzle, field_path, loc) => {
                 visitor.value(value.clone(), swizzle, field_path, loc, ctx)
             }

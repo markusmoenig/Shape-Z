@@ -85,21 +85,7 @@ pub struct PatternD {
     pub blocks: FxHashMap<String, Box<Stmt>>,
 }
 
-impl Default for PatternD {
-    fn default() -> Self {
-        Self::empty()
-    }
-}
-
 impl PatternD {
-    pub fn empty() -> Self {
-        Self {
-            name: String::new(),
-            params: FxHashMap::default(),
-            blocks: FxHashMap::default(),
-        }
-    }
-
     pub fn new(
         name: String,
         params: FxHashMap<String, Box<Expr>>,
@@ -109,6 +95,30 @@ impl PatternD {
             name,
             params,
             blocks,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct MaterialD {
+    pub name: String,
+    pub params: FxHashMap<String, Box<Expr>>,
+    pub blocks: FxHashMap<String, Box<Stmt>>,
+
+    pub body: Vec<NodeOp>,
+}
+
+impl MaterialD {
+    pub fn new(
+        name: String,
+        params: FxHashMap<String, Box<Expr>>,
+        blocks: FxHashMap<String, Box<Stmt>>,
+    ) -> Self {
+        Self {
+            name,
+            params,
+            blocks,
+            body: vec![],
         }
     }
 }

@@ -18,6 +18,9 @@ pub struct Execution {
     /// execution.
     pub bbox: Aabb<f32>,
 
+    /// The material the VM writes to.
+    pub material: Material,
+
     /// The execution stack.
     pub stack: Vec<Value>,
 }
@@ -35,6 +38,7 @@ impl Execution {
                 min: Vec3::zero(),
                 max: Vec3::one(),
             },
+            material: Material::default(),
             stack: Vec::with_capacity(32),
         }
     }
@@ -51,6 +55,7 @@ impl Execution {
                 min: Vec3::zero(),
                 max: Vec3::one(),
             },
+            material: Material::default(),
             stack: Vec::with_capacity(32),
         }
     }
@@ -388,6 +393,17 @@ impl Execution {
                         if let Some(odd) = odd {
                             self.execute(odd, program);
                         }
+                    }
+                }
+                // Material Write Instructions
+                NodeOp::MaterialAlbedo => {
+                    if let Some(top) = self.stack.last() {
+                        self.material.base_color = top.as_vec3();
+                    }
+                }
+                NodeOp::MaterialRoughness => {
+                    if let Some(top) = self.stack.last() {
+                        self.material.roughness = top.as_float();
                     }
                 }
             }

@@ -48,7 +48,7 @@ impl Renderer for PBR {
         resolution: Vec2<F>,
         // project: Arc<Project>,
         grid: &VoxelGrid,
-        palette: &Palette,
+        materials: &[Vec<NodeOp>],
         camera: &Box<dyn Camera>,
     ) -> Vec4<F> {
         let mut rng = rand::rng();
@@ -84,7 +84,12 @@ impl Renderer for PBR {
             }
 
             if let HitType::Voxel(m) = hit.hit {
-                let material = palette.get(m);
+                let mut execution = Execution::new(0);
+                let program = &mut Program::new(Vec3::zero(), 0);
+
+                execution.execute(&materials[m as usize], program);
+
+                let material = &execution.material;
                 let albedo = material.base_color_linear();
 
                 let x = hit.hitpoint;

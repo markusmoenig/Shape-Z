@@ -11,6 +11,8 @@ pub struct Parser {
 
     variable_counter: u32,
     variable_map: FxHashMap<String, u32>,
+
+    materials: IndexMap<String, Material>,
 }
 
 impl Default for Parser {
@@ -30,6 +32,8 @@ impl Parser {
 
             variable_counter: 0,
             variable_map: FxHashMap::default(),
+
+            materials: IndexMap::default(),
         }
     }
 
@@ -84,6 +88,9 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> Result<Stmt, ParseError> {
+        if self.match_token(vec![TokenType::Material]) {
+            return self.material_declaration();
+        }
         if self.match_token(vec![TokenType::Voxel]) {
             return self.voxel_declaration();
         }
@@ -157,6 +164,70 @@ impl Parser {
             var_name,
             ASTValue::None,
             init,
+            self.create_loc(line),
+        ))
+    }
+
+    /// Material declaration
+    fn material_declaration(&mut self) -> Result<Stmt, ParseError> {
+        let line = self.current_line;
+        self.consume(
+            TokenType::Identifier,
+            "Expected identifier after 'material''",
+            self.current_line,
+        )?;
+
+        let id = self.previous().unwrap().lexeme.clone();
+        let mut params = FxHashMap::default();
+
+        while self.match_token(vec![TokenType::Identifier]) {
+            let id = self.previous().unwrap().lexeme.clone();
+
+            self.consume(
+                TokenType::Equal,
+                "Expected '=' after voxel identifier",
+                self.current_line,
+            )?;
+
+            let value = self.expression()?;
+
+            params.insert(id, Box::new(value));
+        }
+
+        self.consume(
+            TokenType::LeftBrace,
+            "Expected '{' after material header",
+            self.current_line,
+        )?;
+
+        // -- Read Body Statements
+
+        let mut blocks = FxHashMap::default();
+
+        while self.match_token(vec![TokenType::Identifier]) {
+            let id = self.previous().unwrap().lexeme.clone();
+
+            self.consume(
+                TokenType::LeftBrace,
+                "Expected '{' after pattern identifier",
+                self.current_line,
+            )?;
+
+            let block = self.block()?;
+
+            blocks.insert(id, Box::new(block));
+        }
+
+        self.consume(
+            TokenType::RightBrace,
+            "Expected '}' after pattern block",
+            self.current_line,
+        )?;
+
+        self.materials.insert(id.clone(), Material::default());
+
+        Ok(Stmt::Material(
+            MaterialD::new(id, params, blocks),
             self.create_loc(line),
         ))
     }
@@ -1248,6 +1319,7 @@ impl Parser {
                     //     field_path = self.get_field_path_at_current();
                     // }
                 }
+
                 if token.lexeme == "local"
                     || token.lexeme == "world"
                     || token.lexeme == "u"
@@ -1260,7 +1332,12 @@ impl Parser {
                         field_path,
                         self.create_loc(token.line),
                     ))
-                } else if let Some(var_name) = self.verifier.get_var_name(&token.lexeme) {
+                } else if let Some(material) = self.materials.get_index_of(&token.lexeme) {
+                    Ok(Expr::MaterialReference(
+                        token.lexeme.clone(),
+                        self.create_loc(token.line),
+                    ))
+                } else if let Some(_) = self.verifier.get_var_name(&token.lexeme) {
                     Ok(Expr::Variable(
                         token.lexeme,
                         swizzle,
