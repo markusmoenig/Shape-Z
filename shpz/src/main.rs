@@ -1,10 +1,31 @@
 // ---
 
+use clap::{Command, arg};
 use shapezlib::prelude::*;
 
+fn cli() -> Command {
+    Command::new("shpz")
+        .about("Shape-Z. Compiles, renders or polygonizes '.shpz' source files.")
+        .author("Markus Moenig")
+        .version("0.1.0")
+        .subcommand_required(false)
+        .arg_required_else_help(true)
+        .allow_external_subcommands(true)
+        .arg(arg!(<FILE> "The input '.shpz' file"))
+        .arg_required_else_help(false)
+        .subcommand(
+            Command::new("render").about("Renders the input to an PNG image. Used by default."),
+        )
+        .subcommand(Command::new("polygonize").about("Polygonize the input to an OBJ file."))
+}
+
 fn main() {
-    let mut path = std::path::PathBuf::new();
-    path.push("main.shpz");
+    let matches = cli().get_matches();
+
+    let file_name = matches.get_one::<String>("FILE").unwrap();
+    // println!("file_name {}", file_name);
+
+    let mut path = std::path::PathBuf::from(file_name);
 
     let size = Vec3::new(10, 4, 10);
     let density = 96;
@@ -67,8 +88,7 @@ fn main() {
 
     // Render loop
 
-    let mut path = std::path::PathBuf::new();
-    path.push("main.png");
+    path.set_extension("png");
 
     for i in 0..iterations {
         // Render the output grid

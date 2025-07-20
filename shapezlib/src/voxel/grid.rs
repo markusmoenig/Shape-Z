@@ -197,9 +197,9 @@ impl VoxelGrid {
     /// World-space Aabb of the whole grid
     #[inline]
     fn bbox(&self) -> Aabb<F> {
-        let h = Vec3::from(self.bounds) * 0.5;
-        Aabb { min: -h, max: h }
-        // self.active_bbox
+        // let h = Vec3::from(self.bounds) * 0.5;
+        // Aabb { min: -h, max: h }
+        self.active_bbox
     }
 
     /// Recursively dda the tiles
@@ -224,7 +224,7 @@ impl VoxelGrid {
         let srd = rd.map(|v| v.signum());
         let rdi = Vec3::broadcast(1.0) / (rd * 2.0);
 
-        while t < t_max {
+        while t <= t_max {
             let key = {
                 let vi = i.map(|v| v as i32);
                 (vi.x, vi.y, vi.z)

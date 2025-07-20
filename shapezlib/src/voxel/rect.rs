@@ -24,8 +24,9 @@ impl VoxelRect {
         (sx..ex).flat_map(move |x| {
             (sy..ey).flat_map(move |y| {
                 (sz..ez).map(move |z| {
-                    let world = Vec3::new(x as F, y as F, z as F) * voxel_size;
-
+                    let voxel_half = voxel_size * 0.5;
+                    let world = Vec3::new(x as F, y as F, z as F) * voxel_size
+                        + Vec3::broadcast(voxel_half);
                     Vec3::new(world.x - center_x, world.y - center_y, world.z - center_z)
                 })
             })

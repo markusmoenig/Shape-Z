@@ -58,16 +58,7 @@ impl Renderer for PBR {
 
         let mut ray = camera.create_ray(uv, resolution, Vec2::new(rng.random(), rng.random()));
 
-        // let hit = grid.dda(&ray);
-
-        // if let Some(hit) = hit {
-        //     let mat = palette.get(hit.material);
-        //     acc.x = mat.base_color.x;
-        //     acc.y = mat.base_color.y;
-        //     acc.z = mat.base_color.z;
-        // }
-        //
-        for i in 0..4 {
+        for _ in 0..4 {
             let hit = grid.dda(&ray);
 
             if hit.hit == HitType::Outside {
@@ -97,7 +88,7 @@ impl Renderer for PBR {
                 let nl = if n.dot(ray.dir) < 0.0 { n } else { -n };
                 let eps = 0.001;
 
-                let reflection_type = ReflectionType::GGX;
+                let reflection_type = ReflectionType::Diffuse;
 
                 acc += mask
                     * (material.base_color_linear() * Vec3::broadcast(1.0) + material.emission);
@@ -110,7 +101,7 @@ impl Renderer for PBR {
                         let d = Self::jitter(nl, phi, r2.sqrt(), (1.0 - r2).sqrt());
 
                         // Direct lighting sample
-                        let mut e = Vec3::zero();
+                        let e = Vec3::zero();
 
                         /*
                         for light in &ft.graph.lights {
@@ -179,12 +170,12 @@ impl Renderer for PBR {
                     ReflectionType::GGX => {
                         let roughness = material.roughness.clamp(0.001, 1.0);
                         let alpha = roughness * roughness;
-                        let metallic = material.metallic;
+                        // let metallic = material.metallic;
                         let reflectance = 1.0;
-                        let base_f0 = 0.04;
-                        let f0 = base_f0 + (1.0 - base_f0) * metallic; // 0.04 for dielectrics → 1.0 for metal
-                        let v = (-ray.dir).normalized();
-                        let nv = n.dot(v).max(1e-5);
+                        // let base_f0 = 0.04;
+                        // let f0 = base_f0 + (1.0 - base_f0) * metallic; // 0.04 for dielectrics → 1.0 for metal
+                        // let v = (-ray.dir).normalized();
+                        // let nv = n.dot(v).max(1e-5);
                         let color = albedo;
 
                         if rng.random::<F>() < reflectance {

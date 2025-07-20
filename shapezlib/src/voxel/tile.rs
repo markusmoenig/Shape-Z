@@ -129,7 +129,7 @@ impl Tile {
     pub fn dda(&self, ray: &Ray) -> Option<HitRecord> {
         let (mut t_min, t_max) = ray.intersect_aabb(&self.bbox)?;
 
-        t_min = (t_min - 0.1).max(0.0);
+        t_min = (t_min - 0.002).max(0.0);
 
         let ro = ray.at(t_min);
         let rd = ray.dir;
@@ -145,7 +145,7 @@ impl Tile {
         let mut normal = Vec3::zero();
 
         let mut t = t_min;
-        while t < t_max {
+        while t <= t_max {
             let key = {
                 let vi = i.map(|v| v as i32);
                 (vi.x, vi.y, vi.z)

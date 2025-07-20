@@ -127,8 +127,7 @@ impl Renderer for BSDF {
                     break;
                 }
 
-                ray.dir = scatter_sample.l;
-                ray.origin = state.fhp + ray.dir * 0.006;
+                ray = Ray::new(state.fhp, scatter_sample.l).advanced(0.006);
             }
         }
 

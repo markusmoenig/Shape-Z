@@ -1,0 +1,168 @@
+material Mirror {
+    albedo {
+        1;
+    }
+
+    roughness {
+        0.0;
+    }
+
+    metallic {
+        1.0;
+    }
+}
+
+material White {
+    albedo {
+        vec3(0.9, 0.9, 0.9);
+    }
+
+    roughness {
+        1.0;
+    }
+
+    transmission {
+        0.0;
+    }
+}
+
+material WallPaint {
+    albedo {
+        vec3(0.9, 0.9, 0.2);
+    }
+
+    roughness {
+        0.0;
+    }
+
+    emission {
+        vec3(0.9, 0.9, 0.2);
+    }
+}
+
+material Glass {
+    albedo {
+        1;
+    }
+
+    roughness {
+        0.0;
+    }
+
+    transmission {
+        1.0;
+    }
+}
+
+material Bricks {
+    albedo {
+        vec3(1.0, 0.5, 0.5) + (hash - 0.5) * 0.3;
+    }
+    roughness {
+        1;
+    }
+}
+
+material Wood {
+    albedo {
+        vec3(0.70, 0.40, 0.20) + (hash - 0.5) * 0.1;
+    }
+    roughness {
+        1;
+    }
+}
+
+voxel Box size = vec3(5, 3, 5) {
+
+    shape Rect {
+
+        segment Left depth = 1.0 {
+
+            if d <= 0.05 {
+                White;
+            } else
+            if d < 0.2 {
+                pattern Bricks {
+                    brick {
+                        Bricks;
+                    }
+                    cement {
+                        //if d < 0.195 {
+                            White;
+                        //}
+                    }
+                } 
+            } else
+            if d < 0.21 && v > 1.2 && (u > 3.5 || u < 1.5) {
+                WallPaint;
+            }
+
+            if d > 0.20 && d < 0.21 && (v > 1.6 && v < 2.6) && (u > 2.0 && u < 3.0) {
+                Mirror;
+            }
+
+            if v < 1.2 && d > 0.2 {
+                if v > 1.0 && d > 0.35 && d < 0.9 && (u > 1.8 && u < 3.2) {
+                    
+                } else {         
+                    /*               
+                    let relief = fract(u / 0.3);            
+                    
+                    if v < 1.0 && relief > 0.1 && relief < 0.8 && d > 0.045 {
+                      } else {
+                        White;
+                    }*/
+
+                    White;
+                }
+            }
+        }
+    }
+
+    segment Back depth = 0.2 {
+
+        if (v > 1.2 && v < 2.6) && (u > 1.5 && u < 3.5) {
+            if d > 0.096 && d < 0.1 {
+                Glass;
+            }
+        } else {
+            White;
+        }
+    }
+
+    segment Floor {        
+        if d >  0.09 {
+            pattern Bricks {
+                brick {
+                    Wood;
+                }
+                cement {
+                    White;
+                }
+            }    
+        }  else {
+            White;
+        } 
+    }
+
+    /*
+    shape Disc {
+        if d > 0.40 {
+            pattern Modulo {
+                even {
+                 2;
+                }
+                odd {
+                    1;
+                }
+            } 
+        }
+
+        if d > 0.48 {
+            3;
+        }
+    }*/
+}
+
+place Box at = vec3(0, 0, 0);
+
