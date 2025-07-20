@@ -17,11 +17,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           profile: minimal
-          override: true
+          override: true          
 
       - name: Install dependencies on Ubuntu
         if: startsWith(matrix.os, 'ubuntu')

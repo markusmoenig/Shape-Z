@@ -296,7 +296,7 @@ impl Visitor for CompileVisitor {
                     "albedo" => material_ops.push(NodeOp::MaterialAlbedo),
                     "subsurface" => material_ops.push(NodeOp::MaterialSubsurface),
                     "metallic" => material_ops.push(NodeOp::MaterialMetallic),
-                    "specular" => material_ops.push(NodeOp::MaterialSpecular),
+                    "specular_tint" => material_ops.push(NodeOp::MaterialSpecularTint),
                     "roughness" => material_ops.push(NodeOp::MaterialRoughness),
                     "anisotropic" => material_ops.push(NodeOp::MaterialAnisotropic),
                     "sheen" => material_ops.push(NodeOp::MaterialSheen),
@@ -305,9 +305,6 @@ impl Visitor for CompileVisitor {
                     "clearcoat_gloss" => material_ops.push(NodeOp::MaterialClearcoatGloss),
                     "ior" => material_ops.push(NodeOp::MaterialIOR),
                     "transmission" => material_ops.push(NodeOp::MaterialTransmission),
-                    "transmission_roughness" => {
-                        material_ops.push(NodeOp::MaterialTransmissionRoughness)
-                    }
                     "emission" => material_ops.push(NodeOp::MaterialEmission),
                     other => {
                         return Err(RuntimeError::new(

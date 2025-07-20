@@ -100,8 +100,7 @@ impl Renderer for PBR {
                 let reflection_type = ReflectionType::GGX;
 
                 acc += mask
-                    * (material.base_color_linear() * Vec3::broadcast(1.0)
-                        + material.emission_color);
+                    * (material.base_color_linear() * Vec3::broadcast(1.0) + material.emission);
 
                 #[allow(clippy::single_match)]
                 match reflection_type {
@@ -138,12 +137,12 @@ impl Renderer for PBR {
                             }
                         }*/
 
-                        acc += mask * material.emission_color + mask * albedo * e;
+                        acc += mask * material.emission + mask * albedo * e;
                         mask *= albedo;
                         ray = Ray::new(x, d).advanced(eps);
                     }
                     ReflectionType::Specular => {
-                        acc += mask * material.emission_color;
+                        acc += mask * material.emission;
                         mask *= material.base_color_linear();
                         ray = Ray::new(x, ray.dir - 2.0 * ray.dir.dot(n) * n).advanced(eps);
                     }
@@ -226,7 +225,7 @@ impl Renderer for PBR {
                             let theta = 2.0 * F_PI * xsi_2;
                             let dir = Self::angle_to_dir(nl, theta, phi);
 
-                            acc += mask * material.emission_color + mask * color * brdf;
+                            acc += mask * material.emission + mask * color * brdf;
                             mask *= color;
                             ray = Ray::new(x, dir).advanced(eps);
                         } else {
@@ -266,7 +265,7 @@ impl Renderer for PBR {
                                 }
                             }*/
 
-                            acc += mask * material.emission_color + mask * color * e;
+                            acc += mask * material.emission + mask * color * e;
                             mask *= color;
                             ray = Ray::new(x, d).advanced(eps);
                         }

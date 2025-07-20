@@ -22,7 +22,7 @@ pub struct Execution {
     pub bbox: Aabb<f32>,
 
     /// The material the VM writes to.
-    pub material: Material,
+    pub material: BSDFMaterial,
 
     /// The execution stack.
     pub stack: Vec<Value>,
@@ -42,7 +42,7 @@ impl Execution {
                 min: Vec3::zero(),
                 max: Vec3::one(),
             },
-            material: Material::default(),
+            material: BSDFMaterial::default(),
             stack: Vec::with_capacity(32),
         }
     }
@@ -60,7 +60,7 @@ impl Execution {
                 min: Vec3::zero(),
                 max: Vec3::one(),
             },
-            material: Material::default(),
+            material: BSDFMaterial::default(),
             stack: Vec::with_capacity(32),
         }
     }
@@ -468,9 +468,9 @@ impl Execution {
                         self.material.metallic = top.as_float();
                     }
                 }
-                NodeOp::MaterialSpecular => {
+                NodeOp::MaterialSpecularTint => {
                     if let Some(top) = self.stack.last() {
-                        self.material.specular = top.as_float();
+                        self.material.specular_tint = top.as_float();
                     }
                 }
                 NodeOp::MaterialRoughness => {
@@ -500,7 +500,7 @@ impl Execution {
                 }
                 NodeOp::MaterialClearcoatGloss => {
                     if let Some(top) = self.stack.last() {
-                        self.material.clearcoat_gloss = top.as_float();
+                        self.material.clearcoat_roughness = top.as_float();
                     }
                 }
                 NodeOp::MaterialIOR => {
@@ -510,17 +510,12 @@ impl Execution {
                 }
                 NodeOp::MaterialTransmission => {
                     if let Some(top) = self.stack.last() {
-                        self.material.transmission = top.as_float();
-                    }
-                }
-                NodeOp::MaterialTransmissionRoughness => {
-                    if let Some(top) = self.stack.last() {
-                        self.material.transmission_roughness = top.as_float();
+                        self.material.spec_trans = top.as_float();
                     }
                 }
                 NodeOp::MaterialEmission => {
                     if let Some(top) = self.stack.last() {
-                        self.material.emission_color = top.as_vec3();
+                        self.material.emission = top.as_vec3();
                     }
                 }
             }

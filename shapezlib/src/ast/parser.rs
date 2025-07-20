@@ -12,7 +12,7 @@ pub struct Parser {
     variable_counter: u32,
     variable_map: FxHashMap<String, u32>,
 
-    materials: IndexMap<String, Material>,
+    materials: IndexMap<String, BSDFMaterial>,
 }
 
 impl Default for Parser {
@@ -224,7 +224,7 @@ impl Parser {
             self.current_line,
         )?;
 
-        self.materials.insert(id.clone(), Material::default());
+        self.materials.insert(id.clone(), BSDFMaterial::default());
 
         Ok(Stmt::Material(
             MaterialD::new(id, params, blocks),

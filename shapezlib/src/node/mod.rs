@@ -56,7 +56,7 @@ pub enum NodeOp {
     MaterialAlbedo,
     MaterialSubsurface,
     MaterialMetallic,
-    MaterialSpecular,
+    MaterialSpecularTint,
     MaterialRoughness,
     MaterialAnisotropic,
     MaterialSheen,
@@ -65,6 +65,5 @@ pub enum NodeOp {
     MaterialClearcoatGloss,
     MaterialIOR,
     MaterialTransmission,
-    MaterialTransmissionRoughness,
     MaterialEmission,
 }

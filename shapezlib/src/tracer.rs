@@ -3,8 +3,6 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use vek::Vec2;
 
-// use crate::editor::{CAMERA, PALETTE, RENDERBUFFER, RENDERER, VOXELGRID};
-
 pub struct Tracer {}
 
 #[allow(clippy::new_without_default)]
@@ -12,44 +10,6 @@ impl Tracer {
     pub fn new() -> Self {
         Self {}
     }
-
-    /*
-    pub fn draw(&mut self, ui: &mut TheUI) {
-        if let Some(render_view) = ui.get_render_view("ModelView") {
-            let dim = *render_view.dim();
-            let surface = render_view.render_buffer_mut();
-            surface.resize(dim.width, dim.height);
-
-            let mut rb = Arc::clone(&RENDERBUFFER);
-
-            // Resize if needed
-            {
-                let mut buffer = rb.lock().unwrap();
-                if buffer.width != dim.width as usize || buffer.height != dim.height as usize {
-                    *buffer = RenderBuffer::new(dim.width as usize, dim.height as usize);
-                    buffer.accum = 1;
-                }
-            }
-
-            let grid = Arc::clone(&VOXELGRID);
-            let palette = Arc::clone(&PALETTE);
-            let renderer = Arc::clone(&RENDERER);
-            let camera = Arc::clone(&CAMERA);
-
-            // Render
-            self.render(&mut rb, &grid, &palette, &renderer, &camera);
-            {
-                let mut buffer = rb.lock().unwrap();
-                buffer.accum += 1;
-            }
-
-            // Blit
-            {
-                let buffer = rb.lock().unwrap();
-                buffer.to_u8_vec_gamma_buffer(surface.pixels_mut());
-            }
-        }
-    }*/
 
     pub fn render(
         &self,
@@ -71,16 +31,13 @@ impl Tracer {
         let num_cpus = num_cpus::get();
         let _start = self.get_time();
 
-        // let ft_arc = Arc::clone(&ft);
         let grid_arc = Arc::clone(grid);
         let materials_arc = Arc::clone(materials);
         let renderer_arc = Arc::clone(renderer);
-        // let camera_arc = Arc::clone(camera);
 
         // Create threads
         let mut handles = vec![];
         for _ in 0..num_cpus {
-            // let ft = Arc::clone(&ft_arc);
             let grid = Arc::clone(&grid_arc);
             let materials = Arc::clone(&materials_arc);
             let renderer = Arc::clone(&renderer_arc);
@@ -132,7 +89,7 @@ impl Tracer {
                                 // tile_buffer.set(w, h, [uv.x, uv.y, 0.0, 1.0]);
                             }
                         }
-                        // Save the tile buffer to the main buffer
+                        // Accumulate the tile buffer to the main buffer
                         buffer_mutex
                             .lock()
                             .unwrap()
