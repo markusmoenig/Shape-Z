@@ -1325,6 +1325,7 @@ impl Parser {
                     || token.lexeme == "u"
                     || token.lexeme == "v"
                     || token.lexeme == "d"
+                    || token.lexeme == "hash"
                 {
                     Ok(Expr::Variable(
                         token.lexeme.clone(),

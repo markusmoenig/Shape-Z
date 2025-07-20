@@ -115,28 +115,28 @@ impl VoxelGrid {
 
     /// Get a voxel at the given world coordinate
     #[inline(always)]
-    pub fn get(&self, wc: Vec3<f32>) -> Option<u8> {
+    pub fn get(&self, wc: Vec3<f32>) -> Option<Voxel> {
         let (tile_key, local_key) = self.to_tile_coord(wc);
         self.tiles.get(&tile_key)?.get(local_key)
     }
 
     /// Set a voxel at the given world coordinate
     #[inline(always)]
-    pub fn set(&mut self, wc: Vec3<f32>, mat: u8) {
+    pub fn set(&mut self, wc: Vec3<f32>, voxel: Voxel) {
         let (tile_key, local_key) = self.to_tile_coord(wc);
         if let Some(tile) = self.tiles.get_mut(&tile_key) {
-            tile.set(local_key, mat);
+            tile.set(local_key, voxel);
         }
     }
 
     /// Set a voxel at the given world coordinate and create a new tile if necessary.
     #[inline(always)]
-    pub fn set_create(&mut self, wc: Vec3<f32>, mat: u8) {
+    pub fn set_create(&mut self, wc: Vec3<f32>, voxel: Voxel) {
         let (tile_key, local_key) = self.to_tile_coord(wc);
         self.tiles
             .entry(tile_key)
             .or_insert_with(|| Tile::new(self.density))
-            .set(local_key, mat);
+            .set(local_key, voxel);
     }
 
     /// Merges this grid with another grid.

@@ -58,7 +58,7 @@ pub mod prelude {
     pub use crate::voxel::renderer::model::Model;
     pub use crate::voxel::renderer::pbr::PBR;
     pub use crate::voxel::tile::Tile;
-    pub use crate::voxel::{Coord, Face, HitRecord, HitType};
+    pub use crate::voxel::{Coord, Face, HitRecord, HitType, Voxel};
 }
 
 // ---
@@ -71,6 +71,7 @@ fn main() {
 
     let size = Vec3::new(10, 4, 10);
     let density = 96;
+    let iterations = 50;
 
     let camera: Arc<RwLock<Box<dyn Camera>>> = Arc::new(RwLock::new(Box::new(Iso::new())));
     let renderer: Arc<Box<dyn Renderer>> = Arc::new(Box::new(PBR::new()));
@@ -130,24 +131,27 @@ fn main() {
     ctx.program.grid.write().unwrap().update_bboxes();
 
     let _stop = tracer.get_time();
-    println!("Modeling time: {:?} ms.", _stop - _start);
+    println!("Compile time: {:?} ms.", _stop - _start);
 
-    // Render the output grid
-
-    tracer.render(
-        &mut buffer,
-        &ctx.program.grid,
-        &materials,
-        &renderer,
-        &camera,
-    );
-
-    // Save the rendered image
-
-    let b = buffer.lock().unwrap();
+    // Render loop
 
     let mut path = std::path::PathBuf::new();
     path.push("main.png");
 
-    b.save_srgb(path);
+    for i in 0..iterations {
+        // Render the output grid
+
+        tracer.render(
+            &mut buffer,
+            &ctx.program.grid,
+            &materials,
+            &renderer,
+            &camera,
+        );
+
+        if i % 10 == 0 {
+            let b = buffer.lock().unwrap();
+            b.save_srgb(path.clone());
+        }
+    }
 }

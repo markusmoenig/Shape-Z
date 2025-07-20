@@ -83,11 +83,11 @@ impl Renderer for PBR {
                 break;
             }
 
-            if let HitType::Voxel(m) = hit.hit {
+            if let HitType::Voxel(voxel) = hit.hit {
                 let mut execution = Execution::new(0);
                 let program = &mut Program::new(Vec3::zero(), 0);
-
-                execution.execute(&materials[m as usize], program);
+                execution.hash = voxel.hash as f32 / 255.0;
+                execution.execute(&materials[voxel.material as usize], program);
 
                 let material = &execution.material;
                 let albedo = material.base_color_linear();

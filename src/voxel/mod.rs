@@ -10,6 +10,27 @@ pub mod tile;
 use crate::F;
 use vek::Vec3;
 
+/// The basic voxel struct stored in a VoxelGrid
+/// Currently defines a material id and a hash value
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub struct Voxel {
+    pub material: u8,
+    pub hash: u8,
+}
+
+impl Voxel {
+    pub fn new(material: u8, hash: u8) -> Self {
+        Self { material, hash }
+    }
+
+    pub fn mat(material: u8) -> Self {
+        Self {
+            material,
+            hash: 255,
+        }
+    }
+}
+
 /// Face
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum Face {
@@ -27,7 +48,7 @@ pub type Coord = (i32, i32, i32);
 /// HitType
 #[derive(Debug, Clone, PartialEq)]
 pub enum HitType {
-    Voxel(u8),        // Material ID
+    Voxel(Voxel),     // Material ID
     BBox((f32, f32)), // BBox hit (t_min, t_far)
     Outside,          // Ray didn't enter grid
 }

@@ -2,7 +2,7 @@ use crate::prelude::*;
 
 #[derive(Clone, Debug)]
 pub struct Tile {
-    pub voxels: Vec<Option<u8>>,
+    pub voxels: Vec<Option<Voxel>>,
     pub density: usize,
     pub bbox: Aabb<F>,
     pub has_voxels: bool,
@@ -45,7 +45,7 @@ impl Tile {
                 // Spread index linearly from border (0) to center (15)
                 let index = (norm * max_index).round() as u8;
 
-                self.set((x as i32, 0, z as i32), index);
+                self.set((x as i32, 0, z as i32), Voxel::mat(index));
             }
         }
 
@@ -103,12 +103,12 @@ impl Tile {
     }
 
     #[inline]
-    pub fn get(&self, coord: Coord) -> Option<u8> {
+    pub fn get(&self, coord: Coord) -> Option<Voxel> {
         self.index(coord).and_then(|i| self.voxels[i])
     }
 
     #[inline]
-    pub fn set(&mut self, coord: Coord, mat: u8) {
+    pub fn set(&mut self, coord: Coord, mat: Voxel) {
         if let Some(i) = self.index(coord) {
             self.voxels[i] = Some(mat);
         }

@@ -490,6 +490,8 @@ impl Visitor for CompileVisitor {
             ctx.emit(NodeOp::V);
         } else if name == "d" {
             ctx.emit(NodeOp::D);
+        } else if name == "hash" {
+            ctx.emit(NodeOp::Hash);
         } else {
             if let Some(index) = ctx.variables.get(&name) {
                 ctx.emit(NodeOp::Load(*index as usize));

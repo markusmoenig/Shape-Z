@@ -39,12 +39,12 @@ impl VoxelRect {
     }
 
     /// Set all voxels inside this region in the grid
-    pub fn fill(&self, grid: &mut VoxelGrid, mat: u8) {
+    pub fn fill(&self, grid: &mut VoxelGrid, voxel: Voxel) {
         for world in self.iter_voxels(grid) {
             let local = self.world_to_local(world);
 
             if (local - Vec3::new(0.0, 0.0, 0.0)).magnitude() - 0.5 <= 0.0 {
-                grid.set_create(world, mat);
+                grid.set_create(world, voxel);
             }
         }
     }

@@ -19,6 +19,7 @@ pub enum NodeOp {
     U,
     V,
     D,
+    Hash,
     Pack3,
     Add,
     Sub,
