@@ -1,4 +1,5 @@
 pub mod bsdf;
+pub mod bsdf_helper;
 pub mod model;
 pub mod pbr;
 

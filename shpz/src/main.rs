@@ -11,14 +11,9 @@ fn main() {
     let iterations = 50;
 
     let camera: Arc<RwLock<Box<dyn Camera>>> = Arc::new(RwLock::new(Box::new(Iso::new())));
-    let renderer: Arc<Box<dyn Renderer>> = Arc::new(Box::new(PBR::new()));
+    let renderer: Arc<Box<dyn Renderer>> = Arc::new(Box::new(BSDF::new()));
     let mut buffer = Arc::new(Mutex::new(RenderBuffer::new(800, 800)));
-    // let palette = Arc::new(RwLock::new(Palette::default()));
     let tracer = Tracer::new();
-
-    // palette.write().unwrap().materials[0].base_color = Vec3::new(1.0, 0.0, 0.0);
-    // palette.write().unwrap().materials[1].base_color = Vec3::new(0.0, 1.0, 0.0);
-    // palette.write().unwrap().materials[2].base_color = Vec3::new(0.0, 0.0, 1.0);
 
     {
         // let mut c = camera.write().unwrap();
