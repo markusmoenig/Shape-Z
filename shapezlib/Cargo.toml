@@ -1,0 +1,18 @@
+[package]
+name = "shapezlib"
+edition = "2024"
+version = "0.1.0"
+license = "MIT"
+authors = ["Markus Moenig"]
+description = "Shape Prozessing Language"
+keywords = ["language", "voxel", "rendering", "procedural", "modeling"]
+repository = "https://github.com/markusmoenig/Shape-Z.git"
+
+[dependencies]
+rayon = "1"
+vek = { version = "0.17.1", default-features = true }
+rand = "0.9"
+num_cpus = "1.16.0"
+rustc-hash = "1.1.0"
+image = "0.25.1"
+indexmap = "2.10.0"

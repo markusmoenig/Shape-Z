@@ -1,2 +1,1 @@
-Shape-Z is in a conceptual stage right now.
-
+# Shape-Z: Shape Prozessing Language

@@ -1,0 +1,12 @@
+[package]
+name = "shpz"
+edition = "2024"
+version = "0.1.0"
+license = "MIT"
+authors = ["Markus Moenig"]
+description = "Shape Prozessing Language"
+keywords = ["language", "voxel", "rendering", "procedural", "modeling"]
+repository = "https://github.com/markusmoenig/Shape-Z.git"
+
+[dependencies]
+shapezlib = { version = "0.1.0", path = "../shapezlib" }

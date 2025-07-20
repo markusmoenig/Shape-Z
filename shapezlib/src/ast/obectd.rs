@@ -2,7 +2,6 @@ use crate::prelude::*;
 
 #[derive(Clone, Debug)]
 pub struct VoxelD {
-    pub id: Uuid,
     pub name: String,
     pub params: FxHashMap<String, Box<Expr>>,
     pub block: Option<Box<Stmt>>,
@@ -14,7 +13,6 @@ pub struct VoxelD {
 impl VoxelD {
     pub fn new(name: String, params: FxHashMap<String, Box<Expr>>, block: Box<Stmt>) -> Self {
         Self {
-            id: Uuid::new_v4(),
             name,
             params,
             block: Some(block),

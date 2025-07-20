@@ -154,7 +154,7 @@ impl Tracer {
         buffer.lock().unwrap().accum += 1;
 
         let _stop = self.get_time();
-        println!("Shader execution time: {:?} ms.", _stop - _start);
+        // println!("Shader execution time: {:?} ms.", _stop - _start);
     }
 
     /// Get the current time
