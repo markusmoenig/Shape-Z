@@ -185,13 +185,40 @@ impl Visitor for CompileVisitor {
             block.accept(self, ctx)?;
         }
 
+        let mut at = vec![];
+        if let Some(depth_ast) = objectd.params.get("at") {
+            ctx.add_custom_target();
+            _ = depth_ast.accept(self, ctx)?;
+            if let Some(code) = ctx.take_last_custom_target() {
+                at = code;
+            }
+        }
+
+        let mut size = vec![];
+        if let Some(depth_ast) = objectd.params.get("size") {
+            ctx.add_custom_target();
+            _ = depth_ast.accept(self, ctx)?;
+            if let Some(code) = ctx.take_last_custom_target() {
+                size = code;
+            }
+        }
+
+        let mut radius = vec![];
+        if let Some(depth_ast) = objectd.params.get("radius") {
+            ctx.add_custom_target();
+            _ = depth_ast.accept(self, ctx)?;
+            if let Some(code) = ctx.take_last_custom_target() {
+                radius = code;
+            }
+        }
+
         if let Some(code) = ctx.take_last_custom_target() {
             match objectd.name.as_str() {
                 "Rect" => {
-                    ctx.emit(NodeOp::ShapeRect(code));
+                    ctx.emit(NodeOp::ShapeRect(at, size, code));
                 }
                 "Disc" => {
-                    ctx.emit(NodeOp::ShapeDisc(code));
+                    ctx.emit(NodeOp::ShapeDisc(at, radius, code));
                 }
                 _ => {}
             }
@@ -489,6 +516,8 @@ impl Visitor for CompileVisitor {
             ctx.emit(NodeOp::D);
         } else if name == "hash" {
             ctx.emit(NodeOp::Hash);
+        } else if name == "Clear" {
+            ctx.emit(NodeOp::Clear);
         } else {
             if let Some(index) = ctx.variables.get(&name) {
                 ctx.emit(NodeOp::Load(*index as usize));
@@ -521,6 +550,11 @@ impl Visitor for CompileVisitor {
             }
             ASTValue::Float(f) => {
                 ctx.emit(NodeOp::Push(Value::from_float(*f)));
+            }
+            ASTValue::Float2(x, y) => {
+                _ = x.accept(self, ctx)?.to_float().unwrap_or_default();
+                _ = y.accept(self, ctx)?.to_float().unwrap_or_default();
+                ctx.emit(NodeOp::Pack2);
             }
             ASTValue::Float3(x, y, z) => {
                 _ = x.accept(self, ctx)?.to_float().unwrap_or_default();

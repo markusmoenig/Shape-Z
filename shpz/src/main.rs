@@ -9,10 +9,8 @@ fn cli() -> Command {
         .author("Markus Moenig")
         .version("0.1.0")
         .subcommand_required(false)
-        .arg_required_else_help(true)
         .allow_external_subcommands(true)
-        .arg(arg!(<FILE> "The input '.shpz' file"))
-        .arg_required_else_help(false)
+        .arg(arg!([FILE] "The input '.shpz' file").default_value("main.shpz"))
         .subcommand(
             Command::new("render").about("Renders the input to an PNG image. Used by default."),
         )

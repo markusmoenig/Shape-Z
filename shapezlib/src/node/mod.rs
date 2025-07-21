@@ -3,6 +3,14 @@ pub mod execution;
 pub mod program;
 pub mod value;
 
+#[derive(Clone, Copy, Debug)]
+pub enum Plane {
+    XY, // Back
+    YZ, // u = Y, v = Z
+    XZ, // Floor
+    ZY, // Left
+}
+
 #[derive(Debug, Clone)]
 pub enum NodeOp {
     Load(usize),
@@ -13,6 +21,7 @@ pub enum NodeOp {
     If(Vec<NodeOp>, Option<Vec<NodeOp>>),
     Place(String),
     Push(Value),
+    Clear,
     Dup,
     World,
     Local,
@@ -20,6 +29,7 @@ pub enum NodeOp {
     V,
     D,
     Hash,
+    Pack2,
     Pack3,
     Add,
     Sub,
@@ -46,8 +56,8 @@ pub enum NodeOp {
     Or,
     Not,
     Neg,
-    ShapeRect(Vec<NodeOp>),
-    ShapeDisc(Vec<NodeOp>),
+    ShapeRect(Vec<NodeOp>, Vec<NodeOp>, Vec<NodeOp>),
+    ShapeDisc(Vec<NodeOp>, Vec<NodeOp>, Vec<NodeOp>),
     SegmentLeft(Vec<NodeOp>, Vec<NodeOp>),
     SegmentBack(Vec<NodeOp>, Vec<NodeOp>),
     SegmentFloor(Vec<NodeOp>, Vec<NodeOp>),

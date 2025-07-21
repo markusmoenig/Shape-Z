@@ -40,7 +40,11 @@ impl Parser {
     /// Compile the main source module.
     pub fn compile(&mut self, path: PathBuf) -> Result<Module, ParseError> {
         if let Ok(source) = std::fs::read_to_string(path.clone()) {
-            self.compile_module("main".to_string(), source, path)
+            if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                self.compile_module(stem.to_string(), source, path)
+            } else {
+                Err(ParseError::new("Could not read file", 0, &path))
+            }
         } else {
             Err(ParseError::new("Could not read file", 0, &path))
         }
@@ -305,8 +309,11 @@ impl Parser {
             )?;
 
             let value = self.expression()?;
-
             params.insert(id, Box::new(value));
+
+            if self.tokens[self.current].kind == TokenType::Comma {
+                self.advance();
+            }
         }
 
         self.consume(
@@ -1326,6 +1333,7 @@ impl Parser {
                     || token.lexeme == "v"
                     || token.lexeme == "d"
                     || token.lexeme == "hash"
+                    || token.lexeme == "Clear"
                 {
                     Ok(Expr::Variable(
                         token.lexeme.clone(),

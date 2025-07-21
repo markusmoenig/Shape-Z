@@ -97,8 +97,11 @@ voxel Box size = vec3(5, 3, 5) {
                 WallPaint;
             }
 
-            if d > 0.20 && d < 0.21 && (v > 1.6 && v < 2.6) && (u > 2.0 && u < 3.0) {
-                Mirror;
+            // Place a mirror centered on the wall
+            shape Rect at = vec2(0, 0.6), size = vec2(1.5, 1) {
+                if d > 0.20 && d < 0.21 {
+                    Mirror;
+                }
             }
 
             if v < 1.2 && d > 0.2 {
@@ -120,13 +123,13 @@ voxel Box size = vec3(5, 3, 5) {
     }
 
     segment Back depth = 0.2 {
-
-        if (v > 1.2 && v < 2.6) && (u > 1.5 && u < 3.5) {
+        White;
+        // Place a window
+        shape Rect at = vec2(0, 0.4), size = vec2(2, 1.4) {
+            Clear; // Clear the voxel
             if d > 0.096 && d < 0.1 {
-                Glass;
+                Glass; // Add Glass in the middle
             }
-        } else {
-            White;
         }
     }
 
