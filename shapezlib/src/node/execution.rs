@@ -742,6 +742,11 @@ impl Execution {
             })
             .collect();
 
+        let aabb = Aabb {
+            min: -size * 0.5,
+            max: size * 0.5,
+        };
+
         let produced: Vec<(Coord, Tile)> = tile_keys
             .into_par_iter()
             .map(|tile_key| {
@@ -749,14 +754,13 @@ impl Execution {
                 let tile_origin = Vec3::new(tile_key.0 as F, tile_key.1 as F, tile_key.2 as F);
 
                 let mut exec = Execution::new_from_var(self);
-                let mut p = program.clone();
+                let mut p = Program::new(Vec3::zero(), grid.density);
 
                 let centre = rect.origin + rect.size * 0.5;
 
                 for z in 0..grid.density {
                     for y in 0..grid.density {
                         for x in 0..grid.density {
-                            // absolute position (same as you have now)
                             let world_abs = (tile_origin
                                 + Vec3::new(x as F, y as F, z as F) / grid.density_f)
                                 + Vec3::broadcast(voxel_size * 0.5);
@@ -767,10 +771,7 @@ impl Execution {
                             exec.stack.clear();
                             exec.world = Value::from_vec3(world);
                             exec.local = Value::from_vec3(local);
-                            exec.bbox = Aabb {
-                                min: -size * 0.5,
-                                max: size * 0.5,
-                            };
+                            exec.bbox = aabb;
 
                             exec.execute(&voxel.body, &mut p);
                             if let Some(val) = exec.stack.last() {
