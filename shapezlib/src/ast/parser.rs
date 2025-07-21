@@ -258,8 +258,10 @@ impl Parser {
             )?;
 
             let value = self.expression()?;
-
             params.insert(id, Box::new(value));
+            if self.tokens[self.current].kind == TokenType::Comma {
+                self.advance();
+            }
         }
 
         self.consume(
@@ -310,7 +312,6 @@ impl Parser {
 
             let value = self.expression()?;
             params.insert(id, Box::new(value));
-
             if self.tokens[self.current].kind == TokenType::Comma {
                 self.advance();
             }
@@ -363,8 +364,10 @@ impl Parser {
             )?;
 
             let value = self.expression()?;
-
             params.insert(id, Box::new(value));
+            if self.tokens[self.current].kind == TokenType::Comma {
+                self.advance();
+            }
         }
 
         self.consume(
@@ -512,8 +515,10 @@ impl Parser {
             )?;
 
             let value = self.expression()?;
-
             params.insert(id, Box::new(value));
+            if self.tokens[self.current].kind == TokenType::Comma {
+                self.advance();
+            }
         }
 
         self.consume(

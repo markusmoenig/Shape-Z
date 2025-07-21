@@ -180,45 +180,36 @@ impl Visitor for CompileVisitor {
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
+        // Compile params
+        let mut cp = FxHashMap::default();
+        for (name, ast) in &objectd.params {
+            ctx.add_custom_target();
+            _ = ast.accept(self, ctx)?;
+            if let Some(code) = ctx.take_last_custom_target() {
+                cp.insert(name.clone(), code);
+            }
+        }
+
+        // Body
         ctx.add_custom_target();
         if let Some(block) = &objectd.block {
             block.accept(self, ctx)?;
         }
-
-        let mut at = vec![];
-        if let Some(depth_ast) = objectd.params.get("at") {
-            ctx.add_custom_target();
-            _ = depth_ast.accept(self, ctx)?;
-            if let Some(code) = ctx.take_last_custom_target() {
-                at = code;
-            }
-        }
-
-        let mut size = vec![];
-        if let Some(depth_ast) = objectd.params.get("size") {
-            ctx.add_custom_target();
-            _ = depth_ast.accept(self, ctx)?;
-            if let Some(code) = ctx.take_last_custom_target() {
-                size = code;
-            }
-        }
-
-        let mut radius = vec![];
-        if let Some(depth_ast) = objectd.params.get("radius") {
-            ctx.add_custom_target();
-            _ = depth_ast.accept(self, ctx)?;
-            if let Some(code) = ctx.take_last_custom_target() {
-                radius = code;
-            }
-        }
-
         if let Some(code) = ctx.take_last_custom_target() {
             match objectd.name.as_str() {
                 "Rect" => {
-                    ctx.emit(NodeOp::ShapeRect(at, size, code));
+                    ctx.emit(NodeOp::ShapeRect(
+                        cp.get("at").cloned().unwrap_or(vec![]),
+                        cp.get("size").cloned().unwrap_or(vec![]),
+                        code,
+                    ));
                 }
                 "Disc" => {
-                    ctx.emit(NodeOp::ShapeDisc(at, radius, code));
+                    ctx.emit(NodeOp::ShapeDisc(
+                        cp.get("at").cloned().unwrap_or(vec![]),
+                        cp.get("radius").cloned().unwrap_or(vec![]),
+                        code,
+                    ));
                 }
                 _ => {}
             }
@@ -234,14 +225,13 @@ impl Visitor for CompileVisitor {
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        // Parameters
-
-        let mut depth = vec![];
-        if let Some(depth_ast) = objectd.params.get("depth") {
+        // Compile params
+        let mut cp = FxHashMap::default();
+        for (name, ast) in &objectd.params {
             ctx.add_custom_target();
-            _ = depth_ast.accept(self, ctx)?;
+            _ = ast.accept(self, ctx)?;
             if let Some(code) = ctx.take_last_custom_target() {
-                depth = code;
+                cp.insert(name.clone(), code);
             }
         }
 
@@ -251,6 +241,7 @@ impl Visitor for CompileVisitor {
             _ = block.accept(self, ctx)?;
         }
         if let Some(code) = ctx.take_last_custom_target() {
+            let depth = cp.get("depth").cloned().unwrap_or(vec![]);
             match objectd.name.as_str() {
                 "Left" => {
                     ctx.emit(NodeOp::SegmentLeft(depth, code));
@@ -275,9 +266,18 @@ impl Visitor for CompileVisitor {
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        let mut codes = FxHashMap::default();
+        // Compile params
+        let mut cp = FxHashMap::default();
+        for (name, ast) in &objectd.params {
+            ctx.add_custom_target();
+            _ = ast.accept(self, ctx)?;
+            if let Some(code) = ctx.take_last_custom_target() {
+                cp.insert(name.clone(), code);
+            }
+        }
 
         // Compile all blocks
+        let mut codes = FxHashMap::default();
         for (name, stmts) in &objectd.blocks {
             ctx.add_custom_target();
             _ = stmts.accept(self, ctx)?;
@@ -288,14 +288,18 @@ impl Visitor for CompileVisitor {
 
         match objectd.name.as_str() {
             "Modulo" => {
+                let size = cp.get("size").cloned().unwrap_or(vec![]);
                 let even = codes.get("even".into()).cloned();
                 let odd = codes.get("odd".into()).cloned();
-                ctx.emit(NodeOp::PatternModulo(even, odd));
+                ctx.emit(NodeOp::PatternModulo(size, even, odd));
             }
             "Bricks" => {
+                let size = cp.get("size").cloned().unwrap_or(vec![]);
+                let gap = cp.get("gap").cloned().unwrap_or(vec![]);
+                let rounding = cp.get("rounding").cloned().unwrap_or(vec![]);
                 let brick = codes.get("brick".into()).cloned();
                 let cement = codes.get("cement".into()).cloned();
-                ctx.emit(NodeOp::PatternBricks(brick, cement));
+                ctx.emit(NodeOp::PatternBricks(size, gap, rounding, brick, cement));
             }
             _ => {}
         }

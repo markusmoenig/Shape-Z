@@ -57,8 +57,8 @@ pub mod prelude {
     pub use crate::voxel::renderer::Renderer;
     pub use crate::voxel::renderer::bsdf::BSDF;
     pub use crate::voxel::renderer::bsdf_helper::*;
-    pub use crate::voxel::renderer::model::Model;
     pub use crate::voxel::renderer::pbr::PBR;
+    pub use crate::voxel::renderer::raw::Raw;
     pub use crate::voxel::tile::Tile;
     pub use crate::voxel::{Coord, Face, HitRecord, HitType, Voxel};
 }

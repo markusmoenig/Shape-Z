@@ -65,7 +65,7 @@ material Bricks {
 
 material Wood {
     albedo {
-        vec3(0.70, 0.40, 0.20) + (hash - 0.5) * 0.1;
+        vec3(0.70, 0.40, 0.20) + (hash - 0.5) * 0.2;
     }
     roughness {
         1;
@@ -142,12 +142,12 @@ voxel Box size = vec3(5, 3, 5) {
 
     segment Floor {        
         if d >  0.09 {
-            pattern Bricks {
+            pattern Bricks size = vec2(1.2, 0.2), gap = 0.01, rounding = 0.0 {
                 brick {
                     Wood;
                 }
                 cement {
-                    White;
+                    Wood;
                 }
             }    
         }  else {

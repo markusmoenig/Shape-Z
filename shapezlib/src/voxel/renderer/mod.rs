@@ -1,7 +1,7 @@
 pub mod bsdf;
 pub mod bsdf_helper;
-pub mod model;
 pub mod pbr;
+pub mod raw;
 
 use crate::prelude::*;
 use vek::{Vec2, Vec3, Vec4};

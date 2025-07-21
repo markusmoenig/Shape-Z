@@ -580,14 +580,23 @@ impl Execution {
                     self.pop_state();
                 }
                 // Pattern
-                NodeOp::PatternModulo(even, odd) => {
+                NodeOp::PatternModulo(size, even, odd) => {
                     let u = self.u.as_float();
                     let v = self.v.as_float();
 
-                    let size = 0.1;
+                    let modulo_size = if size.is_empty() {
+                        0.02
+                    } else {
+                        self.execute(size, program);
+                        self.stack.pop().unwrap().as_float()
+                    };
 
-                    let cell_u = (u / size).floor() as i32;
-                    let cell_v = (v / size).floor() as i32;
+                    let cell_u = (u / modulo_size).floor() as i32;
+                    let cell_v = (v / modulo_size).floor() as i32;
+
+                    // Set `self.hash` based on cell ID
+                    let cell_id = Vec2::new(cell_u as f32, cell_v as f32);
+                    self.hash = (self.hash21(cell_id) + 1.0) * 0.5;
 
                     let is_even = (cell_u ^ cell_v) % 2 == 0;
                     if is_even {
@@ -600,25 +609,35 @@ impl Execution {
                         }
                     }
                 }
-                NodeOp::PatternBricks(br, ce) => {
-                    fn hash21(p: Vec2<f32>) -> f32 {
-                        let dot = p.x * 127.1 + p.y * 311.7;
-                        (dot.sin().fract() * 43758.5453).fract()
-                    }
-
-                    let round = 0.1;
-                    let brick_size = Vec2::new(0.3, 0.1);
-                    let gap = 0.02;
-                    let cell = brick_size + Vec2::broadcast(gap);
+                NodeOp::PatternBricks(size, gap, round, br, ce) => {
+                    let brick_size = if size.is_empty() {
+                        Vec2::new(0.3, 0.1)
+                    } else {
+                        self.execute(size, program);
+                        self.stack.pop().unwrap().as_vec2()
+                    };
+                    let gap_size = if gap.is_empty() {
+                        0.02
+                    } else {
+                        self.execute(gap, program);
+                        self.stack.pop().unwrap().as_float()
+                    };
+                    let rounding = if round.is_empty() {
+                        0.1
+                    } else {
+                        self.execute(round, program);
+                        self.stack.pop().unwrap().as_float()
+                    };
+                    let cell = brick_size + Vec2::broadcast(gap_size);
 
                     let mut u = Vec2::new(self.u.x(), self.v.x()) / cell;
                     u.x += 0.5 * ((u.y.floor() as i32 % 2) as f32);
 
                     let cell_id = u.map(|v| v.floor());
-                    self.hash = (hash21(cell_id) + 1.0) * 0.5;
+                    self.hash = (self.hash21(cell_id) + 1.0) * 0.5;
 
                     let p = u.map(|v| v.fract()) - 0.5;
-                    let rc = self.sdf_box(p, brick_size / cell * 0.5, round);
+                    let rc = self.sdf_box(p, brick_size / cell * 0.5, rounding);
 
                     if rc < 0.0 {
                         if let Some(br) = br {
@@ -896,6 +915,13 @@ impl Execution {
     fn sdf_box(&self, p: Vec2<f32>, b: Vec2<f32>, r: f32) -> f32 {
         let d = p.map(|v| v.abs()) - b + Vec2::broadcast(r);
         d.x.max(d.y).min(0.0) + (d.map(|v| v.max(0.0))).magnitude() - r
+    }
+
+    /// Hash21
+    #[inline]
+    fn hash21(&self, p: Vec2<f32>) -> f32 {
+        let dot = p.x * 127.1 + p.y * 311.7;
+        (dot.sin().fract() * 43758.5453).fract()
     }
 
     // Push the current segmentation state.
