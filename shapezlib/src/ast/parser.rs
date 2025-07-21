@@ -1332,6 +1332,8 @@ impl Parser {
                     || token.lexeme == "u"
                     || token.lexeme == "v"
                     || token.lexeme == "d"
+                    || token.lexeme == "sdf"
+                    || token.lexeme == "inside"
                     || token.lexeme == "hash"
                     || token.lexeme == "Clear"
                 {

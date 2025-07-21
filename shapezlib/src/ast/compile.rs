@@ -514,6 +514,10 @@ impl Visitor for CompileVisitor {
             ctx.emit(NodeOp::V);
         } else if name == "d" {
             ctx.emit(NodeOp::D);
+        } else if name == "sdf" {
+            ctx.emit(NodeOp::SDF);
+        } else if name == "inside" {
+            ctx.emit(NodeOp::Inside);
         } else if name == "hash" {
             ctx.emit(NodeOp::Hash);
         } else if name == "Clear" {

@@ -7,6 +7,8 @@ pub struct SegmentationState {
     pub u: Value,
     pub v: Value,
     pub d: Value,
+    pub sdf: Value,
+    pub inside: Value,
 }
 
 pub struct Execution {
@@ -24,6 +26,10 @@ pub struct Execution {
     pub d: Value,
     /// The current plane
     pub plane: Plane,
+    /// The shape computed distance value
+    pub sdf: Value,
+    /// -sdf
+    pub inside: Value,
 
     /// The current segmentation state
     state_stack: Vec<SegmentationState>,
@@ -52,6 +58,8 @@ impl Execution {
             v: Value::zero(),
             d: Value::zero(),
             plane: Plane::XZ,
+            sdf: Value::zero(),
+            inside: Value::zero(),
             state_stack: Vec::with_capacity(8),
             hash: 1.0,
             bbox: Aabb {
@@ -72,6 +80,8 @@ impl Execution {
             v: Value::zero(),
             d: Value::zero(),
             plane: Plane::XZ,
+            sdf: Value::zero(),
+            inside: Value::zero(),
             state_stack: Vec::with_capacity(8),
             hash: 1.0,
             bbox: Aabb {
@@ -188,6 +198,12 @@ impl Execution {
                 }
                 NodeOp::D => {
                     self.stack.push(self.d);
+                }
+                NodeOp::SDF => {
+                    self.stack.push(self.sdf);
+                }
+                NodeOp::Inside => {
+                    self.stack.push(self.inside);
                 }
                 NodeOp::Hash => {
                     self.stack.push(Value::from_float(self.hash));
@@ -317,7 +333,7 @@ impl Execution {
                 }
                 // Shapes
                 NodeOp::ShapeRect(at, size, body) => {
-                    let cl = self.bbox.clone();
+                    self.push_state();
 
                     let bb_size = self.bbox.size();
                     let bbox_size = match self.plane {
@@ -342,25 +358,7 @@ impl Execution {
                         offset = self.stack.pop().unwrap().as_vec2();
                     }
 
-                    // Compute center of bbox in 2D plane
-                    let center = match self.plane {
-                        Plane::XY => Vec2::new(
-                            self.bbox.min.x + bbox_size.x * 0.5,
-                            self.bbox.min.y + bbox_size.y * 0.5,
-                        ),
-                        Plane::XZ => Vec2::new(
-                            self.bbox.min.x + bbox_size.x * 0.5,
-                            self.bbox.min.z + bbox_size.y * 0.5,
-                        ),
-                        Plane::YZ => Vec2::new(
-                            self.bbox.min.y + bbox_size.x * 0.5,
-                            self.bbox.min.z + bbox_size.y * 0.5,
-                        ),
-                        Plane::ZY => Vec2::new(
-                            self.bbox.min.z + bbox_size.x * 0.5,
-                            self.bbox.min.y + bbox_size.y * 0.5,
-                        ),
-                    };
+                    let center = self.center_of_bbox();
 
                     // Final offset is relative to center, minus half size
                     offset = center + offset - dims * 0.5;
@@ -395,40 +393,117 @@ impl Execution {
 
                     // Execute body if local point is within new bbox
                     if self.bbox.contains_point(self.local.as_vec3()) {
+                        let local = self.local.as_vec3();
+
+                        let p = match self.plane {
+                            Plane::XY => Vec2::new(
+                                local.x - (self.bbox.min.x + dims.x * 0.5),
+                                local.y - (self.bbox.min.y + dims.y * 0.5),
+                            ),
+                            Plane::XZ => Vec2::new(
+                                local.x - (self.bbox.min.x + dims.x * 0.5),
+                                local.z - (self.bbox.min.z + dims.y * 0.5),
+                            ),
+                            Plane::YZ => Vec2::new(
+                                local.y - (self.bbox.min.y + dims.x * 0.5),
+                                local.z - (self.bbox.min.z + dims.y * 0.5),
+                            ),
+                            Plane::ZY => Vec2::new(
+                                local.z - (self.bbox.min.z + dims.x * 0.5),
+                                local.y - (self.bbox.min.y + dims.y * 0.5),
+                            ),
+                        };
+
+                        let sdf = self.sdf_box(p, dims * 0.5, 0.0);
+                        self.sdf = Value::from_float(sdf);
+                        self.inside = Value::from_float(-sdf);
+
                         self.execute(body, program);
                     }
 
-                    self.bbox = cl;
+                    self.pop_state();
                 }
-                NodeOp::ShapeDisc(at, size, body) => {
-                    let local = self.local.as_vec3();
+                NodeOp::ShapeDisc(at, radius, body) => {
+                    self.push_state();
 
-                    // Get center and radius from bbox in XZ plane
-                    let bbox = &self.bbox;
-                    let center_x = (bbox.min.x + bbox.max.x) * 0.5;
-                    let center_z = (bbox.min.z + bbox.max.z) * 0.5;
-                    let radius_x = (bbox.max.x - bbox.min.x) * 0.5;
-                    let radius_z = (bbox.max.z - bbox.min.z) * 0.5;
-                    let radius = radius_x.min(radius_z); // use smallest to stay inside bounds
+                    let mut center_offset = Vec2::zero();
+                    let mut radius_value = 1.0;
 
-                    let dx = local.x - center_x;
-                    let dz = local.z - center_z;
-                    let r = (dx * dx + dz * dz).sqrt();
-
-                    if r > radius {
-                        return;
+                    if !radius.is_empty() {
+                        self.execute(radius, program);
+                        radius_value = self.stack.pop().unwrap().as_float();
                     }
 
-                    let theta = dz.atan2(dx); // angle around Y axis (radians)
-                    let height = local.y;
+                    if !at.is_empty() {
+                        self.execute(at, program);
+                        center_offset = self.stack.pop().unwrap().as_vec2();
+                    }
 
-                    self.u = Value::from_float(theta); // angle in radians
-                    self.v = Value::from_float(height); // Y height
-                    self.d = Value::from_float(r); // radial depth
+                    let center = self.center_of_bbox();
+                    let offset = center + center_offset;
 
-                    let bbox_backup = self.bbox.clone();
-                    self.execute(body, program);
-                    self.bbox = bbox_backup;
+                    // New bounding box centered at `offset`, extended by radius, in correct 2D plane
+                    match self.plane {
+                        Plane::XY => {
+                            self.bbox.min.x = offset.x - radius_value;
+                            self.bbox.max.x = offset.x + radius_value;
+                            self.bbox.min.y = offset.y - radius_value;
+                            self.bbox.max.y = offset.y + radius_value;
+                        }
+                        Plane::XZ => {
+                            self.bbox.min.x = offset.x - radius_value;
+                            self.bbox.max.x = offset.x + radius_value;
+                            self.bbox.min.z = offset.y - radius_value;
+                            self.bbox.max.z = offset.y + radius_value;
+                        }
+                        Plane::YZ => {
+                            self.bbox.min.y = offset.x - radius_value;
+                            self.bbox.max.y = offset.x + radius_value;
+                            self.bbox.min.z = offset.y - radius_value;
+                            self.bbox.max.z = offset.y + radius_value;
+                        }
+                        Plane::ZY => {
+                            self.bbox.min.z = offset.x - radius_value;
+                            self.bbox.max.z = offset.x + radius_value;
+                            self.bbox.min.y = offset.y - radius_value;
+                            self.bbox.max.y = offset.y + radius_value;
+                        }
+                    }
+
+                    if self.bbox.contains_point(self.local.as_vec3()) {
+                        let local = self.local.as_vec3();
+
+                        // Map to plane coords + height
+                        let (p, h) = match self.plane {
+                            Plane::XY => {
+                                (Vec2::new(local.x - offset.x, local.y - offset.y), local.z)
+                            }
+                            Plane::XZ => {
+                                (Vec2::new(local.x - offset.x, local.z - offset.y), local.y)
+                            }
+                            Plane::YZ => {
+                                (Vec2::new(local.y - offset.x, local.z - offset.y), local.x)
+                            }
+                            Plane::ZY => {
+                                (Vec2::new(local.z - offset.x, local.y - offset.y), local.x)
+                            }
+                        };
+
+                        let theta = p.y.atan2(p.x);
+                        let r = p.magnitude();
+                        let sdf: f32 = r - radius_value;
+
+                        self.u = Value::from_float(theta);
+                        self.v = Value::from_float(h);
+                        self.sdf = Value::from_float(sdf);
+                        self.inside = Value::from_float(-sdf);
+
+                        if sdf <= 0.0 {
+                            self.execute(body, program);
+                        }
+                    }
+
+                    self.pop_state();
                 }
                 // Segments
                 NodeOp::SegmentLeft(depth, body) => {
@@ -525,10 +600,6 @@ impl Execution {
                     }
                 }
                 NodeOp::PatternBricks(br, ce) => {
-                    fn s_box(p: Vec2<f32>, b: Vec2<f32>, r: f32) -> f32 {
-                        let d = p.map(|v| v.abs()) - b + Vec2::new(r, r);
-                        d.x.max(d.y).min(0.0) + (d.map(|v| v.max(0.0))).magnitude() - r
-                    }
                     fn hash21(p: Vec2<f32>) -> f32 {
                         let dot = p.x * 127.1 + p.y * 311.7;
                         (dot.sin().fract() * 43758.5453).fract()
@@ -546,7 +617,7 @@ impl Execution {
                     self.hash = (hash21(cell_id) + 1.0) * 0.5;
 
                     let p = u.map(|v| v.fract()) - 0.5;
-                    let rc = s_box(p, brick_size / cell * 0.5, round);
+                    let rc = self.sdf_box(p, brick_size / cell * 0.5, round);
 
                     if rc < 0.0 {
                         if let Some(br) = br {
@@ -687,6 +758,37 @@ impl Execution {
         program.grid.write().unwrap().merge(&grid);
     }
 
+    /// Returns the center of the bbox for a given plane
+    #[inline]
+    fn center_of_bbox(&self) -> Vec2<f32> {
+        let size = self.bbox.size();
+        match self.plane {
+            Plane::XY => Vec2::new(
+                self.bbox.min.x + size.w * 0.5,
+                self.bbox.min.y + size.h * 0.5,
+            ),
+            Plane::XZ => Vec2::new(
+                self.bbox.min.x + size.w * 0.5,
+                self.bbox.min.z + size.d * 0.5,
+            ),
+            Plane::YZ => Vec2::new(
+                self.bbox.min.y + size.h * 0.5,
+                self.bbox.min.z + size.d * 0.5,
+            ),
+            Plane::ZY => Vec2::new(
+                self.bbox.min.z + size.d * 0.5,
+                self.bbox.min.y + size.h * 0.5,
+            ),
+        }
+    }
+
+    /// SDF to a 2D box
+    #[inline]
+    fn sdf_box(&self, p: Vec2<f32>, b: Vec2<f32>, r: f32) -> f32 {
+        let d = p.map(|v| v.abs()) - b + Vec2::broadcast(r);
+        d.x.max(d.y).min(0.0) + (d.map(|v| v.max(0.0))).magnitude() - r
+    }
+
     // Push the current segmentation state.
     fn push_state(&mut self) {
         self.state_stack.push(SegmentationState {
@@ -695,6 +797,8 @@ impl Execution {
             u: self.u,
             v: self.v,
             d: self.d,
+            sdf: self.sdf,
+            inside: self.inside,
         });
     }
 
@@ -706,6 +810,8 @@ impl Execution {
             self.u = state.u;
             self.v = state.v;
             self.d = state.d;
+            self.sdf = state.sdf;
+            self.inside = state.inside;
         }
     }
 }

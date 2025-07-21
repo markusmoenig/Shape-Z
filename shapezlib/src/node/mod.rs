@@ -6,7 +6,7 @@ pub mod value;
 #[derive(Clone, Copy, Debug)]
 pub enum Plane {
     XY, // Back
-    YZ, // u = Y, v = Z
+    YZ,
     XZ, // Floor
     ZY, // Left
 }
@@ -28,6 +28,8 @@ pub enum NodeOp {
     U,
     V,
     D,
+    SDF,
+    Inside,
     Hash,
     Pack2,
     Pack3,

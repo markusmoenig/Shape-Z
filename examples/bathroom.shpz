@@ -98,7 +98,14 @@ voxel Box size = vec3(5, 3, 5) {
             }
 
             // Place a mirror centered on the wall
+            /*
             shape Rect at = vec2(0, 0.6), size = vec2(1.5, 1) {
+                if d > 0.20 && d < 0.21 {
+                    Mirror;
+                }
+            }*/
+
+            shape Disc at = vec2(0, 0.6), radius = 0.8 {
                 if d > 0.20 && d < 0.21 {
                     Mirror;
                 }
@@ -108,7 +115,7 @@ voxel Box size = vec3(5, 3, 5) {
                 if v > 1.0 && d > 0.35 && d < 0.9 && (u > 1.8 && u < 3.2) {
                     
                 } else {         
-                    /*               
+                    /*
                     let relief = fract(u / 0.3);            
                     
                     if v < 1.0 && relief > 0.1 && relief < 0.8 && d > 0.045 {
@@ -146,25 +153,21 @@ voxel Box size = vec3(5, 3, 5) {
         }  else {
             White;
         } 
+
+        /*
+        shape Disc radius = 1.0 {
+            if sdf > -0.2 {
+                pattern Bricks {
+                    brick {
+                    White;
+                    }
+                    cement {
+                        Wood;
+                    }
+                } 
+            }
+        }*/
     }
-
-    /*
-    shape Disc {
-        if d > 0.40 {
-            pattern Modulo {
-                even {
-                 2;
-                }
-                odd {
-                    1;
-                }
-            } 
-        }
-
-        if d > 0.48 {
-            3;
-        }
-    }*/
 }
 
 place Box at = vec3(0, 0, 0);
