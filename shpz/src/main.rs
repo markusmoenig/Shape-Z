@@ -79,7 +79,7 @@ fn main() {
 
     let materials: Arc<RwLock<Vec<Vec<NodeOp>>>> =
         Arc::new(RwLock::new(ctx.materials.values().cloned().collect()));
-    ctx.program.grid.write().unwrap().update_bboxes();
+    ctx.program.grid.write().unwrap().update_bboxes(true);
 
     let _stop = tracer.get_time();
     println!("Compile time: {:?} ms.", _stop - _start);

@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use rayon::prelude::*;
 
 #[derive(Clone)]
 pub struct SegmentationState {
@@ -710,6 +711,113 @@ impl Execution {
         let mut grid = VoxelGrid::empty(program.grid.read().unwrap().density);
 
         let mut execution = Execution::new_from_var(&self);
+        let mut size = Vec3::new(1.0, 1.0, 1.0);
+        execution.execute(&voxel.size, program);
+        if let Some(value) = execution.stack.last() {
+            size = value.as_vec3();
+        }
+
+        let rect = VoxelRect {
+            origin: Vec3::zero(),
+            size,
+        };
+
+        let voxel_size = 1.0 / grid.density_f;
+
+        let tile_min = (
+            rect.origin.x.floor() as i32,
+            rect.origin.y.floor() as i32,
+            rect.origin.z.floor() as i32,
+        );
+        let tile_max = (
+            (rect.origin.x + rect.size.x).ceil() as i32 - 1,
+            (rect.origin.y + rect.size.y).ceil() as i32 - 1,
+            (rect.origin.z + rect.size.z).ceil() as i32 - 1,
+        );
+
+        let tile_keys: Vec<Coord> = (tile_min.2..=tile_max.2)
+            .flat_map(|tz| {
+                (tile_min.1..=tile_max.1)
+                    .flat_map(move |ty| (tile_min.0..=tile_max.0).map(move |tx| (tx, ty, tz)))
+            })
+            .collect();
+
+        let produced: Vec<(Coord, Tile)> = tile_keys
+            .into_par_iter()
+            .map(|tile_key| {
+                let mut tile = Tile::new(grid.density);
+                let tile_origin = Vec3::new(tile_key.0 as F, tile_key.1 as F, tile_key.2 as F);
+
+                let mut exec = Execution::new_from_var(self);
+                let mut p = program.clone();
+
+                let centre = rect.origin + rect.size * 0.5;
+
+                for z in 0..grid.density {
+                    for y in 0..grid.density {
+                        for x in 0..grid.density {
+                            // absolute position (same as you have now)
+                            let world_abs = (tile_origin
+                                + Vec3::new(x as F, y as F, z as F) / grid.density_f)
+                                + Vec3::broadcast(voxel_size * 0.5);
+
+                            let world = world_abs - centre;
+                            let local = world;
+
+                            exec.stack.clear();
+                            exec.world = Value::from_vec3(world);
+                            exec.local = Value::from_vec3(local);
+                            exec.bbox = Aabb {
+                                min: -size * 0.5,
+                                max: size * 0.5,
+                            };
+
+                            exec.execute(&voxel.body, &mut p);
+                            if let Some(val) = exec.stack.last() {
+                                let mat = val.x();
+                                if mat >= 0.0 {
+                                    let hash = (exec.hash * 255.0).floor() as u8;
+                                    tile.set(
+                                        (x as i32, y as i32, z as i32),
+                                        Voxel::new(mat as u8, hash),
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+
+                let grid_offset = -(rect.origin + rect.size * 0.5).map(|v| v.floor() as i32);
+
+                let tile_key_offset = (
+                    tile_key.0 + grid_offset.x,
+                    tile_key.1 + grid_offset.y,
+                    tile_key.2 + grid_offset.z,
+                );
+
+                (tile_key_offset, tile)
+            })
+            .collect();
+
+        for (key, tile) in produced {
+            grid.tiles.insert(key, tile);
+        }
+
+        program.grid.write().unwrap().merge(&grid);
+    }
+
+    /*
+    /// Place a voxel box into the world. We first model into a separate grid
+    /// and than merge back into the program grid.
+    pub fn place(&mut self, id: &String, program: &mut Program) {
+        let voxel = match program.voxels.get(id) {
+            Some(defined) => defined.clone(),
+            None => return,
+        };
+
+        let mut grid = VoxelGrid::empty(program.grid.read().unwrap().density);
+
+        let mut execution = Execution::new_from_var(&self);
 
         let mut size = Vec3::new(1.0, 1.0, 1.0);
         execution.execute(&voxel.size, program);
@@ -756,7 +864,7 @@ impl Execution {
         }
 
         program.grid.write().unwrap().merge(&grid);
-    }
+    }*/
 
     /// Returns the center of the bbox for a given plane
     #[inline]

@@ -72,11 +72,13 @@ impl VoxelGrid {
     }
 
     /// Update the bounding boxes of the tiles (needed after editing)
-    pub fn update_bboxes(&mut self) {
-        // Update the tiles bboxes
-        self.tiles.par_iter_mut().for_each(|(_, tile)| {
-            tile.update_bbox();
-        });
+    pub fn update_bboxes(&mut self, handle_tiles: bool) {
+        if handle_tiles {
+            // Update the tiles bboxes
+            self.tiles.par_iter_mut().for_each(|(_, tile)| {
+                tile.update_bbox();
+            });
+        }
 
         // Compute a union of all non-empty tile bboxes
         let empty = Aabb {
