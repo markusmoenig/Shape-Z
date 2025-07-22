@@ -135,4 +135,41 @@ impl Value {
     pub fn truthy(self) -> bool {
         self.0[0] != 0.0
     }
+
+    #[inline]
+    pub fn min(self, other: Self) -> Self {
+        let mut out = [0.0; 3];
+        for i in 0..3 {
+            out[i] = self.0[i].min(other.0[i]);
+        }
+        Value(out)
+    }
+
+    #[inline]
+    pub fn max(self, other: Self) -> Self {
+        let mut out = [0.0; 3];
+        for i in 0..3 {
+            out[i] = self.0[i].max(other.0[i]);
+        }
+        Value(out)
+    }
+
+    #[inline]
+    pub fn mix(self, other: Self, factor: Self) -> Self {
+        let mut out = [0.0; 3];
+        for i in 0..3 {
+            out[i] = self.0[i] * (1.0 - factor.0[i]) + other.0[i] * factor.0[i];
+        }
+        Value(out)
+    }
+
+    #[inline]
+    pub fn smoothstep(self, edge0: Self, edge1: Self) -> Self {
+        let mut out = [0.0; 3];
+        for i in 0..3 {
+            let t = ((self.0[i] - edge0.0[i]) / (edge1.0[i] - edge0.0[i])).clamp(0.0, 1.0);
+            out[i] = t * t * (3.0 - 2.0 * t);
+        }
+        Value(out)
+    }
 }

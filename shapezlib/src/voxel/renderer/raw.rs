@@ -4,7 +4,8 @@ use vek::{Vec2, Vec3, Vec4};
 use rand::Rng;
 
 pub struct Raw {
-    pub background_color: Vec3<F>,
+    background_color: Vec3<F>,
+    execution: Execution,
 }
 
 impl Renderer for Raw {
@@ -14,6 +15,7 @@ impl Renderer for Raw {
     {
         Self {
             background_color: Vec3::broadcast(0.2),
+            execution: Execution::new(0),
         }
     }
 
@@ -29,6 +31,11 @@ impl Renderer for Raw {
     /// Set the background color.
     fn set_background_color(&mut self, color: Vec3<F>) {
         self.background_color = color;
+    }
+
+    /// Set the execution.
+    fn set_execution(&mut self, execution: Execution) {
+        self.execution = execution;
     }
 
     /// Render the pixel at the given screen position.

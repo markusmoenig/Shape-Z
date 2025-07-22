@@ -30,7 +30,7 @@ fn main() {
     let iterations = 50;
 
     let camera: Arc<RwLock<Box<dyn Camera>>> = Arc::new(RwLock::new(Box::new(Iso::new())));
-    let renderer: Arc<Box<dyn Renderer>> = Arc::new(Box::new(BSDF::new()));
+    let renderer: Arc<RwLock<Box<dyn Renderer>>> = Arc::new(RwLock::new(Box::new(BSDF::new())));
     let mut buffer = Arc::new(Mutex::new(RenderBuffer::new(800, 800)));
     let tracer = Tracer::new();
 
@@ -83,6 +83,8 @@ fn main() {
 
     let _stop = tracer.get_time();
     println!("Compile time: {:?} ms.", _stop - _start);
+
+    renderer.write().unwrap().set_execution(execution);
 
     // Render loop
 

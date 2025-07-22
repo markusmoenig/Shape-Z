@@ -99,6 +99,46 @@ impl Visitor for CompileVisitor {
                 op: NodeOp::Degrees,
             },
         );
+        functions.insert(
+            "noise_value".to_string(),
+            ASTFunction {
+                name: "noise_value".to_string(),
+                arguments: 2,
+                op: NodeOp::NoiseValue,
+            },
+        );
+        functions.insert(
+            "min".to_string(),
+            ASTFunction {
+                name: "min".to_string(),
+                arguments: 2,
+                op: NodeOp::Min,
+            },
+        );
+        functions.insert(
+            "max".to_string(),
+            ASTFunction {
+                name: "max".to_string(),
+                arguments: 2,
+                op: NodeOp::Max,
+            },
+        );
+        functions.insert(
+            "mix".to_string(),
+            ASTFunction {
+                name: "mix".to_string(),
+                arguments: 3,
+                op: NodeOp::Mix,
+            },
+        );
+        functions.insert(
+            "smoothstep".to_string(),
+            ASTFunction {
+                name: "smoothstep".to_string(),
+                arguments: 3,
+                op: NodeOp::Smoothstep,
+            },
+        );
 
         Self {
             environment: Environment::default(),
@@ -374,12 +414,21 @@ impl Visitor for CompileVisitor {
     fn place(
         &mut self,
         id: &String,
-        _params: &FxHashMap<String, Box<Expr>>,
+        params: &FxHashMap<String, Box<Expr>>,
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
+        let mut at = vec![];
+        if let Some(at_param) = params.get("at") {
+            ctx.add_custom_target();
+            _ = at_param.accept(self, ctx)?;
+            if let Some(code) = ctx.take_last_custom_target() {
+                at = code;
+            }
+        }
+
         if ctx.program.voxels.contains_key(id) {
-            ctx.emit(NodeOp::Place(id.clone()));
+            ctx.emit(NodeOp::Place(id.clone(), at));
         }
 
         Ok(ASTValue::None)
@@ -512,8 +561,14 @@ impl Visitor for CompileVisitor {
 
         if name == "local" {
             ctx.emit(NodeOp::Local);
+            if !swizzle.is_empty() {
+                ctx.emit(NodeOp::GetComponents(swizzle.to_vec()));
+            }
         } else if name == "world" {
             ctx.emit(NodeOp::World);
+            if !swizzle.is_empty() {
+                ctx.emit(NodeOp::GetComponents(swizzle.to_vec()));
+            }
         } else if name == "u" {
             ctx.emit(NodeOp::U);
         } else if name == "v" {

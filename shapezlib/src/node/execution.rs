@@ -12,6 +12,7 @@ pub struct SegmentationState {
     pub inside: Value,
 }
 
+#[derive(Clone)]
 pub struct Execution {
     pub variables: Vec<Value>,
 
@@ -189,7 +190,16 @@ impl Execution {
                         self.execute(code, program);
                     }
                 }
-                NodeOp::Place(id) => self.place(id, program),
+                NodeOp::Place(id, at_code) => {
+                    let mut at = Vec3::zero();
+                    if !at_code.is_empty() {
+                        self.execute(at_code, program);
+                        if let Some(rc) = self.stack.pop() {
+                            at = rc.as_vec3();
+                        }
+                    }
+                    self.place(id, at, program);
+                }
                 NodeOp::World => {
                     self.stack.push(self.world);
                 }
@@ -282,6 +292,35 @@ impl Execution {
                     let a = self.stack.pop().unwrap();
                     self.stack
                         .push(Value::from_float(a.as_float().to_degrees()));
+                }
+                NodeOp::Min => {
+                    let b = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(a.min(b));
+                }
+                NodeOp::Max => {
+                    let b = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(a.max(b));
+                }
+                NodeOp::Mix => {
+                    let c: Value = self.stack.pop().unwrap();
+                    let b: Value = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(a.mix(b, c));
+                }
+                NodeOp::Smoothstep => {
+                    let c: Value = self.stack.pop().unwrap();
+                    let b: Value = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(a.smoothstep(b, c));
+                }
+                NodeOp::NoiseValue => {
+                    let b = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    let val = self.value_noise(a.as_float() as i32, b.as_vec3());
+                    self.hash = val;
+                    self.stack.push(Value::from_float(val));
                 }
                 // Comparison
                 NodeOp::Eq => {
@@ -827,7 +866,7 @@ impl Execution {
 
     /// Place a voxel box into the world. We first model into a separate grid
     /// and than merge back into the program grid.
-    pub fn place(&mut self, id: &String, program: &mut Program) {
+    pub fn place(&mut self, id: &String, at: Vec3<f32>, program: &mut Program) {
         let voxel = match program.voxels.get(id) {
             Some(defined) => defined.clone(),
             None => return,
@@ -843,7 +882,7 @@ impl Execution {
         }
 
         let rect = VoxelRect {
-            origin: Vec3::zero(),
+            origin: at - size * 0.5,
             size,
         };
 
@@ -881,17 +920,15 @@ impl Execution {
                 let mut exec = Execution::new_from_var(self);
                 let mut p = Program::new(Vec3::zero(), grid.density);
 
-                let centre = rect.origin + rect.size * 0.5;
-
                 for z in 0..grid.density {
                     for y in 0..grid.density {
                         for x in 0..grid.density {
-                            let world_abs = (tile_origin
+                            let world = (tile_origin
                                 + Vec3::new(x as F, y as F, z as F) / grid.density_f)
                                 + Vec3::broadcast(voxel_size * 0.5);
 
-                            let world = world_abs - centre;
-                            let local = world;
+                            // let world = world_abs - center;
+                            let local = world - at;
 
                             exec.stack.clear();
                             exec.world = Value::from_vec3(world);
@@ -913,8 +950,7 @@ impl Execution {
                     }
                 }
 
-                let grid_offset = -(rect.origin + rect.size * 0.5).map(|v| v.floor() as i32);
-
+                let grid_offset = (rect.origin + rect.size * 0.5).map(|v| v.floor() as i32);
                 let tile_key_offset = (
                     tile_key.0 + grid_offset.x,
                     tile_key.1 + grid_offset.y,
@@ -1004,6 +1040,76 @@ impl Execution {
     fn hash21(&self, p: Vec2<f32>) -> f32 {
         let dot = p.x * 127.1 + p.y * 311.7;
         (dot.sin().fract() * 43758.5453).fract()
+    }
+
+    /// Value noise 3D
+    /// Base on https://www.shadertoy.com/view/4dS3Wd
+    pub fn value_noise(&self, octaves: i32, scale: Vec3<f32>) -> f32 {
+        fn hash(mut p: f32) -> f32 {
+            p = (p * 0.011).fract();
+            p *= p + 7.5;
+            p *= p + p;
+            p.fract()
+        }
+
+        fn noise(x: Vec3<f32>) -> f32 {
+            let step = Vec3::new(110.0, 241.0, 171.0);
+
+            let i = x.map(|v| v.floor());
+            let f = x.map(|v| v.fract());
+
+            let n = i.dot(step);
+
+            let u = f * f * f.map(|v| 3.0 - 2.0 * v);
+
+            lerp(
+                lerp(
+                    lerp(
+                        hash(n + step.dot(Vec3::new(0.0, 0.0, 0.0))),
+                        hash(n + step.dot(Vec3::new(1.0, 0.0, 0.0))),
+                        u.x,
+                    ),
+                    lerp(
+                        hash(n + step.dot(Vec3::new(0.0, 1.0, 0.0))),
+                        hash(n + step.dot(Vec3::new(1.0, 1.0, 0.0))),
+                        u.x,
+                    ),
+                    u.y,
+                ),
+                lerp(
+                    lerp(
+                        hash(n + step.dot(Vec3::new(0.0, 0.0, 1.0))),
+                        hash(n + step.dot(Vec3::new(1.0, 0.0, 1.0))),
+                        u.x,
+                    ),
+                    lerp(
+                        hash(n + step.dot(Vec3::new(0.0, 1.0, 1.0))),
+                        hash(n + step.dot(Vec3::new(1.0, 1.0, 1.0))),
+                        u.x,
+                    ),
+                    u.y,
+                ),
+                u.z,
+            )
+        }
+
+        let p = self.local.as_vec3();
+
+        let mut x = Vec3::new(1240.0, 1240.0, 1240.0) + p * 8.0 * scale;
+
+        if octaves == 0 {
+            return noise(x);
+        }
+
+        let mut v = 0.0;
+        let mut a = 0.5;
+        let shift = Vec3::new(100.0, 100.0, 100.0);
+        for _ in 0..octaves {
+            v += a * noise(x);
+            x = x * 2.0 + shift;
+            a *= 0.5;
+        }
+        v
     }
 
     // Push the current segmentation state.

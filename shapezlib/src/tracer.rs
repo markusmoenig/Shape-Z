@@ -16,7 +16,7 @@ impl Tracer {
         buffer: &mut Arc<Mutex<RenderBuffer>>,
         grid: &Arc<RwLock<VoxelGrid>>,
         materials: &Arc<RwLock<Vec<Vec<NodeOp>>>>,
-        renderer: &Arc<Box<dyn Renderer>>,
+        renderer: &Arc<RwLock<Box<dyn Renderer>>>,
         camera: &Arc<RwLock<Box<dyn Camera>>>,
     ) {
         let tile_size = (80, 80);
@@ -78,7 +78,7 @@ impl Tracer {
                                     1.0 - (y as F / screen_size.y),
                                 );
 
-                                let p = renderer.render(
+                                let p = renderer.read().unwrap().render(
                                     uv,
                                     screen_size,
                                     grid_ref,

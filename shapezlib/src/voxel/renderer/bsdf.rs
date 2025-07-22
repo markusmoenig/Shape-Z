@@ -3,7 +3,8 @@ use crate::prelude::*;
 use rand::Rng;
 
 pub struct BSDF {
-    pub background_color: Vec3<F>,
+    background_color: Vec3<F>,
+    execution: Execution,
 }
 
 impl Renderer for BSDF {
@@ -13,6 +14,7 @@ impl Renderer for BSDF {
     {
         Self {
             background_color: Vec3::broadcast(0.8),
+            execution: Execution::new(0),
         }
     }
 
@@ -30,6 +32,11 @@ impl Renderer for BSDF {
         self.background_color = color;
     }
 
+    /// Set the execution.
+    fn set_execution(&mut self, execution: Execution) {
+        self.execution = execution;
+    }
+
     /// Render the pixel at the given screen position.
     fn render(
         &self,
@@ -40,6 +47,7 @@ impl Renderer for BSDF {
         materials: &[Vec<NodeOp>],
         camera: &Box<dyn Camera>,
     ) -> Vec4<F> {
+        let program = &mut Program::new(Vec3::zero(), 0);
         let mut rng = rand::rng();
 
         let mut radiance = Vec3::zero();
@@ -67,9 +75,9 @@ impl Renderer for BSDF {
             }
 
             if let HitType::Voxel(voxel) = hit.hit {
-                let mut execution = Execution::new(0);
-                let program = &mut Program::new(Vec3::zero(), 0);
+                let mut execution = self.execution.clone();
                 execution.hash = voxel.hash as f32 / 255.0;
+                execution.world = Value::from_vec3(hit.hitpoint);
                 execution.execute(&materials[voxel.material as usize], program);
 
                 // let material = &execution.material;

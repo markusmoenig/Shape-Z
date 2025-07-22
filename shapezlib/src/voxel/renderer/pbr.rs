@@ -14,7 +14,8 @@ enum ReflectionType {
 }
 
 pub struct PBR {
-    pub background_color: Vec3<F>,
+    background_color: Vec3<F>,
+    execution: Execution,
 }
 
 impl Renderer for PBR {
@@ -24,6 +25,7 @@ impl Renderer for PBR {
     {
         Self {
             background_color: Vec3::broadcast(0.2),
+            execution: Execution::new(0),
         }
     }
 
@@ -39,6 +41,11 @@ impl Renderer for PBR {
     /// Set the background color.
     fn set_background_color(&mut self, color: Vec3<F>) {
         self.background_color = color;
+    }
+
+    /// Set the execution.
+    fn set_execution(&mut self, execution: Execution) {
+        self.execution = execution;
     }
 
     /// Render the pixel at the given screen position.

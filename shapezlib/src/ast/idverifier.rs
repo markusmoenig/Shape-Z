@@ -55,6 +55,7 @@ impl IdVerifier {
             "step",
             "exp",
             "log",
+            "noise_value",
         ];
 
         for func in inbuilt_functions {
