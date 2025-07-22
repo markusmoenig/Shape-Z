@@ -80,7 +80,7 @@ impl Visitor for CompileVisitor {
             ASTFunction {
                 name: "fract".to_string(),
                 arguments: 1,
-                op: NodeOp::Ceil,
+                op: NodeOp::Fract,
             },
         );
         functions.insert(
@@ -508,6 +508,8 @@ impl Visitor for CompileVisitor {
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
+        let mut rc = ASTValue::None;
+
         if name == "local" {
             ctx.emit(NodeOp::Local);
         } else if name == "world" {
@@ -526,6 +528,8 @@ impl Visitor for CompileVisitor {
             ctx.emit(NodeOp::Hash);
         } else if name == "Clear" {
             ctx.emit(NodeOp::Clear);
+        } else if self.functions.contains_key(&name) {
+            rc = ASTValue::Function(name.clone(), vec![], Box::new(ASTValue::None));
         } else {
             if let Some(index) = ctx.variables.get(&name) {
                 ctx.emit(NodeOp::Load(*index as usize));
@@ -534,14 +538,10 @@ impl Visitor for CompileVisitor {
                 }
             }
         }
-
         // else if let Some(vv) = self.environment.get(&name) {
         //     rc = vv;
-        // } else if let Some(ASTValue::Function(name, args, body)) = self.ast_functions.get(&name) {
-        //     rc = ASTValue::Function(name.clone(), args.clone(), body.clone());
-        // }
 
-        Ok(ASTValue::None)
+        Ok(rc)
     }
 
     fn value(
