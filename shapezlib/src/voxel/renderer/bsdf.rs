@@ -78,6 +78,7 @@ impl Renderer for BSDF {
                 let mut execution = self.execution.clone();
                 execution.hash = voxel.hash as f32 / 255.0;
                 execution.world = Value::from_vec3(hit.hitpoint);
+                execution.local = execution.world;
                 execution.execute(&materials[voxel.material as usize], program);
 
                 // let material = &execution.material;

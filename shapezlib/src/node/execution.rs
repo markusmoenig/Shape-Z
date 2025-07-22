@@ -315,7 +315,27 @@ impl Execution {
                     let a = self.stack.pop().unwrap();
                     self.stack.push(a.smoothstep(b, c));
                 }
-                NodeOp::NoiseValue => {
+                NodeOp::Clamp => {
+                    let c: Value = self.stack.pop().unwrap();
+                    let b: Value = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(a.clamp(b, c));
+                }
+                NodeOp::SmoothUnion => {
+                    let c: Value = self.stack.pop().unwrap();
+                    let b: Value = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(Value::from_float(self.smooth_min(
+                        a.as_float(),
+                        b.as_float(),
+                        c.as_float(),
+                    )));
+                }
+                NodeOp::WhiteNoise => {
+                    let val = self.white_noise();
+                    self.stack.push(Value::from_float(val));
+                }
+                NodeOp::ValueNoise => {
                     let b = self.stack.pop().unwrap();
                     let a = self.stack.pop().unwrap();
                     let val = self.value_noise(a.as_float() as i32, b.as_vec3());
@@ -495,7 +515,6 @@ impl Execution {
                     anchor.x = anchor.x.clamp(0.0, 1.0);
                     anchor.y = anchor.y.clamp(0.0, 1.0);
 
-                    // ───────────── plane-specific data ─────────────
                     let bb_size = self.bbox.size();
                     let (plane_min, plane_size) = match self.plane {
                         Plane::XY => (
@@ -547,7 +566,6 @@ impl Execution {
                         }
                     }
 
-                    // ───────────── (rest of your original code stays unchanged) ─────────────
                     if self.bbox.contains_point(self.local.as_vec3()) {
                         let local = self.local.as_vec3();
 
@@ -570,8 +588,13 @@ impl Execution {
                         let rlen = p.magnitude();
                         let sdf = rlen - r;
 
-                        self.u = Value::from_float(theta);
-                        self.v = Value::from_float(h);
+                        use std::f32::consts::TAU;
+
+                        let repeats = 5.0;
+                        let u = (theta / TAU * repeats + repeats * 0.5).fract();
+
+                        self.u = Value::from_float(u);
+                        self.v = Value::from_float(h.abs());
                         self.sdf = Value::from_float(sdf);
                         self.inside = Value::from_float(-sdf);
 
@@ -968,65 +991,18 @@ impl Execution {
         program.grid.write().unwrap().merge(&grid);
     }
 
-    /*
-    /// Place a voxel box into the world. We first model into a separate grid
-    /// and than merge back into the program grid.
-    pub fn place(&mut self, id: &String, program: &mut Program) {
-        let voxel = match program.voxels.get(id) {
-            Some(defined) => defined.clone(),
-            None => return,
-        };
+    /// SDF to a Hexagon
+    #[inline]
+    fn _sdf_hex(p: Vec2<f32>, radius: f32) -> f32 {
+        let k = Vec2::new(-0.8660254, 0.5); // cos(π/6), sin(π/6)
+        let p = p.map(|v| v.abs());
 
-        let mut grid = VoxelGrid::empty(program.grid.read().unwrap().density);
+        let a = p - k * (p.dot(k)).min(radius);
+        let b = p - Vec2::new(radius, 0.0);
+        let inside = if p.y > radius * 0.5 { a } else { b };
 
-        let mut execution = Execution::new_from_var(&self);
-
-        let mut size = Vec3::new(1.0, 1.0, 1.0);
-        execution.execute(&voxel.size, program);
-        if let Some(value) = execution.stack.last() {
-            size = value.as_vec3();
-        }
-
-        let rect = VoxelRect {
-            origin: Vec3::zero(),
-            size,
-        };
-
-        for world in rect.iter_voxels(&grid) {
-            let local = rect.world_to_local(world);
-
-            execution.stack.clear();
-
-            // Set up the voxel coordinates
-            execution.world = Value::from_vec3(world);
-            execution.local = Value::from_vec3(local);
-
-            // Inital bbox for the grid which the shapes adhere to and segments subdivide.
-            execution.bbox = Aabb {
-                min: -size / 2.0,
-                max: size / 2.0,
-            };
-
-            // Execute the voxel body
-            execution.execute(&voxel.body, program);
-
-            // Recursively execute voxels shapes
-            // for shape in voxel.shapes.iter() {
-            //     shape.execute(&mut execution, program);
-            // }
-
-            // Set the result.
-            if let Some(value) = execution.stack.last() {
-                let mat = value.x();
-                if mat >= 0.0 {
-                    let hash = (execution.hash * 255.0).floor() as u8;
-                    grid.set_create(world, Voxel::new(mat as u8, hash));
-                }
-            }
-        }
-
-        program.grid.write().unwrap().merge(&grid);
-    }*/
+        inside.magnitude() * inside.y.signum()
+    }
 
     /// SDF to a 2D box
     #[inline]
@@ -1042,9 +1018,24 @@ impl Execution {
         (dot.sin().fract() * 43758.5453).fract()
     }
 
+    #[inline]
+    fn smooth_min(&self, a: f32, b: f32, k: f32) -> f32 {
+        let h = (0.5 + 0.5 * (b - a) / k).clamp(0.0, 1.0);
+        let m = b * (1.0 - h) + a * h;
+        m - k * h * (1.0 - h)
+    }
+
+    #[inline]
+    fn white_noise(&self) -> f32 {
+        let p = self.local.as_vec3();
+
+        let dot = (p.x + p.z) * 127.1 + (p.y + p.z) * 311.7 + (p.x + p.y) * 74.7;
+        (dot.sin() * 43758.5453).fract()
+    }
+
     /// Value noise 3D
     /// Base on https://www.shadertoy.com/view/4dS3Wd
-    pub fn value_noise(&self, octaves: i32, scale: Vec3<f32>) -> f32 {
+    fn value_noise(&self, octaves: i32, scale: Vec3<f32>) -> f32 {
         fn hash(mut p: f32) -> f32 {
             p = (p * 0.011).fract();
             p *= p + 7.5;

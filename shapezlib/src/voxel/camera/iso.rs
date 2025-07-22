@@ -15,7 +15,7 @@ impl Camera for Iso {
         Self {
             center: Vec3::zero(),
 
-            scale: 50.0,
+            scale: 60.0,
             yaw: std::f32::consts::FRAC_PI_4,
             pitch: -0.61548, // classic iso
                              // pitch: -0.87266, // UO

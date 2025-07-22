@@ -172,4 +172,13 @@ impl Value {
         }
         Value(out)
     }
+
+    #[inline]
+    pub fn clamp(self, min: Self, max: Self) -> Self {
+        let mut out = [0.0; 3];
+        for i in 0..3 {
+            out[i] = self.0[i].clamp(min.0[i], max.0[i]);
+        }
+        Value(out)
+    }
 }

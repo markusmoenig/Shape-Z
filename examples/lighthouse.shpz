@@ -1,6 +1,6 @@
 material Rock {
     albedo {
-        mix(vec3(0.4, 0.45, 0.5), vec3(0.6, 0.6, 0.65), hash);
+        mix(vec3(0.5, 0.45, 0.5), vec3(0.6, 0.6, 0.65), hash);
     }
     roughness {
         0.2 + (hash - 0.5) * 0.2;
@@ -26,16 +26,17 @@ material LightTowerBody {
             0.1;
         } else {
             let stripe = floor(world.y / 0.5) % 2;;
-            mix(vec3(0.9, 0.1, 0.1), vec3(0.95), stripe);
+            mix(vec3(0.9, 0.1, 0.1), vec3(0.95), stripe) - (hash - 0.5) * 0.2 
+                + (white_noise() - 0.5) * 0.25;
         }
     }
 
     roughness {
-        0.1;
+        hash;
     }
 
-    transmission {
-        0.0;
+    metallic {
+        0.1;
     }
 }
 
@@ -58,17 +59,21 @@ material Water {
 }
 
 voxel Rock size = vec3(5, 3, 5) {
-    let dist = length(local + vec3(0, 4, 0)) - 2.0;
-    dist = min(dist, length(local + vec3(1, 2, 0)) - 1.0);
+    // let dist = length(local + vec3(0, 4, 0)) - 2.0;
+    // dist = min(dist, length(local + vec3(1, 2, 0)) - 1.0);
+
+    let d1 = length(local + vec3(0, 4, 0)) - 2.0;
+    let d2 = length(local + vec3(1, 2, 0)) - 1.0;
+    let dist = smooth_union(d1, d2, 0.8);
 
     // Detail noise
-    let n2 = noise_value(4, 3.0);
+    let n2 = value_noise(4, vec3(1.0, 50.0, 1.0));
 
     // Smooth noise base
-    let n1 = noise_value(0, 0.3);
+    let n1 = value_noise(0, vec3(0.3, 1.0, 0.3));
 
     // Combine both
-    let displaced = dist - n1 * 0.2 - n2 * 0.05;
+    let displaced = dist - n1 * 0.20 - n2 * 0.15;
 
     if displaced < 1.6 {
         Rock;
@@ -77,20 +82,28 @@ voxel Rock size = vec3(5, 3, 5) {
     // let water_height = sin(local.x * 4.0 + noise_value(2, 1.0) * 3.0) * 0.1
     //              + sin(local.z * 3.0 + noise_value(2, 1.0) * 2.0) * 0.1;
 
-    let water_height = 0.0;
+    // let water_height = 0.0;
 
-    if local.y < water_height {
-        if_clear {
-            Water;
-        }
-    }
+    // if local.y < water_height {
+    //     if_clear {
+    //         Water;
+    //     }
+    // }
 }
 
-voxel Tower size = vec3(2, 5, 2) {
+voxel Tower size = vec3(2, 7, 2) {
     shape Rect {
-        segment Floor depth = 5 {
+        segment Floor depth = 7 {
             shape Disc {
-                LightTowerBody;
+            if inside < 0.2 {
+                    pattern Bricks  {
+                        brick {
+                            LightTowerBody;
+                        }
+                        cement {
+                        }
+                    }
+                }
             }
         }
     }

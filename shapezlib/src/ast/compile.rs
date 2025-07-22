@@ -100,11 +100,19 @@ impl Visitor for CompileVisitor {
             },
         );
         functions.insert(
-            "noise_value".to_string(),
+            "white_noise".to_string(),
             ASTFunction {
-                name: "noise_value".to_string(),
+                name: "white_noise".to_string(),
+                arguments: 0,
+                op: NodeOp::WhiteNoise,
+            },
+        );
+        functions.insert(
+            "value_noise".to_string(),
+            ASTFunction {
+                name: "value_noise".to_string(),
                 arguments: 2,
-                op: NodeOp::NoiseValue,
+                op: NodeOp::ValueNoise,
             },
         );
         functions.insert(
@@ -137,6 +145,22 @@ impl Visitor for CompileVisitor {
                 name: "smoothstep".to_string(),
                 arguments: 3,
                 op: NodeOp::Smoothstep,
+            },
+        );
+        functions.insert(
+            "clamp".to_string(),
+            ASTFunction {
+                name: "clamp".to_string(),
+                arguments: 3,
+                op: NodeOp::Clamp,
+            },
+        );
+        functions.insert(
+            "smooth_union".to_string(),
+            ASTFunction {
+                name: "smooth_union".to_string(),
+                arguments: 3,
+                op: NodeOp::SmoothUnion,
             },
         );
 
