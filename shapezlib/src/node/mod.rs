@@ -5,10 +5,10 @@ pub mod value;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Plane {
-    XY, // Back
+    XY, // Back, Front
     YZ,
-    XZ, // Floor
-    ZY, // Left
+    XZ, // Floor, Ceiling
+    ZY, // Left, Right
 }
 
 #[derive(Debug, Clone)]
@@ -19,6 +19,7 @@ pub enum NodeOp {
     GetComponents(Vec<u8>),
     SetComponents(Vec<u8>),
     If(Vec<NodeOp>, Option<Vec<NodeOp>>),
+    IfClear(Vec<NodeOp>),
     Place(String),
     Push(Value),
     Clear,
@@ -63,6 +64,9 @@ pub enum NodeOp {
     SegmentLeft(Vec<NodeOp>, Vec<NodeOp>),
     SegmentBack(Vec<NodeOp>, Vec<NodeOp>),
     SegmentFloor(Vec<NodeOp>, Vec<NodeOp>),
+    SegmentRight(Vec<NodeOp>, Vec<NodeOp>),
+    SegmentFront(Vec<NodeOp>, Vec<NodeOp>),
+    SegmentCeiling(Vec<NodeOp>, Vec<NodeOp>),
     PatternModulo(Vec<NodeOp>, Option<Vec<NodeOp>>, Option<Vec<NodeOp>>),
     PatternBricks(
         Vec<NodeOp>,

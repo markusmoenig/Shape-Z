@@ -786,6 +786,21 @@ impl Visitor for CompileVisitor {
         Ok(ASTValue::None)
     }
 
+    fn ifclear_stmt(
+        &mut self,
+        block: &Stmt,
+        _loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError> {
+        ctx.add_custom_target();
+        _ = block.accept(self, ctx)?;
+        if let Some(code) = ctx.take_last_custom_target() {
+            ctx.emit(NodeOp::IfClear(code));
+        }
+
+        Ok(ASTValue::None)
+    }
+
     fn ternary(
         &mut self,
         _cond: &Expr,

@@ -184,6 +184,11 @@ impl Execution {
                         self.execute(else_code, program);
                     }
                 }
+                NodeOp::IfClear(code) => {
+                    if self.stack.is_empty() {
+                        self.execute(code, program);
+                    }
+                }
                 NodeOp::Place(id) => self.place(id, program),
                 NodeOp::World => {
                     self.stack.push(self.world);
@@ -344,51 +349,60 @@ impl Execution {
                         Plane::ZY => Vec2::new(bb_size.d, bb_size.h),
                     };
 
-                    let mut offset = Vec2::zero();
+                    // --- evaluate rect size ----------------------------------------------------
                     let mut dims = bbox_size;
-
-                    // Evaluate 'dims' (size of shape)
                     if !size.is_empty() {
                         self.execute(size, program);
                         dims = self.stack.pop().unwrap().as_vec2();
                     }
 
-                    // Default 'at' is (0,0), evaluate if provided
+                    // --- evaluate anchor (at); default = centre (0.5, 0.5) ---------------------
+                    let mut anchor = Vec2::broadcast(0.5);
                     if !at.is_empty() {
                         self.execute(at, program);
-                        offset = self.stack.pop().unwrap().as_vec2();
+                        anchor = self.stack.pop().unwrap().as_vec2();
                     }
+                    // (optional) clamp to [0,1] so weird values don’t shove the rect outside
+                    anchor.x = anchor.x.clamp(0.0, 1.0);
+                    anchor.y = anchor.y.clamp(0.0, 1.0);
 
-                    let center = self.center_of_bbox();
-
-                    // Final offset is relative to center, minus half size
-                    offset = center + offset - dims * 0.5;
-
-                    // Apply bbox reduction
+                    // --- compute rect min per plane -------------------------------------------
                     match self.plane {
                         Plane::XY => {
-                            self.bbox.min.x = offset.x;
-                            self.bbox.min.y = offset.y;
-                            self.bbox.max.x = offset.x + dims.x;
-                            self.bbox.max.y = offset.y + dims.y;
+                            let plane_min = Vec2::new(self.bbox.min.x, self.bbox.min.y);
+                            let rect_min = plane_min + anchor * (bbox_size - dims);
+
+                            self.bbox.min.x = rect_min.x;
+                            self.bbox.min.y = rect_min.y;
+                            self.bbox.max.x = rect_min.x + dims.x;
+                            self.bbox.max.y = rect_min.y + dims.y;
                         }
                         Plane::XZ => {
-                            self.bbox.min.x = offset.x;
-                            self.bbox.min.z = offset.y;
-                            self.bbox.max.x = offset.x + dims.x;
-                            self.bbox.max.z = offset.y + dims.y;
+                            let plane_min = Vec2::new(self.bbox.min.x, self.bbox.min.z);
+                            let rect_min = plane_min + anchor * (bbox_size - dims);
+
+                            self.bbox.min.x = rect_min.x;
+                            self.bbox.min.z = rect_min.y;
+                            self.bbox.max.x = rect_min.x + dims.x;
+                            self.bbox.max.z = rect_min.y + dims.y;
                         }
                         Plane::YZ => {
-                            self.bbox.min.y = offset.x;
-                            self.bbox.min.z = offset.y;
-                            self.bbox.max.y = offset.x + dims.x;
-                            self.bbox.max.z = offset.y + dims.y;
+                            let plane_min = Vec2::new(self.bbox.min.y, self.bbox.min.z);
+                            let rect_min = plane_min + anchor * (bbox_size - dims);
+
+                            self.bbox.min.y = rect_min.x;
+                            self.bbox.min.z = rect_min.y;
+                            self.bbox.max.y = rect_min.x + dims.x;
+                            self.bbox.max.z = rect_min.y + dims.y;
                         }
                         Plane::ZY => {
-                            self.bbox.min.z = offset.x;
-                            self.bbox.min.y = offset.y;
-                            self.bbox.max.z = offset.x + dims.x;
-                            self.bbox.max.y = offset.y + dims.y;
+                            let plane_min = Vec2::new(self.bbox.min.z, self.bbox.min.y);
+                            let rect_min = plane_min + anchor * (bbox_size - dims);
+
+                            self.bbox.min.z = rect_min.x;
+                            self.bbox.min.y = rect_min.y;
+                            self.bbox.max.z = rect_min.x + dims.x;
+                            self.bbox.max.y = rect_min.y + dims.y;
                         }
                     }
 
@@ -427,54 +441,77 @@ impl Execution {
                 NodeOp::ShapeDisc(at, radius, body) => {
                     self.push_state();
 
-                    let mut center_offset = Vec2::zero();
-                    let mut radius_value = 1.0;
-
+                    let mut r = 1.0;
                     if !radius.is_empty() {
                         self.execute(radius, program);
-                        radius_value = self.stack.pop().unwrap().as_float();
+                        r = self.stack.pop().unwrap().as_float();
                     }
 
+                    // 0.0 = flush with min side, 0.5 = centred, 1.0 = flush with max side.
+                    let mut anchor = Vec2::broadcast(0.5);
                     if !at.is_empty() {
                         self.execute(at, program);
-                        center_offset = self.stack.pop().unwrap().as_vec2();
+                        anchor = self.stack.pop().unwrap().as_vec2();
                     }
+                    anchor.x = anchor.x.clamp(0.0, 1.0);
+                    anchor.y = anchor.y.clamp(0.0, 1.0);
 
-                    let center = self.center_of_bbox();
-                    let offset = center + center_offset;
+                    // ───────────── plane-specific data ─────────────
+                    let bb_size = self.bbox.size();
+                    let (plane_min, plane_size) = match self.plane {
+                        Plane::XY => (
+                            Vec2::new(self.bbox.min.x, self.bbox.min.y),
+                            Vec2::new(bb_size.w, bb_size.h),
+                        ),
+                        Plane::XZ => (
+                            Vec2::new(self.bbox.min.x, self.bbox.min.z),
+                            Vec2::new(bb_size.w, bb_size.d),
+                        ),
+                        Plane::YZ => (
+                            Vec2::new(self.bbox.min.y, self.bbox.min.z),
+                            Vec2::new(bb_size.h, bb_size.d),
+                        ),
+                        Plane::ZY => (
+                            Vec2::new(self.bbox.min.z, self.bbox.min.y),
+                            Vec2::new(bb_size.d, bb_size.h),
+                        ),
+                    };
 
-                    // New bounding box centered at `offset`, extended by radius, in correct 2D plane
+                    let offset = plane_min
+                        + anchor * (plane_size - Vec2::broadcast(2.0 * r))
+                        + Vec2::broadcast(r);
+
                     match self.plane {
                         Plane::XY => {
-                            self.bbox.min.x = offset.x - radius_value;
-                            self.bbox.max.x = offset.x + radius_value;
-                            self.bbox.min.y = offset.y - radius_value;
-                            self.bbox.max.y = offset.y + radius_value;
+                            self.bbox.min.x = offset.x - r;
+                            self.bbox.max.x = offset.x + r;
+                            self.bbox.min.y = offset.y - r;
+                            self.bbox.max.y = offset.y + r;
                         }
                         Plane::XZ => {
-                            self.bbox.min.x = offset.x - radius_value;
-                            self.bbox.max.x = offset.x + radius_value;
-                            self.bbox.min.z = offset.y - radius_value;
-                            self.bbox.max.z = offset.y + radius_value;
+                            self.bbox.min.x = offset.x - r;
+                            self.bbox.max.x = offset.x + r;
+                            self.bbox.min.z = offset.y - r;
+                            self.bbox.max.z = offset.y + r;
                         }
                         Plane::YZ => {
-                            self.bbox.min.y = offset.x - radius_value;
-                            self.bbox.max.y = offset.x + radius_value;
-                            self.bbox.min.z = offset.y - radius_value;
-                            self.bbox.max.z = offset.y + radius_value;
+                            self.bbox.min.y = offset.x - r;
+                            self.bbox.max.y = offset.x + r;
+                            self.bbox.min.z = offset.y - r;
+                            self.bbox.max.z = offset.y + r;
                         }
                         Plane::ZY => {
-                            self.bbox.min.z = offset.x - radius_value;
-                            self.bbox.max.z = offset.x + radius_value;
-                            self.bbox.min.y = offset.y - radius_value;
-                            self.bbox.max.y = offset.y + radius_value;
+                            self.bbox.min.z = offset.x - r;
+                            self.bbox.max.z = offset.x + r;
+                            self.bbox.min.y = offset.y - r;
+                            self.bbox.max.y = offset.y + r;
                         }
                     }
 
+                    // ───────────── (rest of your original code stays unchanged) ─────────────
                     if self.bbox.contains_point(self.local.as_vec3()) {
                         let local = self.local.as_vec3();
 
-                        // Map to plane coords + height
                         let (p, h) = match self.plane {
                             Plane::XY => {
                                 (Vec2::new(local.x - offset.x, local.y - offset.y), local.z)
@@ -491,8 +528,8 @@ impl Execution {
                         };
 
                         let theta = p.y.atan2(p.x);
-                        let r = p.magnitude();
-                        let sdf: f32 = r - radius_value;
+                        let rlen = p.magnitude();
+                        let sdf = rlen - r;
 
                         self.u = Value::from_float(theta);
                         self.v = Value::from_float(h);
@@ -574,6 +611,75 @@ impl Execution {
                         self.v = Value::from_float(local.z - self.bbox.min.z); // v = Z
                         self.d = Value::from_float(local.y - self.bbox.min.y); // d = Y (depth from floor)
 
+                        self.execute(body, program);
+                    }
+
+                    self.pop_state();
+                }
+                NodeOp::SegmentRight(depth, body) => {
+                    self.push_state();
+
+                    self.plane = Plane::ZY;
+                    let local = self.local.as_vec3();
+
+                    let thickness = if depth.is_empty() {
+                        0.1
+                    } else {
+                        self.execute(depth, program);
+                        self.stack.pop().unwrap().as_float()
+                    };
+
+                    self.bbox.min.x = self.bbox.max.x - thickness;
+                    if self.bbox.contains_point(local) {
+                        self.u = Value::from_float(local.z - self.bbox.min.z); // u = Z
+                        self.v = Value::from_float(local.y - self.bbox.min.y); // v = Y
+                        self.d = Value::from_float(self.bbox.max.x - local.x); // d = X (depth)
+                        self.execute(body, program);
+                    }
+
+                    self.pop_state();
+                }
+                NodeOp::SegmentFront(depth, body) => {
+                    self.push_state();
+
+                    self.plane = Plane::XY;
+                    let local = self.local.as_vec3();
+
+                    let thickness = if depth.is_empty() {
+                        0.1
+                    } else {
+                        self.execute(depth, program);
+                        self.stack.pop().unwrap().as_float()
+                    };
+
+                    self.bbox.min.z = self.bbox.max.z - thickness;
+                    if self.bbox.contains_point(local) {
+                        self.u = Value::from_float(local.x - self.bbox.min.x); // u = X
+                        self.v = Value::from_float(local.y - self.bbox.min.y); // v = Y
+                        self.d = Value::from_float(self.bbox.max.z - local.z); // d = Z (depth)
+                        self.execute(body, program);
+                    }
+
+                    self.pop_state();
+                }
+                NodeOp::SegmentCeiling(depth, body) => {
+                    self.push_state();
+
+                    self.plane = Plane::XZ;
+                    let local = self.local.as_vec3();
+
+                    let thickness = if depth.is_empty() {
+                        0.1
+                    } else {
+                        self.execute(depth, program);
+                        self.stack.pop().unwrap().as_float()
+                    };
+
+                    self.bbox.min.y = self.bbox.max.y - thickness;
+                    if self.bbox.contains_point(local) {
+                        self.u = Value::from_float(local.x - self.bbox.min.x); // u = X
+                        self.v = Value::from_float(local.z - self.bbox.min.z); // v = Z
+                        self.d = Value::from_float(self.bbox.max.y - local.y); // d = Y (depth)
                         self.execute(body, program);
                     }
 
@@ -885,30 +991,6 @@ impl Execution {
 
         program.grid.write().unwrap().merge(&grid);
     }*/
-
-    /// Returns the center of the bbox for a given plane
-    #[inline]
-    fn center_of_bbox(&self) -> Vec2<f32> {
-        let size = self.bbox.size();
-        match self.plane {
-            Plane::XY => Vec2::new(
-                self.bbox.min.x + size.w * 0.5,
-                self.bbox.min.y + size.h * 0.5,
-            ),
-            Plane::XZ => Vec2::new(
-                self.bbox.min.x + size.w * 0.5,
-                self.bbox.min.z + size.d * 0.5,
-            ),
-            Plane::YZ => Vec2::new(
-                self.bbox.min.y + size.h * 0.5,
-                self.bbox.min.z + size.d * 0.5,
-            ),
-            Plane::ZY => Vec2::new(
-                self.bbox.min.z + size.d * 0.5,
-                self.bbox.min.y + size.h * 0.5,
-            ),
-        }
-    }
 
     /// SDF to a 2D box
     #[inline]

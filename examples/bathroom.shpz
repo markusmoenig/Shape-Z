@@ -18,11 +18,29 @@ material White {
     }
 
     roughness {
-        1.0;
+        0.0;
     }
 
     transmission {
         0.0;
+    }
+}
+
+material White2 {
+    albedo {
+        vec3(0.95, 0.9, 0.85);
+    }
+
+    roughness {
+        hash;
+    }
+
+    //clearcoat {
+    //    hash;
+    //}
+
+    metallic {
+        0.2;
     }
 }
 
@@ -77,11 +95,12 @@ voxel Box size = vec3(5, 3, 5) {
     shape Rect {
 
         segment Left depth = 1.0 {
-
             if d <= 0.05 {
+                // Back Wall Color
                 White;
             } else
             if d < 0.2 {
+                // Bricks in the middle
                 pattern Bricks {
                     brick {
                         Bricks;
@@ -97,15 +116,8 @@ voxel Box size = vec3(5, 3, 5) {
                 WallPaint;
             }
 
-            // Place a mirror centered on the wall
-            /*
-            shape Rect at = vec2(0, 0.6), size = vec2(1.5, 1) {
-                if d > 0.20 && d < 0.21 {
-                    Mirror;
-                }
-            }*/
-
-            shape Disc at = vec2(0, 0.6), radius = 0.8 {
+            // Place a round mirror centered on the wall
+            shape Disc at = vec2(0.5, 0.95), radius = 0.8 {
                 if d > 0.20 && d < 0.21 {
                     Mirror;
                 }
@@ -130,29 +142,46 @@ voxel Box size = vec3(5, 3, 5) {
     }
 
     segment Back depth = 0.2 {
-        White;
+        if v < 2.9 {
+            pattern Bricks size = vec2(10, 0.1), gap = 0.09, rounding = 0.0 {
+                brick {
+                    White2;
+                }
+                cement {
+                    if d < 0.18 {
+                        White2;
+                    }
+                }
+            }  
+        } else {
+            White;
+        }            
+
         // Place a window
-        shape Rect at = vec2(0, 0.4), size = vec2(2, 1.4) {
-            Clear; // Clear the voxel
+        shape Rect at = vec2(0.5, 0.6), size = vec2(2, 1.4) {
+            Clear; // Clear window voxels
             if d > 0.096 && d < 0.1 {
                 Glass; // Add Glass in the middle
             }
         }
     }
 
-    segment Floor {        
-        if d >  0.09 {
-            pattern Bricks size = vec2(1.2, 0.2), gap = 0.01, rounding = 0.0 {
-                brick {
-                    Wood;
-                }
-                cement {
-                    Wood;
-                }
-            }    
-        }  else {
-            White;
-        } 
+    segment Floor {      
+
+        if_clear {  
+            if d >  0.09 {
+                pattern Bricks size = vec2(1.2, 0.15), gap = 0.01, rounding = 0.0 {
+                    brick {
+                        Wood;
+                    }
+                    cement {
+                        Wood;
+                    }
+                }    
+            }  else {
+                White;
+            } 
+        }
 
         /*
         shape Disc radius = 1.0 {

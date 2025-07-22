@@ -64,6 +64,7 @@ macro_rules! expr_float {
 #[derive(Clone, Debug)]
 pub enum Stmt {
     If(Box<Expr>, Box<Stmt>, Option<Box<Stmt>>, Location),
+    IfClear(Box<Stmt>, Location),
     While(Box<Expr>, Box<Stmt>, Location),
     For(
         Vec<Box<Stmt>>,
@@ -428,6 +429,13 @@ pub trait Visitor {
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError>;
 
+    fn ifclear_stmt(
+        &mut self,
+        block: &Stmt,
+        loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError>;
+
     fn while_stmt(
         &mut self,
         cond: &Expr,
@@ -475,6 +483,7 @@ impl Stmt {
             Stmt::If(cond, then_stmt, else_stmt, loc) => {
                 visitor.if_stmt(cond, then_stmt, else_stmt, loc, ctx)
             }
+            Stmt::IfClear(block, loc) => visitor.ifclear_stmt(block, loc, ctx),
             Stmt::While(cond, body, loc) => visitor.while_stmt(cond, body, loc, ctx),
             Stmt::For(init, cond, incr, body, loc) => {
                 visitor.for_stmt(init, cond, incr, body, loc, ctx)

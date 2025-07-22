@@ -449,20 +449,9 @@ impl Parser {
             self.if_statement()
         } else if self.match_token(vec![TokenType::Pattern]) {
             self.pattern_statement()
-        }
-        /*
-        else if self.match_token(vec![TokenType::Print]) {
-            self.print_statement()
-        } else if self.match_token(vec![TokenType::While]) {
-            self.while_statement()
-        } else if self.match_token(vec![TokenType::For]) {
-            self.for_statement()
-        } else if self.match_token(vec![TokenType::Return]) {
-            self.return_statement()
-        } else if self.match_token(vec![TokenType::Break]) {
-            self.break_statement()
-        }*/
-        else if self.match_token(vec![TokenType::LeftBrace]) {
+        } else if self.match_token(vec![TokenType::IfClear]) {
+            self.ifclear_statement()
+        } else if self.match_token(vec![TokenType::LeftBrace]) {
             self.block()
         } else {
             self.expression_statement()
@@ -492,6 +481,20 @@ impl Parser {
             else_branch,
             self.create_loc(line),
         ))
+    }
+
+    fn ifclear_statement(&mut self) -> Result<Stmt, ParseError> {
+        let line = self.current_line;
+
+        self.consume(
+            TokenType::LeftBrace,
+            "Expected '{' after if_clear header",
+            self.current_line,
+        )?;
+
+        let block = self.block()?;
+
+        Ok(Stmt::IfClear(Box::new(block), self.create_loc(line)))
     }
 
     fn pattern_statement(&mut self) -> Result<Stmt, ParseError> {
