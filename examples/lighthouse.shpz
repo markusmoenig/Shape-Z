@@ -60,6 +60,14 @@ material Water {
     }
 }
 
+config density {
+    20;
+}
+
+config background {
+    0.6;
+}
+
 voxel Rock size = vec3(5, 3, 5) {
     // let dist = length(local + vec3(0, 4, 0)) - 2.0;
     // dist = min(dist, length(local + vec3(1, 2, 0)) - 1.0);

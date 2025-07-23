@@ -1,6 +1,9 @@
 use crate::prelude::*;
 use std::path::PathBuf;
 
+// Default density
+const DENSITY: usize = 40;
+
 pub struct ShapeZ {
     path: PathBuf,
     context: Context,
@@ -24,7 +27,7 @@ impl ShapeZ {
     pub fn new() -> Self {
         Self {
             path: PathBuf::new(),
-            context: Context::new(Vec3::zero(), 96, FxHashMap::default()),
+            context: Context::new(Vec3::zero(), DENSITY, FxHashMap::default()),
 
             camera: Arc::new(RwLock::new(Box::new(Iso::new()))),
             renderer: Arc::new(RwLock::new(Box::new(BSDF::new()))),
@@ -46,7 +49,7 @@ impl ShapeZ {
         // Compile the AST
 
         let mut visitor = CompileVisitor::new();
-        self.context = Context::new(Vec3::zero(), 96, module.variables.clone());
+        self.context = Context::new(Vec3::zero(), DENSITY, module.variables.clone());
 
         for statement in module.stmts.clone() {
             _ = statement.accept(&mut visitor, &mut self.context);
@@ -55,16 +58,45 @@ impl ShapeZ {
         Ok(module)
     }
 
+    /// Compile the voxels into the VoxelGrid.
     pub fn execute(&mut self) {
         let mut execution = Execution::new(self.context.variables.len());
+
+        // Execute relevant global configs before voxel compilation
+
+        // If user specified a density create a new grid
+        if let Some(code) = self.context.global_config.get("density").cloned() {
+            execution.execute(&code, &mut self.context.program);
+            if let Some(density) = execution.stack.pop() {
+                let density = (density.x() as usize).clamp(0, 200);
+                let volumetric = self.context.program.grid.read().unwrap().volumetric.clone();
+                self.context.program.grid = Arc::new(RwLock::new(VoxelGrid::empty(density)));
+                self.context.program.grid.write().unwrap().volumetric = volumetric;
+            }
+        }
+
+        // If user specified a background set it to the renderer.
+        if let Some(code) = self.context.global_config.get("background").cloned() {
+            execution.execute(&code, &mut self.context.program);
+            if let Some(back) = execution.stack.pop() {
+                self.renderer
+                    .write()
+                    .unwrap()
+                    .set_background_color(back.as_vec3());
+            }
+        }
+
+        // Execute the main program to compile all voxels.
         execution.execute(
             &self.context.program.globals.clone(),
             &mut self.context.program,
         );
 
+        // Extract the materials from the context.
         self.materials = Arc::new(RwLock::new(
             self.context.materials.values().cloned().collect(),
         ));
+
         self.context
             .program
             .grid
@@ -75,6 +107,7 @@ impl ShapeZ {
         self.renderer.write().unwrap().set_execution(execution);
     }
 
+    /// Compute a sample of the image.
     pub fn sample(&mut self) {
         self.tracer.render(
             &mut self.buffer,
@@ -85,6 +118,7 @@ impl ShapeZ {
         );
     }
 
+    /// Write the current image to disc.
     pub fn write_image(&self) {
         let mut path = self.path.clone();
         path.set_extension("png");
@@ -93,6 +127,7 @@ impl ShapeZ {
         b.save_srgb(path.clone());
     }
 
+    /// Get the current time in ms.
     pub fn get_time(&self) -> u128 {
         self.tracer.get_time()
     }

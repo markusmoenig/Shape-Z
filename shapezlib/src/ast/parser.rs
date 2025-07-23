@@ -110,6 +110,9 @@ impl Parser {
         if self.match_token(vec![TokenType::Let]) {
             return self.var_declaration();
         }
+        if self.match_token(vec![TokenType::Config]) {
+            return self.config_declaration();
+        }
 
         self.statement()
     }
@@ -234,6 +237,37 @@ impl Parser {
             MaterialD::new(id, params, blocks),
             self.create_loc(line),
         ))
+    }
+
+    /// Config declaration
+    fn config_declaration(&mut self) -> Result<Stmt, ParseError> {
+        let line = self.current_line;
+        self.consume(
+            TokenType::Identifier,
+            "Expected identifier after 'config''",
+            self.current_line,
+        )?;
+
+        let valid = ["density", "background"];
+        let id = self.previous().unwrap().lexeme.clone();
+
+        if !valid.contains(&id.as_str()) {
+            return Err(ParseError::new(
+                format!("Invalid config id: {:?}", id),
+                line,
+                &self.path,
+            ));
+        }
+
+        self.consume(
+            TokenType::LeftBrace,
+            "Expected '{' after config header",
+            self.current_line,
+        )?;
+
+        let block = self.block()?;
+
+        Ok(Stmt::Config(id, Box::new(block), self.create_loc(line)))
     }
 
     /// Voxel declaration

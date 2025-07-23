@@ -77,6 +77,7 @@ pub enum Stmt {
     Block(Vec<Box<Stmt>>, Location),
     Expression(Box<Expr>, Location),
     Material(MaterialD, Location),
+    Config(String, Box<Stmt>, Location),
     Voxel(VoxelD, Location),
     Shape(ShapeD, Location),
     Segment(SegmentD, Location),
@@ -260,6 +261,14 @@ pub trait Visitor {
     fn material_reference(
         &mut self,
         name: &String,
+        loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError>;
+
+    fn config(
+        &mut self,
+        id: &String,
+        block: &Box<Stmt>,
         loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError>;
@@ -492,6 +501,7 @@ impl Stmt {
             Stmt::Block(list, loc) => visitor.block(list, loc, ctx),
             Stmt::Expression(expression, loc) => visitor.expression(expression, loc, ctx),
             Stmt::Material(objectd, loc) => visitor.material(objectd, loc, ctx),
+            Stmt::Config(id, block, loc) => visitor.config(id, block, loc, ctx),
             Stmt::Voxel(objectd, loc) => visitor.voxel(objectd, loc, ctx),
             Stmt::Shape(objectd, loc) => visitor.shape(objectd, loc, ctx),
             Stmt::Segment(objectd, loc) => visitor.segment(objectd, loc, ctx),

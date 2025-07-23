@@ -439,6 +439,22 @@ impl Visitor for CompileVisitor {
         Ok(ASTValue::None)
     }
 
+    fn config(
+        &mut self,
+        id: &String,
+        block: &Box<Stmt>,
+        _loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError> {
+        ctx.add_custom_target();
+        _ = block.accept(self, ctx)?;
+        if let Some(code) = ctx.take_last_custom_target() {
+            ctx.global_config.insert(id.clone(), code);
+        }
+
+        Ok(ASTValue::None)
+    }
+
     fn place(
         &mut self,
         id: &String,

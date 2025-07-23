@@ -59,7 +59,6 @@ pub struct SegmentD {
     pub block: Option<Box<Stmt>>,
 
     pub size: Vec<NodeOp>,
-
     pub body: Vec<NodeOp>,
 }
 

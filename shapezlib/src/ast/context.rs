@@ -1,13 +1,24 @@
 use crate::prelude::*;
 
+/// The context during script and voxel compilation.
 #[derive(Clone, Debug)]
 pub struct Context {
+    /// The current code output target.
     pub current_target: OutputTarget,
+
+    /// Custom targets needed for recursive nesting.
     pub custom_targets: Vec<Vec<NodeOp>>,
 
+    /// Holds the variable names and their indices into the global / flat array.
     pub variables: FxHashMap<String, u32>,
+
+    /// Holds all declared materials and their code which gets executed by the renderer on hit.
     pub materials: IndexMap<String, Vec<NodeOp>>,
 
+    /// Holds the global configuration code (density, background, etc.)
+    pub global_config: FxHashMap<String, Vec<NodeOp>>,
+
+    /// Holds the grid and the programs NodeOps.
     pub program: Program,
 }
 
@@ -19,6 +30,7 @@ impl Context {
             program: Program::new(size, density),
             variables,
             materials: IndexMap::default(),
+            global_config: FxHashMap::default(),
         }
     }
 
@@ -59,18 +71,4 @@ impl Context {
             None
         }
     }
-
-    // pub fn new(density: usize) -> Self {
-    //     Self {
-    //         code: Vec::new(),
-
-    //         density,
-    //         definitions: FxHashMap::default(),
-    //     }
-    // }
-
-    // /// Clear the code generation array.
-    // pub fn clean_code(&mut self) {
-    //     self.code.clear();
-    // }
 }

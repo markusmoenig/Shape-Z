@@ -65,6 +65,7 @@ pub enum TokenType {
     Pattern,
     Place,
     IfClear,
+    Config,
 
     Let,
 
@@ -157,6 +158,7 @@ impl Scanner {
         keywords.insert("segment", TokenType::Segment);
         keywords.insert("pattern", TokenType::Pattern);
         keywords.insert("place", TokenType::Place);
+        keywords.insert("config", TokenType::Config);
 
         keywords.insert("if_clear", TokenType::IfClear);
 
