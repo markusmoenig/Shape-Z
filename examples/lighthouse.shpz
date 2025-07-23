@@ -8,6 +8,14 @@ config background {
     0.8;
 }
 
+config sun_dir {
+    vec3(0.8, 1.0, 1.0);
+}
+
+config sun_emission {
+    vec3(1.0, 0.9, 0.7) * 1.0;
+}
+
 voxel Rock size = vec3(5, 3, 5) {
     // let dist = length(local + vec3(0, 4, 0)) - 2.0;
     // dist = min(dist, length(local + vec3(1, 2, 0)) - 1.0);

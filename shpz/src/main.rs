@@ -18,7 +18,7 @@ fn cli() -> Command {
 }
 
 fn main() {
-    let iterations = 50;
+    let iterations = 500;
 
     let matches = cli().get_matches();
 

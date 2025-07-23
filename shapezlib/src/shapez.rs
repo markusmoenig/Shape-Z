@@ -86,6 +86,28 @@ impl ShapeZ {
             }
         }
 
+        // If user specified a sun_dir set it to the renderer.
+        if let Some(code) = self.context.global_config.get("sun_dir").cloned() {
+            execution.execute(&code, &mut self.context.program);
+            if let Some(back) = execution.stack.pop() {
+                self.renderer
+                    .write()
+                    .unwrap()
+                    .set_sun_dir(back.as_vec3().normalized());
+            }
+        }
+
+        // If user specified a sun_emission set it to the renderer.
+        if let Some(code) = self.context.global_config.get("sun_emission").cloned() {
+            execution.execute(&code, &mut self.context.program);
+            if let Some(back) = execution.stack.pop() {
+                self.renderer
+                    .write()
+                    .unwrap()
+                    .set_sun_emission(back.as_vec3());
+            }
+        }
+
         // Execute the main program to compile all voxels.
         execution.execute(
             &self.context.program.globals.clone(),

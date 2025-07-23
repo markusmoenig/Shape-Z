@@ -4,6 +4,8 @@ use rand::Rng;
 
 pub struct BSDF {
     background_color: Vec3<F>,
+    sun_dir: Option<Vec3<F>>,
+    sun_emission: Vec3<F>,
     execution: Execution,
 }
 
@@ -14,6 +16,8 @@ impl Renderer for BSDF {
     {
         Self {
             background_color: Vec3::broadcast(0.8),
+            sun_dir: None,
+            sun_emission: Vec3::new(1.0, 0.95, 0.9),
             execution: Execution::new(0),
         }
     }
@@ -30,6 +34,16 @@ impl Renderer for BSDF {
     /// Set the background color.
     fn set_background_color(&mut self, color: Vec3<F>) {
         self.background_color = color;
+    }
+
+    // Set the sun_dir.
+    fn set_sun_dir(&mut self, dir: Vec3<F>) {
+        self.sun_dir = Some(dir);
+    }
+
+    // Set the sun_emission.
+    fn set_sun_emission(&mut self, emission: Vec3<F>) {
+        self.sun_emission = emission;
     }
 
     /// Set the execution.
@@ -119,7 +133,63 @@ impl Renderer for BSDF {
                 // Emissive materials
                 radiance += state.mat.emission * state.mat.base_color * throughput;
 
-                // Sample Lights ...
+                // Sample sunlight if set
+                if let Some(sun_dir) = &self.sun_dir {
+                    let mut light_sample = BSDFLightSampleRec::default();
+                    let mut scatter_sample = BSDFScatterSampleRec::default();
+
+                    let scatter_pos = state.fhp + state.normal * 0.006;
+
+                    let l = BSDFLight {
+                        position: *sun_dir,
+                        emission: self.sun_emission,
+                        radius: 0.0,
+                        type_: 1.0,
+                        u: Vec3::zero(),
+                        v: Vec3::zero(),
+                        area: 0.0,
+                    };
+
+                    sample_distant_light(&l, scatter_pos, &mut light_sample, 1);
+
+                    let li = light_sample.emission;
+
+                    let mut in_sun_shadow = 1.0;
+                    let sun_ray = Ray::new(hit.hitpoint, *sun_dir).advanced(0.006);
+
+                    let mut volume = curr_volumetric_material;
+                    loop {
+                        let hit = grid.dda(&sun_ray, volume);
+
+                        if let HitType::Voxel(_) = hit.hit {
+                            if hit.volumetric.is_none() {
+                                in_sun_shadow = 0.0;
+                                break;
+                            } else {
+                                volume = hit.volumetric;
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+
+                    if in_sun_shadow > 0.0 {
+                        scatter_sample.f = disney_eval(
+                            &state,
+                            -ray.dir,
+                            state.ffnormal,
+                            light_sample.direction,
+                            &mut scatter_sample.pdf,
+                        );
+
+                        let mis_weight = 1.0;
+                        if scatter_sample.pdf > 0.0 {
+                            radiance += (mis_weight * li * scatter_sample.f / light_sample.pdf)
+                                * throughput
+                                * in_sun_shadow;
+                        }
+                    }
+                }
 
                 // Sample BSDF for color and outgoing direction
                 scatter_sample.f = disney_sample(

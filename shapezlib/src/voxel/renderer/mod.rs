@@ -36,6 +36,12 @@ pub trait Renderer: Send + Sync {
     /// Set the background color.
     fn set_background_color(&mut self, color: Vec3<F>) {}
 
+    // Set the sun_dir.
+    fn set_sun_dir(&mut self, color: Vec3<F>) {}
+
+    // Set the sun_emission.
+    fn set_sun_emission(&mut self, color: Vec3<F>) {}
+
     fn set_execution(&mut self, execution: Execution);
 
     /// Converts an sRGB Vec3 to linear space.

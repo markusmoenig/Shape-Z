@@ -303,7 +303,7 @@ impl Parser {
             self.current_line,
         )?;
 
-        let valid = ["density", "background"];
+        let valid = ["density", "background", "sun_dir", "sun_emission"];
         let id = self.previous().unwrap().lexeme.clone();
 
         if !valid.contains(&id.as_str()) {
