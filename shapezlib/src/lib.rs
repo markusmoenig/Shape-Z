@@ -1,4 +1,5 @@
 pub mod ast;
+pub mod mesh;
 pub mod node;
 pub mod shapez;
 pub mod tracer;

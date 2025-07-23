@@ -23,7 +23,7 @@ impl Camera for Iso {
     }
 
     fn name(&self) -> &str {
-        "Iso"
+        "Isometric"
     }
 
     /// Zoom the camera in or out based on vertical mouse delta

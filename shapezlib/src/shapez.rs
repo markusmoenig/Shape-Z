@@ -140,6 +140,21 @@ impl ShapeZ {
         );
     }
 
+    /// Write the grid into an obj file.
+    pub fn write_obj(&self) {
+        let mut path = self.path.clone();
+        path.set_extension("obj");
+
+        let (verts, indices, mats) =
+            // crate::mesh::mesh_voxel_grid(&self.context.program.grid.read().unwrap());
+            crate::mesh::mesh_voxel_grid_with_materials(&self.context.program.grid.read().unwrap());
+
+        // _ = crate::mesh::write_obj(path, &verts, &indices, None);
+        _ = crate::mesh::write_obj_with_mtl(path.clone(), &verts, &indices, Some(mats));
+
+        println!("OBJ written to: {:?}.", path);
+    }
+
     /// Write the current image to disc.
     pub fn write_image(&self) {
         let mut path = self.path.clone();
@@ -152,5 +167,10 @@ impl ShapeZ {
     /// Get the current time in ms.
     pub fn get_time(&self) -> u128 {
         self.tracer.get_time()
+    }
+
+    /// Get a summary of the voxel grid.
+    pub fn stats(&self) -> (String, String) {
+        self.context.program.grid.read().unwrap().stats()
     }
 }

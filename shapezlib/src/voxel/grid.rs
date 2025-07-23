@@ -202,6 +202,52 @@ impl VoxelGrid {
         self.active_bbox
     }
 
+    /// Returns a string with the amount of voxels inside the grid and the memory used.
+    pub fn stats(&self) -> (String, String) {
+        /// Formats an integer with `.` as thousands separator (e.g. 1234567 → "1.234.567")
+        fn format_number(mut n: usize) -> String {
+            let mut result = String::new();
+            let mut digits = 0;
+
+            while n > 0 {
+                if digits != 0 && digits % 3 == 0 {
+                    result.insert(0, '.');
+                }
+                result.insert(0, char::from_digit((n % 10) as u32, 10).unwrap());
+                n /= 10;
+                digits += 1;
+            }
+
+            if result.is_empty() {
+                result.push('0');
+            }
+
+            result
+        }
+
+        let mut voxel_count = 0usize;
+        let mut mem_bytes = 0usize;
+
+        for tile in self.tiles.values() {
+            for v in &tile.voxels {
+                if v.is_some() {
+                    voxel_count += 1;
+                }
+            }
+
+            // Approximate memory usage:
+            mem_bytes += std::mem::size_of_val(tile); // base tile
+            mem_bytes += tile.voxels.capacity() * std::mem::size_of::<Option<Voxel>>(); // voxel buffer
+        }
+
+        mem_bytes += self.tiles.capacity()
+            * (std::mem::size_of::<(i32, i32, i32)>() + std::mem::size_of::<Tile>());
+        mem_bytes += self.volumetric.capacity();
+
+        let mb = mem_bytes as f64 / (1024.0 * 1024.0);
+        (format_number(voxel_count), format!("{:.2}", mb))
+    }
+
     /// Recursively dda the tiles
     pub fn dda(&self, ray: &Ray, volumetric: Option<u8>) -> HitRecord {
         let mut hit = HitRecord::default();
