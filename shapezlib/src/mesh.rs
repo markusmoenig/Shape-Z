@@ -1,51 +1,33 @@
 use crate::prelude::*;
 
-// ─── mesher.rs ───────────────────────────────────────────────────────────────
 use fast_surface_nets::ndshape::{RuntimeShape, Shape};
 use fast_surface_nets::{SurfaceNetsBuffer, surface_nets};
-use vek::Vec3; // already used in your code
 
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
 
-/// One entry per triangle **in the same order as `indices`**.
-/// `materials[f]` holds the voxel‐material id (u8) for face *f*.
-/// If you don’t have per-face ids just pass `None` and you’ll still get
-/// a single default material.
 type FaceMaterials = Option<Vec<u8>>;
 
-/// Returns (positions, indices) in **world space**.
-///
-/// *`iso`* is the threshold for the isosurface; for binary voxels
-/// use `iso = 0.0` and fill the field with ±1.0.
+/// Returns (positions, indices)
 pub fn mesh_voxel_grid(grid: &VoxelGrid) -> (Vec<[f32; 3]>, Vec<u32>) {
-    //-------------------------------------------------------------------
-    // 1. Determine the dense voxel block we need to sample
-    //-------------------------------------------------------------------
-    let aabb = grid.active_bbox; // tight around non-empty tiles
-    let step = grid.voxel_size(); // world units per voxel
+    let aabb = grid.active_bbox;
+    let step = grid.voxel_size();
     let dims = (
-        ((aabb.max.x - aabb.min.x) / step).ceil() as u32 + 3, // +2 for 1-voxel pad,
-        ((aabb.max.y - aabb.min.y) / step).ceil() as u32 + 3, // +1 so max is inclusive
+        ((aabb.max.x - aabb.min.x) / step).ceil() as u32 + 3,
+        ((aabb.max.y - aabb.min.y) / step).ceil() as u32 + 3,
         ((aabb.max.z - aabb.min.z) / step).ceil() as u32 + 3,
     );
     let shape = RuntimeShape::<u32, 3>::new([dims.0, dims.1, dims.2]);
 
-    println!("{:?}", dims);
-
-    //-------------------------------------------------------------------
-    // 2. Sample the grid into a signed-distance array
-    //-------------------------------------------------------------------
-    let mut sdf = vec![1.0f32; shape.usize()]; // +1 == empty
-    let pad = 1; // one-voxel pad on all sides
+    let mut sdf = vec![1.0f32; shape.usize()];
+    let pad = 1;
     rayon::scope(|s| {
         s.spawn(|_| {
             for z in pad..dims.2 - pad {
                 for y in pad..dims.1 - pad {
                     for x in pad..dims.0 - pad {
-                        // world-space coordinate centred in the voxel:
                         let world = aabb.min
                             + Vec3::new(
                                 (x - pad) as f32 + 0.5,
@@ -62,21 +44,15 @@ pub fn mesh_voxel_grid(grid: &VoxelGrid) -> (Vec<[f32; 3]>, Vec<u32>) {
         });
     });
 
-    //-------------------------------------------------------------------
-    // 3. Run Surface-Nets over that dense block
-    //-------------------------------------------------------------------
     let mut buf = SurfaceNetsBuffer::default();
     surface_nets(
         &sdf,
         &shape,
-        [1, 1, 1], // skip padded border
+        [1, 1, 1],
         [dims.0 - 2, dims.1 - 2, dims.2 - 2],
         &mut buf,
     ); //  [oai_citation:0‡Docs.rs](https://docs.rs/fast-surface-nets/latest/fast_surface_nets/fn.surface_nets.html)
 
-    //-------------------------------------------------------------------
-    // 4. Convert the vertices back to world coordinates
-    //-------------------------------------------------------------------
     for p in &mut buf.positions {
         p[0] = p[0] * step + aabb.min.x;
         p[1] = p[1] * step + aabb.min.y;
@@ -87,11 +63,8 @@ pub fn mesh_voxel_grid(grid: &VoxelGrid) -> (Vec<[f32; 3]>, Vec<u32>) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Same idea as mesh_voxel_grid(), but we also compute `face_mats`.
-/// `iso`   – threshold for the isosurface (0.0 for binary occupancy)
 /// Returns (positions, indices, face_materials)
 pub fn mesh_voxel_grid_with_materials(grid: &VoxelGrid) -> (Vec<[f32; 3]>, Vec<u32>, Vec<u8>) {
-    // ── 1.  Dense sampling region ──────────────────────────────────────────
     let bbox = grid.active_bbox;
     let step = grid.voxel_size();
     let dims = (
@@ -101,11 +74,10 @@ pub fn mesh_voxel_grid_with_materials(grid: &VoxelGrid) -> (Vec<[f32; 3]>, Vec<u
     );
     let shape = RuntimeShape::<u32, 3>::new([dims.0, dims.1, dims.2]);
 
-    // ── 2.  Fill SDF + material arrays ─────────────────────────────────────
-    let mut sdf = vec![1.0f32; shape.usize()]; // +1 outside, -1 inside
-    let mut mat_grid = vec![0u8; shape.usize()]; // material per voxel
+    let mut sdf = vec![1.0f32; shape.usize()];
+    let mut mat_grid = vec![0u8; shape.usize()];
 
-    let pad = 1; // keep 1-voxel border
+    let pad = 1;
     for z in pad..dims.2 - pad {
         for y in pad..dims.1 - pad {
             for x in pad..dims.0 - pad {
@@ -128,7 +100,6 @@ pub fn mesh_voxel_grid_with_materials(grid: &VoxelGrid) -> (Vec<[f32; 3]>, Vec<u
         }
     }
 
-    // ── 3.  Surface-Nets ───────────────────────────────────────────────────
     let mut buf = SurfaceNetsBuffer::default();
     surface_nets(
         &sdf,
@@ -138,14 +109,12 @@ pub fn mesh_voxel_grid_with_materials(grid: &VoxelGrid) -> (Vec<[f32; 3]>, Vec<u
         &mut buf,
     );
 
-    // ── 4.  Transform verts back to world space ────────────────────────────
     for p in &mut buf.positions {
         p[0] = p[0] * step + bbox.min.x;
         p[1] = p[1] * step + bbox.min.y;
         p[2] = p[2] * step + bbox.min.z;
     }
 
-    // ── 5.  Material per face  (centroid → voxel lookup) ───────────────────
     let mut face_mats = Vec::with_capacity(buf.indices.len() / 3);
     for tri in buf.indices.chunks_exact(3) {
         let v0 = buf.positions[tri[0] as usize];
@@ -182,19 +151,19 @@ pub fn write_obj<P: AsRef<std::path::Path>>(
     let file = File::create(path)?;
     let mut w = BufWriter::new(file);
 
-    // vertices ---------------------------------------------------------------
+    // vertices
     for v in positions {
         writeln!(w, "v {} {} {}", v[0], v[1], v[2])?;
     }
 
-    // normals (optional) -----------------------------------------------------
+    // normals
     if let Some(ns) = normals {
         for n in ns {
             writeln!(w, "vn {} {} {}", n[0], n[1], n[2])?;
         }
     }
 
-    // faces  (OBJ is 1-based; “f v1 v2 v3” or “f v1//n1 …” when normals) ----
+    // faces
     for tri in indices.chunks_exact(3) {
         let v1 = tri[0] + 1;
         let v2 = tri[1] + 1;
@@ -209,40 +178,29 @@ pub fn write_obj<P: AsRef<std::path::Path>>(
     Ok(())
 }
 
-/// `base_path` is something like `"chunk"`; we’ll emit `chunk.obj` + `chunk.mtl`.
+/// Write OBJ with materials
 pub fn write_obj_with_mtl<P: AsRef<Path>>(
     base_path: P,
     positions: &[[f32; 3]],
     indices: &[u32],
     face_mats: FaceMaterials, // see above
 ) -> std::io::Result<()> {
-    //----------------------------------------------------------------------
-    // 1.  Derive filenames
-    //----------------------------------------------------------------------
     let obj_path = base_path.as_ref().with_extension("obj");
     let mtl_path = base_path.as_ref().with_extension("mtl");
     let mtl_name = mtl_path.file_name().unwrap().to_string_lossy();
 
-    //----------------------------------------------------------------------
-    // 2.  Open the OBJ
-    //----------------------------------------------------------------------
     let mut obj = BufWriter::new(File::create(&obj_path)?);
 
     // header + link to mtl
-    writeln!(obj, "# generated by fast-surface-nets")?;
+    writeln!(obj, "# generated by Shape-Z")?;
     writeln!(obj, "mtllib {}", mtl_name)?;
 
-    //----------------------------------------------------------------------
-    // 3.  Vertices
-    //----------------------------------------------------------------------
+    // vertices
     for v in positions {
         writeln!(obj, "v {} {} {}", v[0], v[1], v[2])?;
     }
 
-    //----------------------------------------------------------------------
-    // 4.  Faces, grouped by material
-    //----------------------------------------------------------------------
-    // Map voxel-material-id → vec![(i0,i1,i2), …]
+    // faces, grouped by materials
     let mut buckets: HashMap<u8, Vec<[u32; 3]>> = HashMap::new();
 
     for (t, tri) in indices.chunks_exact(3).enumerate() {
@@ -268,9 +226,7 @@ pub fn write_obj_with_mtl<P: AsRef<Path>>(
         }
     }
 
-    //----------------------------------------------------------------------
-    // 5.  Write the companion .mtl
-    //----------------------------------------------------------------------
+    // Write mtl
     let mut mtl = BufWriter::new(File::create(&mtl_path)?);
     writeln!(
         mtl,
