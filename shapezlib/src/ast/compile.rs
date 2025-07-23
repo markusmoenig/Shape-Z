@@ -439,6 +439,23 @@ impl Visitor for CompileVisitor {
         Ok(ASTValue::None)
     }
 
+    fn import(
+        &mut self,
+        module: &Option<Module>,
+        _loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError> {
+        // Execute the statements in the imported module
+        if let Some(module) = module {
+            let mut visitor = CompileVisitor::new();
+            for statement in module.stmts.clone() {
+                _ = statement.accept(&mut visitor, ctx);
+            }
+        }
+
+        Ok(ASTValue::None)
+    }
+
     fn config(
         &mut self,
         id: &String,

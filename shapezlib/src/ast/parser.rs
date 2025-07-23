@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use crate::zero_expr_float;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -92,6 +92,10 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> Result<Stmt, ParseError> {
+        if self.match_token(vec![TokenType::Import]) {
+            return self.import_statement();
+        }
+
         if self.match_token(vec![TokenType::Material]) {
             return self.material_declaration();
         }
@@ -237,6 +241,57 @@ impl Parser {
             MaterialD::new(id, params, blocks),
             self.create_loc(line),
         ))
+    }
+
+    /// Import statement
+    fn import_statement(&mut self) -> Result<Stmt, ParseError> {
+        let line = self.current_line;
+        self.consume(
+            TokenType::String,
+            "Expected path string after 'import''",
+            self.current_line,
+        )?;
+
+        let str = self.previous().unwrap().lexeme.clone().replace("\"", "");
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' after import statement",
+            line,
+        )?;
+
+        // Resolving the path
+
+        fn resolve_import(base_path: &Path, import_path: &str) -> PathBuf {
+            let base_dir = base_path.parent().unwrap_or_else(|| Path::new(""));
+            base_dir.join(import_path)
+        }
+        let path = resolve_import(&self.path, &str);
+
+        let mut module = None;
+
+        if let Ok(source) = std::fs::read_to_string(path.clone()) {
+            if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                let mut parser = Parser::new();
+                let m = parser.compile_module(stem.to_string(), source, path)?;
+
+                // Import materials from imported module
+                for (name, mat) in parser.materials {
+                    self.materials.insert(name, mat);
+                }
+
+                // Import variables
+                for (name, mat) in parser.variable_map {
+                    self.variable_map.insert(name, mat + self.variable_counter);
+                    self.variable_counter += 1;
+                }
+
+                module = Some(m);
+            } else {
+                return Err(ParseError::new("Could not read import file", 0, &path));
+            }
+        }
+
+        Ok(Stmt::Import(module, self.create_loc(line)))
     }
 
     /// Config declaration

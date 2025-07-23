@@ -1,71 +1,11 @@
-material Rock {
-    albedo {
-        mix(vec3(0.5, 0.45, 0.5), vec3(0.6, 0.6, 0.65), hash);
-    }
-    roughness {
-        0.2 + (hash - 0.5) * 0.2;
-    }
-    metallic {
-        1.0;
-    }
-    specular_tint {
-        0.2 + (hash - 0.5) * 0.2;
-    }
-    clearcoat {
-        0.3 + (hash - 0.5) * 0.2;
-    }
-    clearcoat_gloss {
-        0.8 + (hash - 0.5) * 0.15;
-    }
-}
-
-material LightTowerBody {
-
-    albedo {
-        if world.y < 1.0 {
-            0.1;
-        } else {
-            let stripe = floor(world.y / 0.5) % 2;;
-            mix(vec3(0.9, 0.1, 0.1), vec3(0.95), stripe) - (hash - 0.5) * 0.2
-                + (white_noise() - 0.5) * 0.25;
-        }
-    }
-
-    roughness {
-        hash;
-    }
-
-    metallic {
-        0.1;
-    }
-}
-
-material Water {
-    albedo {
-        // vec3(0.0, 0.1, 0.3);
-        // vec3(0.1, 0.3, 0.4);
-        vec3(0.05, 0.1, 0.15);
-    }
-
-    roughness {
-        0.0;
-    }
-
-    transmission {
-        1.0;
-    }
-
-    ior {
-        1.33;
-    }
-}
+import "materials.shpz";
 
 config density {
-    20;
+    50;
 }
 
 config background {
-    0.6;
+    0.8;
 }
 
 voxel Rock size = vec3(5, 3, 5) {

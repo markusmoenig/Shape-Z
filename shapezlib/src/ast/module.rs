@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use std::path::PathBuf;
 
+#[derive(Debug, Clone)]
 pub struct Module {
     pub name: String,
     pub source: String,

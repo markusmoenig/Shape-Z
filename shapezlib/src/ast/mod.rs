@@ -78,6 +78,7 @@ pub enum Stmt {
     Expression(Box<Expr>, Location),
     Material(MaterialD, Location),
     Config(String, Box<Stmt>, Location),
+    Import(Option<Module>, Location),
     Voxel(VoxelD, Location),
     Shape(ShapeD, Location),
     Segment(SegmentD, Location),
@@ -269,6 +270,13 @@ pub trait Visitor {
         &mut self,
         id: &String,
         block: &Box<Stmt>,
+        loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError>;
+
+    fn import(
+        &mut self,
+        id: &Option<Module>,
         loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError>;
@@ -502,6 +510,7 @@ impl Stmt {
             Stmt::Expression(expression, loc) => visitor.expression(expression, loc, ctx),
             Stmt::Material(objectd, loc) => visitor.material(objectd, loc, ctx),
             Stmt::Config(id, block, loc) => visitor.config(id, block, loc, ctx),
+            Stmt::Import(module, loc) => visitor.import(module, loc, ctx),
             Stmt::Voxel(objectd, loc) => visitor.voxel(objectd, loc, ctx),
             Stmt::Shape(objectd, loc) => visitor.shape(objectd, loc, ctx),
             Stmt::Segment(objectd, loc) => visitor.segment(objectd, loc, ctx),

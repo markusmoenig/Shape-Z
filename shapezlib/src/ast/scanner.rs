@@ -58,6 +58,7 @@ pub enum TokenType {
     Export,
     Const,
     Struct,
+
     Material,
     Voxel,
     Shape,
@@ -68,6 +69,7 @@ pub enum TokenType {
     Config,
 
     Let,
+    Import,
 
     In,
     Out,
@@ -163,6 +165,7 @@ impl Scanner {
         keywords.insert("if_clear", TokenType::IfClear);
 
         keywords.insert("let", TokenType::Let);
+        keywords.insert("import", TokenType::Import);
 
         keywords.insert("in", TokenType::In);
         keywords.insert("out", TokenType::Out);
