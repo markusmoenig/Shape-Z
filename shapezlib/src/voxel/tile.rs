@@ -126,8 +126,11 @@ impl Tile {
         !self.has_voxels
     }
 
-    pub fn dda(&self, ray: &Ray) -> Option<HitRecord> {
-        let (mut t_min, t_max) = ray.intersect_aabb(&self.bbox)?;
+    pub fn dda(&self, ray: &Ray, hit: &mut HitRecord) {
+        let (mut t_min, t_max) = match ray.intersect_aabb(&self.bbox) {
+            Some(b) => b,
+            None => return,
+        };
 
         t_min = (t_min - 0.002).max(0.0);
 
@@ -151,15 +154,15 @@ impl Tile {
                 (vi.x, vi.y, vi.z)
             };
 
-            if let Some(material) = self.get(key) {
-                return Some(HitRecord {
-                    hit: HitType::Voxel(material),
-                    hitpoint: ray.at(t),
-                    distance: t_min + t,
-                    normal: -normal,
-                    local_key: key,
-                    ..Default::default()
-                });
+            if let Some(voxel) = self.get(key) {
+                if Some(voxel.material) != hit.volumetric {
+                    hit.hit = HitType::Voxel(voxel);
+                    hit.hitpoint = ray.at(t);
+                    hit.distance = t_min + t;
+                    hit.normal = -normal;
+                    hit.local_key = key;
+                    return;
+                }
             }
 
             let plane = (Vec3::broadcast(1.0) + srd - 2.0 * (ro - i)) * rdi;
@@ -167,7 +170,5 @@ impl Tile {
             normal = equal(t, plane) * srd;
             i += normal;
         }
-
-        None
     }
 }

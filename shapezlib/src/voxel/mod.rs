@@ -63,6 +63,9 @@ pub struct HitRecord {
     pub distance: F,
     pub local_key: Coord,
     pub tile_key: Coord,
+
+    /// The current volumetric material of the dda.
+    pub volumetric: Option<u8>,
 }
 
 impl Default for HitRecord {
@@ -81,6 +84,7 @@ impl HitRecord {
             distance: 0.0,
             local_key: (0, 0, 0),
             tile_key: (0, 0, 0),
+            volumetric: None,
         }
     }
 }

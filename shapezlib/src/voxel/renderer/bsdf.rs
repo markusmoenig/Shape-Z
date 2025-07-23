@@ -63,8 +63,10 @@ impl Renderer for BSDF {
 
         let mut ray = camera.create_ray(uv, resolution, Vec2::new(rng.random(), rng.random()));
 
+        let mut curr_volumetric_material: Option<u8> = None;
+
         for depth in 0..8 {
-            let hit = grid.dda(&ray);
+            let hit = grid.dda(&ray, curr_volumetric_material);
 
             if hit.hit == HitType::Outside {
                 radiance += self.srgb_to_linear(self.background_color) * throughput;
@@ -75,14 +77,12 @@ impl Renderer for BSDF {
             }
 
             if let HitType::Voxel(voxel) = hit.hit {
+                curr_volumetric_material = hit.volumetric;
                 let mut execution = self.execution.clone();
                 execution.hash = voxel.hash as f32 / 255.0;
                 execution.world = Value::from_vec3(hit.hitpoint);
                 execution.local = execution.world;
                 execution.execute(&materials[voxel.material as usize], program);
-
-                // let material = &execution.material;
-                // let albedo = material.base_color_linear();
 
                 state.depth = depth;
                 state.mat.clone_from(&execution.material);

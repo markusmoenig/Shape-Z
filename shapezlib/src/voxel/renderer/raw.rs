@@ -51,7 +51,7 @@ impl Renderer for Raw {
 
         let ray = camera.create_ray(uv, resolution, Vec2::new(rng.random(), rng.random()));
 
-        let hit = grid.dda(&ray);
+        let hit = grid.dda(&ray, None);
         match hit.hit {
             HitType::Outside => {
                 // background

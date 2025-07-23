@@ -26,7 +26,7 @@ material LightTowerBody {
             0.1;
         } else {
             let stripe = floor(world.y / 0.5) % 2;;
-            mix(vec3(0.9, 0.1, 0.1), vec3(0.95), stripe) - (hash - 0.5) * 0.2 
+            mix(vec3(0.9, 0.1, 0.1), vec3(0.95), stripe) - (hash - 0.5) * 0.2
                 + (white_noise() - 0.5) * 0.25;
         }
     }
@@ -42,7 +42,9 @@ material LightTowerBody {
 
 material Water {
     albedo {
-        1;
+        // vec3(0.0, 0.1, 0.3);
+        // vec3(0.1, 0.3, 0.4);
+        vec3(0.05, 0.1, 0.15);
     }
 
     roughness {
@@ -79,16 +81,15 @@ voxel Rock size = vec3(5, 3, 5) {
         Rock;
     }
 
-    // let water_height = sin(local.x * 4.0 + noise_value(2, 1.0) * 3.0) * 0.1
-    //              + sin(local.z * 3.0 + noise_value(2, 1.0) * 2.0) * 0.1;
+    if_clear {
+        let water_height = sin(local.x * 4.0 + value_noise(2, 1.0) * 3.0) * 0.1
+                + sin(local.z * 3.0 + value_noise(2, 1.0) * 2.0) * 0.1;
 
-    // let water_height = 0.0;
-
-    // if local.y < water_height {
-    //     if_clear {
-    //         Water;
-    //     }
-    // }
+        //let water_height = 0.0;
+        if local.y < water_height {
+            Water;
+        }
+    }
 }
 
 voxel Tower size = vec3(2, 7, 2) {

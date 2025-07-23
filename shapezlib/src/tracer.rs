@@ -1,7 +1,6 @@
 use crate::prelude::*;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use vek::Vec2;
 
 pub struct Tracer {}
 

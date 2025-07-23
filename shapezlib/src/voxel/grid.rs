@@ -10,12 +10,8 @@ pub struct VoxelGrid {
     pub bounds: [F; 3],
     /// AABB that encloses every non-empty tile.
     pub active_bbox: Aabb<F>,
-}
-
-impl Default for VoxelGrid {
-    fn default() -> Self {
-        Self::new([10.0, 4.0, 10.0], 96)
-    }
+    /// List of volumetric materials.
+    pub volumetric: Vec<u8>,
 }
 
 impl VoxelGrid {
@@ -29,6 +25,7 @@ impl VoxelGrid {
                 let h = Vec3::from([0.0, 0.0, 0.0]) * 0.5;
                 Aabb { min: -h, max: h }
             },
+            volumetric: vec![],
         }
     }
 
@@ -62,6 +59,7 @@ impl VoxelGrid {
                 let h = Vec3::from(bounds) * 0.5;
                 Aabb { min: -h, max: h }
             },
+            volumetric: vec![],
         }
     }
 
@@ -205,7 +203,10 @@ impl VoxelGrid {
     }
 
     /// Recursively dda the tiles
-    pub fn dda(&self, ray: &Ray) -> HitRecord {
+    pub fn dda(&self, ray: &Ray, volumetric: Option<u8>) -> HitRecord {
+        let mut hit = HitRecord::default();
+        hit.volumetric = volumetric;
+
         #[inline(always)]
         fn equal(l: f32, r: Vec3<f32>) -> Vec3<f32> {
             r.map(|v| if l == v { 1.0 } else { 0.0 })
@@ -213,7 +214,7 @@ impl VoxelGrid {
 
         let (mut t_min, t_max) = match ray.intersect_aabb(&self.bbox()) {
             Some(b) => b,
-            None => return HitRecord::default(),
+            None => return hit,
         };
 
         t_min = (t_min - 0.1).max(0.0);
@@ -239,8 +240,14 @@ impl VoxelGrid {
                 // lro -= rd * 0.01;
 
                 if !tile.is_empty() {
-                    // Cast inside the tile’s dense voxel grid
-                    if let Some(mut hit) = tile.dda(&Ray::new(lro, rd)) {
+                    // DDA the tile
+                    tile.dda(&Ray::new(lro, rd), &mut hit);
+                    if let HitType::Voxel(voxel) = hit.hit {
+                        if self.volumetric.contains(&voxel.material) {
+                            hit.volumetric = Some(voxel.material);
+                        } else {
+                            hit.volumetric = None;
+                        }
                         hit.tile_key = key;
                         hit.hitpoint = ray.at(t + hit.distance / self.density_f);
                         hit.distance = t;

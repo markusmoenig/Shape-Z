@@ -1,5 +1,6 @@
 pub mod ast;
 pub mod node;
+pub mod shapez;
 pub mod tracer;
 pub mod voxel;
 
@@ -27,6 +28,7 @@ pub mod prelude {
 
     pub use indexmap::IndexMap;
 
+    pub use crate::shapez::ShapeZ;
     pub use crate::tracer::Tracer;
 
     pub use crate::node::execution::*;

@@ -399,7 +399,11 @@ impl Visitor for CompileVisitor {
                     "clearcoat" => material_ops.push(NodeOp::MaterialClearcoat),
                     "clearcoat_gloss" => material_ops.push(NodeOp::MaterialClearcoatGloss),
                     "ior" => material_ops.push(NodeOp::MaterialIOR),
-                    "transmission" => material_ops.push(NodeOp::MaterialTransmission),
+                    "transmission" => {
+                        material_ops.push(NodeOp::MaterialTransmission);
+                        let idx = ctx.materials.len();
+                        ctx.program.grid.write().unwrap().volumetric.push(idx as u8);
+                    }
                     "emission" => material_ops.push(NodeOp::MaterialEmission),
                     other => {
                         return Err(RuntimeError::new(

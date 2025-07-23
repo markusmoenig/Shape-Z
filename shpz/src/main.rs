@@ -18,32 +18,17 @@ fn cli() -> Command {
 }
 
 fn main() {
+    let iterations = 50;
+
     let matches = cli().get_matches();
 
     let file_name = matches.get_one::<String>("FILE").unwrap();
     // println!("file_name {}", file_name);
 
-    let mut path = std::path::PathBuf::from(file_name);
+    let path = std::path::PathBuf::from(file_name);
 
-    let size = Vec3::new(10, 4, 10);
-    let density = 96;
-    let iterations = 50;
-
-    let camera: Arc<RwLock<Box<dyn Camera>>> = Arc::new(RwLock::new(Box::new(Iso::new())));
-    let renderer: Arc<RwLock<Box<dyn Renderer>>> = Arc::new(RwLock::new(Box::new(BSDF::new())));
-    let mut buffer = Arc::new(Mutex::new(RenderBuffer::new(800, 800)));
-    let tracer = Tracer::new();
-
-    {
-        // let mut c = camera.write().unwrap();
-        // c.set_origin(Vec3::new(0.0, 0.0, 2.0));
-        // c.set_center(Vec3::zero());
-    }
-
-    // Parse and compile
-
-    let mut parser = Parser::new();
-    let module = match parser.compile(path.clone()) {
+    let mut shapez = ShapeZ::default();
+    let module = match shapez.compile(path.clone()) {
         Ok(module) => module,
         Err(e) => {
             eprintln!("Error compiling module: {}", e);
@@ -51,59 +36,22 @@ fn main() {
         }
     };
 
-    // Compile the AST
-
-    let mut visitor = CompileVisitor::new();
-    let mut ctx = Context::new(size, density, module.variables);
-
-    // println!("{:?}", ctx.variables);
-
-    for statement in module.stmts {
-        match statement.accept(&mut visitor, &mut ctx) {
-            Ok(_) => {}
-            Err(e) => {
-                eprintln!("{}", e);
-                return;
-            }
-        }
-    }
-
     println!("Module '{}' compiled successfully.", module.name);
 
-    // Model by executing the VM
+    // Compile the voxels
 
-    let _start: u128 = tracer.get_time();
-
-    let mut execution = Execution::new(ctx.variables.len());
-    execution.execute(&ctx.program.globals.clone(), &mut ctx.program);
-
-    let materials: Arc<RwLock<Vec<Vec<NodeOp>>>> =
-        Arc::new(RwLock::new(ctx.materials.values().cloned().collect()));
-    ctx.program.grid.write().unwrap().update_bboxes(true);
-
-    let _stop = tracer.get_time();
+    let _start: u128 = shapez.get_time();
+    shapez.execute();
+    let _stop = shapez.get_time();
     println!("Compile time: {:?} ms.", _stop - _start);
-
-    renderer.write().unwrap().set_execution(execution);
 
     // Render loop
 
-    path.set_extension("png");
-
     for i in 0..iterations {
-        // Render the output grid
-
-        tracer.render(
-            &mut buffer,
-            &ctx.program.grid,
-            &materials,
-            &renderer,
-            &camera,
-        );
+        shapez.sample();
 
         if i % 10 == 0 {
-            let b = buffer.lock().unwrap();
-            b.save_srgb(path.clone());
+            shapez.write_image();
         }
     }
 }

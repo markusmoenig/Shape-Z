@@ -66,7 +66,7 @@ impl Renderer for PBR {
         let mut ray = camera.create_ray(uv, resolution, Vec2::new(rng.random(), rng.random()));
 
         for _ in 0..4 {
-            let hit = grid.dda(&ray);
+            let hit = grid.dda(&ray, None);
 
             if hit.hit == HitType::Outside {
                 acc += self.srgb_to_linear(self.background_color) * mask;
