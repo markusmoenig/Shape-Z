@@ -41,6 +41,29 @@ material LightTowerBody {
     }
 }
 
+material Red {
+
+    albedo {
+        if world.y < 1.0 {
+            0.1;
+        } else {
+            vec3(0.9, 0.1, 0.1)
+                + (white_noise() - 0.5) * 0.5;
+        }
+    }
+
+    roughness {
+        0.0;
+    }
+
+    metallic {
+        0.1;
+    }
+
+    clearcoat {
+        1;
+    }
+}
 
 material Water {
     albedo {
@@ -104,16 +127,20 @@ material Metal {
     }
 }
 
-material Iron {
+material WhiteIron {
     albedo {
-        vec3(0.56, 0.57, 0.58);
+        vec3(0.56, 0.57, 0.58) - (white_noise() - 0.5) * 0.5;
     }
 
     roughness {
-        0.2;
+        white_noise();
     }
 
     metallic {
+        white_noise();
+    }
+
+    clearcoat {
         1.0;
     }
 }

@@ -81,17 +81,17 @@ voxel Tower size = vec3(3, 11, 3) {
                     // Top base
                     if d < 8.2 {
                         if inside >= 0.0 {
-                            White;
+                            Red;
                         }
                     } else
                     // Top metal fence
                     if d < 8.9 {
                         if inside >= 0.05 && inside < 0.1 {
                             if floor(v * 12.0) % 2 == 0 {
-                                Iron;
+                                WhiteIron;
                             } else
                             if floor(u * 24.0) % 2 == 0 {
-                                Iron;
+                                WhiteIron;
                             }
                         }
                     }
@@ -103,7 +103,7 @@ voxel Tower size = vec3(3, 11, 3) {
                 if d >= 8 && d <= 10 {
                     if inside < 0.1 {
                         if floor(u * 4.0) % 6 == 0 {
-                            White;
+                            WhiteIron;
                         } else {
                             Glass;
                         }
@@ -115,7 +115,7 @@ voxel Tower size = vec3(3, 11, 3) {
                     let top = 10.0 + h;
 
                     if d <= top {
-                        Iron;
+                        Red;
                     }
                 }
             }

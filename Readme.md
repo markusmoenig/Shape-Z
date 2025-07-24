@@ -32,15 +32,6 @@ Shape-Z supports configurable **voxel density**, allowing you to repurpose the s
 
 Shape-Z is ideal for game developers, artists, and procedural generation enthusiasts seeking a fast and expressive tool for creative modeling.
 
-## License
-
-Shape-Z is dual-licensed under the same terms as Rust:
-
-- **MIT License**  
-- **Apache License (Version 2.0)**
-
-You may choose either license to use Shape-Z according to your needs.
-
 # Example
 
 ![Bathroom](/examples/bathroom.png)
@@ -85,4 +76,14 @@ voxel Box size = vec3(5, 3, 5) {
             }
         }
     }
-    ```
+}
+```
+
+## License
+
+Shape-Z is dual-licensed under the same terms as Rust:
+
+- **MIT License**  
+- **Apache License (Version 2.0)**
+
+You may choose either license to use Shape-Z according to your needs.
