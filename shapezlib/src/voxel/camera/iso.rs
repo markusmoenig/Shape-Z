@@ -15,7 +15,7 @@ impl Camera for Iso {
         Self {
             center: Vec3::zero(),
 
-            scale: 60.0,
+            scale: 50.0,
             yaw: std::f32::consts::FRAC_PI_4,
             pitch: -0.61548, // classic iso
                              // pitch: -0.87266, // UO
@@ -42,6 +42,10 @@ impl Camera for Iso {
 
     fn rotate(&mut self, delta: Vec2<f32>) {
         self.yaw += delta.x * 0.01;
+    }
+
+    fn set_scale(&mut self, scale: F) {
+        self.scale = scale.clamp(0.1, 79.0);
     }
 
     fn create_ray(&self, uv: Vec2<f32>, screen: Vec2<f32>, random: Vec2<f32>) -> Ray {

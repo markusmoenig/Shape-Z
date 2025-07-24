@@ -5,7 +5,7 @@ pub struct Tile {
     pub voxels: Vec<Option<Voxel>>,
     pub density: usize,
     pub bbox: Aabb<F>,
-    pub has_voxels: bool,
+    pub voxel_counter: u32,
 }
 
 impl Tile {
@@ -19,37 +19,8 @@ impl Tile {
                 min: Vec3::zero(),
                 max: Vec3::zero(),
             },
-            has_voxels: false,
+            voxel_counter: 0,
         }
-    }
-
-    pub fn add_floor(&mut self) {
-        let max_index = 15.0;
-
-        let size = self.density as f32;
-
-        for x in 0..self.density {
-            for z in 0..self.density {
-                let xf = x as f32;
-                let zf = z as f32;
-
-                // Distance to nearest edge
-                let dx = xf.min(size - 1.0 - xf);
-                let dz = zf.min(size - 1.0 - zf);
-                let d = dx.min(dz);
-
-                // Normalize distance to [0.0, 1.0]
-                let max_dist = (size - 1.0) / 2.0;
-                let norm = (1.0 - d / max_dist).clamp(0.0, 1.0);
-
-                // Spread index linearly from border (0) to center (15)
-                let index = (norm * max_index).round() as u8;
-
-                self.set((x as i32, 0, z as i32), Voxel::mat(index));
-            }
-        }
-
-        self.update_bbox();
     }
 
     pub fn update_bbox(&mut self) {
@@ -57,13 +28,13 @@ impl Tile {
         let mut max = Vec3::new(i32::MIN, i32::MIN, i32::MIN);
         let d = self.density as i32;
 
-        let mut found = false;
+        self.voxel_counter = 0;
 
         for z in 0..d {
             for y in 0..d {
                 for x in 0..d {
                     if self.get((x, y, z)).is_some() {
-                        found = true;
+                        self.voxel_counter += 1;
                         min.x = min.x.min(x);
                         min.y = min.y.min(y);
                         min.z = min.z.min(z);
@@ -75,9 +46,7 @@ impl Tile {
             }
         }
 
-        self.has_voxels = found;
-
-        if found {
+        if self.voxel_counter > 0 {
             self.bbox = Aabb {
                 min: min.map(|v| v as F),
                 max: max.map(|v| v as F + 1.0),
@@ -123,7 +92,7 @@ impl Tile {
 
     #[inline]
     pub fn is_empty(&self) -> bool {
-        !self.has_voxels
+        self.voxel_counter == 0
     }
 
     pub fn dda(&self, ray: &Ray, hit: &mut HitRecord) {

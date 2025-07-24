@@ -117,6 +117,9 @@ impl Parser {
         if self.match_token(vec![TokenType::Config]) {
             return self.config_declaration();
         }
+        if self.match_token(vec![TokenType::Camera]) {
+            return self.camera_statement();
+        }
 
         self.statement()
     }
@@ -645,6 +648,51 @@ impl Parser {
 
         Ok(Stmt::Pattern(
             PatternD::new(id, params, blocks),
+            self.create_loc(line),
+        ))
+    }
+
+    fn camera_statement(&mut self) -> Result<Stmt, ParseError> {
+        let line = self.current_line;
+        self.consume(
+            TokenType::Identifier,
+            "Expected identifier after 'camera''",
+            self.current_line,
+        )?;
+        let id = self.previous().unwrap().lexeme.clone();
+
+        self.consume(
+            TokenType::LeftBrace,
+            "Expected '{' after camera header",
+            self.current_line,
+        )?;
+
+        // -- Read Body Statements
+
+        let mut blocks = FxHashMap::default();
+
+        while self.match_token(vec![TokenType::Identifier]) {
+            let id = self.previous().unwrap().lexeme.clone();
+
+            self.consume(
+                TokenType::LeftBrace,
+                "Expected '{' after camera identifier",
+                self.current_line,
+            )?;
+
+            let block = self.block()?;
+
+            blocks.insert(id, Box::new(block));
+        }
+
+        self.consume(
+            TokenType::RightBrace,
+            "Expected '}' after camera block",
+            self.current_line,
+        )?;
+
+        Ok(Stmt::Camera(
+            CameraD::new(id, blocks),
             self.create_loc(line),
         ))
     }

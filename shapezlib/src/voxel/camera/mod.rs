@@ -36,6 +36,40 @@ pub trait Camera: Send + Sync {
     /// Zoom the camera towards a target position.
     fn zoom_towards(&mut self, target: Vec3<F>, delta: f32) {}
 
+    /// Set the camera iso scale.
+    fn set_scale(&mut self, scale: F) {}
+
     /// Create a ray.
     fn create_ray(&self, uv: Vec2<F>, screen_size: Vec2<F>, offset: Vec2<F>) -> Ray;
+
+    /// Execute the camera config parameters.
+    fn apply_config(&mut self, execution: &mut Execution, context: &Context) {
+        if let Some(camerad) = &context.camera_config {
+            let mut program = context.program.clone();
+            if let Some(code) = camerad.codes.get("center").cloned() {
+                execution.execute(&code, &mut program);
+                if let Some(value) = execution.stack.pop() {
+                    self.set_center(value.as_vec3());
+                }
+            }
+            if let Some(code) = camerad.codes.get("origin").cloned() {
+                execution.execute(&code, &mut program);
+                if let Some(value) = execution.stack.pop() {
+                    self.set_origin(value.as_vec3());
+                }
+            }
+            if let Some(code) = camerad.codes.get("scale").cloned() {
+                execution.execute(&code, &mut program);
+                if let Some(value) = execution.stack.pop() {
+                    self.set_scale(value.as_float());
+                }
+            }
+            if let Some(code) = camerad.codes.get("fov").cloned() {
+                execution.execute(&code, &mut program);
+                if let Some(value) = execution.stack.pop() {
+                    self.set_fov(value.as_float());
+                }
+            }
+        }
+    }
 }

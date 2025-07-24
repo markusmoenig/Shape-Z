@@ -1,7 +1,7 @@
 use crate::prelude::*;
 
 /// The context during script and voxel compilation.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Context {
     /// The current code output target.
     pub current_target: OutputTarget,
@@ -18,6 +18,9 @@ pub struct Context {
     /// Holds the global configuration code (density, background, etc.)
     pub global_config: FxHashMap<String, Vec<NodeOp>>,
 
+    /// The optional camera config
+    pub camera_config: Option<CameraD>,
+
     /// Holds the grid and the programs NodeOps.
     pub program: Program,
 }
@@ -31,6 +34,7 @@ impl Context {
             variables,
             materials: IndexMap::default(),
             global_config: FxHashMap::default(),
+            camera_config: None,
         }
     }
 

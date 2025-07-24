@@ -45,19 +45,17 @@ fn main() {
         })
         .unwrap_or((800, 800));
 
-    println!(
-        "{} mode | Resolution: {}x{}",
-        if polygonize { "Polygonize" } else { "Render" },
-        width,
-        height
-    );
+    let mut shapez = ShapeZ::default();
 
+    // Change the internal resolution if it is != 800x 800
+    if width != 800 || height != 800 {
+        shapez.set_resolution(width as usize, height as usize);
+    }
+
+    // Compile the script at the given path.
     let file_name = matches.get_one::<String>("FILE").unwrap();
-    // println!("file_name {}", file_name);
-
     let path = std::path::PathBuf::from(file_name);
 
-    let mut shapez = ShapeZ::default();
     let module = match shapez.compile(path.clone()) {
         Ok(module) => module,
         Err(e) => {

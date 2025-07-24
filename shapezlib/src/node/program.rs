@@ -8,7 +8,7 @@ pub enum OutputTarget {
     Voxels(String),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Program {
     pub globals: Vec<NodeOp>,
     pub custom: Vec<NodeOp>,
@@ -17,6 +17,9 @@ pub struct Program {
 
     /// The output grid
     pub grid: Arc<RwLock<VoxelGrid>>,
+
+    /// The camera,
+    pub camera: Arc<RwLock<Box<dyn Camera>>>,
 }
 
 impl Program {
@@ -31,6 +34,8 @@ impl Program {
                 [size.x as F, size.y as F, size.z as F],
                 density,
             ))),
+
+            camera: Arc::new(RwLock::new(Box::new(Iso::new()))),
         }
     }
 }

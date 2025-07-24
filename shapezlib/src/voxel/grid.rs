@@ -229,11 +229,7 @@ impl VoxelGrid {
         let mut mem_bytes = 0usize;
 
         for tile in self.tiles.values() {
-            for v in &tile.voxels {
-                if v.is_some() {
-                    voxel_count += 1;
-                }
-            }
+            voxel_count += tile.voxel_counter as usize;
 
             // Approximate memory usage:
             mem_bytes += std::mem::size_of_val(tile); // base tile

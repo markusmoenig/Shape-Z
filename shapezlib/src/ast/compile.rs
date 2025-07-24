@@ -327,7 +327,7 @@ impl Visitor for CompileVisitor {
     fn pattern(
         &mut self,
         objectd: &PatternD,
-        _loc: &Location,
+        loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
         // Compile params
@@ -365,7 +365,44 @@ impl Visitor for CompileVisitor {
                 let cement = codes.get("cement".into()).cloned();
                 ctx.emit(NodeOp::PatternBricks(size, gap, rounding, brick, cement));
             }
-            _ => {}
+            other => {
+                return Err(RuntimeError::new(
+                    format!("Unknown pattern: {}", other),
+                    loc,
+                ));
+            }
+        }
+
+        Ok(ASTValue::None)
+    }
+
+    // Create a camera
+    fn camera(
+        &mut self,
+        objectd: &CameraD,
+        loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError> {
+        // Compile all blocks
+        let mut codes = FxHashMap::default();
+        for (name, stmts) in &objectd.blocks {
+            ctx.add_custom_target();
+            _ = stmts.accept(self, ctx)?;
+            if let Some(code) = ctx.take_last_custom_target() {
+                codes.insert(name.clone(), code);
+            }
+        }
+
+        let mut config = objectd.clone();
+        config.codes = codes;
+        ctx.camera_config = Some(config);
+
+        match objectd.name.as_str() {
+            "Isometric" => {}
+            "Pinhole" => ctx.program.camera = Arc::new(RwLock::new(Box::new(Pinhole::new()))),
+            other => {
+                return Err(RuntimeError::new(format!("Unknown camera: {}", other), loc));
+            }
         }
 
         Ok(ASTValue::None)

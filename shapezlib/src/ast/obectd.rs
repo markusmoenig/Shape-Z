@@ -97,6 +97,23 @@ impl PatternD {
 }
 
 #[derive(Clone, Debug)]
+pub struct CameraD {
+    pub name: String,
+    pub blocks: FxHashMap<String, Box<Stmt>>,
+    pub codes: FxHashMap<String, Vec<NodeOp>>,
+}
+
+impl CameraD {
+    pub fn new(name: String, blocks: FxHashMap<String, Box<Stmt>>) -> Self {
+        Self {
+            name,
+            blocks,
+            codes: FxHashMap::default(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct MaterialD {
     pub name: String,
     pub params: FxHashMap<String, Box<Expr>>,

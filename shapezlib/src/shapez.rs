@@ -8,12 +8,10 @@ pub struct ShapeZ {
     path: PathBuf,
     context: Context,
 
-    camera: Arc<RwLock<Box<dyn Camera>>>,
     renderer: Arc<RwLock<Box<dyn Renderer>>>,
     buffer: Arc<Mutex<RenderBuffer>>,
 
     materials: Arc<RwLock<Vec<Vec<NodeOp>>>>,
-    // execution: Execution,
     tracer: Tracer,
 }
 
@@ -29,14 +27,16 @@ impl ShapeZ {
             path: PathBuf::new(),
             context: Context::new(Vec3::zero(), DENSITY, FxHashMap::default()),
 
-            camera: Arc::new(RwLock::new(Box::new(Iso::new()))),
             renderer: Arc::new(RwLock::new(Box::new(BSDF::new()))),
             buffer: Arc::new(Mutex::new(RenderBuffer::new(800, 800))),
 
             materials: Arc::new(RwLock::new(vec![])),
-            // execution: Execution::new(0),
             tracer: Tracer::new(),
         }
+    }
+
+    pub fn set_resolution(&mut self, width: usize, height: usize) {
+        self.buffer = Arc::new(Mutex::new(RenderBuffer::new(width, height)));
     }
 
     // Parse and compile the source code into a module.
@@ -108,6 +108,13 @@ impl ShapeZ {
             }
         }
 
+        self.context
+            .program
+            .camera
+            .write()
+            .unwrap()
+            .apply_config(&mut execution, &self.context);
+
         // Execute the main program to compile all voxels.
         execution.execute(
             &self.context.program.globals.clone(),
@@ -136,7 +143,7 @@ impl ShapeZ {
             &self.context.program.grid,
             &self.materials,
             &self.renderer,
-            &self.camera,
+            &self.context.program.camera,
         );
     }
 

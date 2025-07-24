@@ -83,6 +83,7 @@ pub enum Stmt {
     Shape(ShapeD, Location),
     Segment(SegmentD, Location),
     Pattern(PatternD, Location),
+    Camera(CameraD, Location),
     Place(String, FxHashMap<String, Box<Expr>>, Location),
     VarDeclaration(String, ASTValue, Box<Expr>, Location),
     StructDeclaration(String, Vec<(String, ASTValue)>, Location),
@@ -309,6 +310,13 @@ pub trait Visitor {
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError>;
 
+    fn camera(
+        &mut self,
+        objectd: &CameraD,
+        loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError>;
+
     fn place(
         &mut self,
         id: &String,
@@ -515,6 +523,7 @@ impl Stmt {
             Stmt::Shape(objectd, loc) => visitor.shape(objectd, loc, ctx),
             Stmt::Segment(objectd, loc) => visitor.segment(objectd, loc, ctx),
             Stmt::Pattern(objectd, loc) => visitor.pattern(objectd, loc, ctx),
+            Stmt::Camera(objectd, loc) => visitor.camera(objectd, loc, ctx),
             Stmt::Place(id, params, loc) => visitor.place(id, params, loc, ctx),
             Stmt::VarDeclaration(name, static_type, initializer, loc) => {
                 visitor.var_declaration(name, static_type, initializer, loc, ctx)
