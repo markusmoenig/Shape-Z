@@ -50,14 +50,21 @@ fn run_render(
         shapez.set_resolution(width, height);
     }
 
-    let module = match shapez.compile(path.clone()) {
-        Ok(m) => m,
+    let _module = match shapez.parse(path.clone()) {
+        Ok(module) => match shapez.compile(&module) {
+            Ok(()) => {
+                println!("Module '{}' compiled successfully.", module.name);
+            }
+            Err(e) => {
+                eprintln!("Error compiling module: {e}");
+                return false;
+            }
+        },
         Err(e) => {
-            eprintln!("Error compiling module: {e}");
+            eprintln!("Error parsing module: {e}");
             return false;
         }
     };
-    println!("Module '{}' compiled successfully.", module.name);
 
     let t0 = shapez.get_time();
     shapez.execute();
@@ -86,7 +93,7 @@ fn run_render(
         }
 
         shapez.sample();
-        if i % 10 == 0 {
+        if i % 5 == 0 {
             shapez.write_image();
         }
     }

@@ -39,23 +39,26 @@ impl ShapeZ {
         self.buffer = Arc::new(Mutex::new(RenderBuffer::new(width, height)));
     }
 
-    // Parse and compile the source code into a module.
-    pub fn compile(&mut self, path: PathBuf) -> Result<Module, ParseError> {
+    // Parse the source code into a module.
+    pub fn parse(&mut self, path: PathBuf) -> Result<Module, ParseError> {
         self.path = path.clone();
 
         let mut parser = Parser::new();
         let module = parser.compile(path.clone())?;
 
-        // Compile the AST
+        Ok(module)
+    }
 
+    // Compile the source code
+    pub fn compile(&mut self, module: &Module) -> Result<(), RuntimeError> {
         let mut visitor = CompileVisitor::new();
         self.context = Context::new(Vec3::zero(), DENSITY, module.variables.clone());
 
         for statement in module.stmts.clone() {
-            _ = statement.accept(&mut visitor, &mut self.context);
+            _ = statement.accept(&mut visitor, &mut self.context)?;
         }
 
-        Ok(module)
+        Ok(())
     }
 
     /// Compile the voxels into the VoxelGrid.

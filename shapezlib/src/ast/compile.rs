@@ -52,11 +52,51 @@ impl Visitor for CompileVisitor {
             },
         );
         functions.insert(
+            "normalize".to_string(),
+            ASTFunction {
+                name: "normalize".to_string(),
+                arguments: 1,
+                op: NodeOp::Normalize,
+            },
+        );
+        functions.insert(
             "tan".to_string(),
             ASTFunction {
                 name: "tan".to_string(),
                 arguments: 1,
                 op: NodeOp::Tan,
+            },
+        );
+        functions.insert(
+            "atan".to_string(),
+            ASTFunction {
+                name: "atan".to_string(),
+                arguments: 1,
+                op: NodeOp::Atan,
+            },
+        );
+        functions.insert(
+            "atan2".to_string(),
+            ASTFunction {
+                name: "atan2".to_string(),
+                arguments: 2,
+                op: NodeOp::Atan2,
+            },
+        );
+        functions.insert(
+            "dot".to_string(),
+            ASTFunction {
+                name: "dot".to_string(),
+                arguments: 2,
+                op: NodeOp::Dot,
+            },
+        );
+        functions.insert(
+            "cross".to_string(),
+            ASTFunction {
+                name: "cross".to_string(),
+                arguments: 2,
+                op: NodeOp::Cross,
             },
         );
         functions.insert(
@@ -153,6 +193,30 @@ impl Visitor for CompileVisitor {
                 name: "clamp".to_string(),
                 arguments: 3,
                 op: NodeOp::Clamp,
+            },
+        );
+        functions.insert(
+            "sqrt".to_string(),
+            ASTFunction {
+                name: "sqrt".to_string(),
+                arguments: 1,
+                op: NodeOp::Sqrt,
+            },
+        );
+        functions.insert(
+            "log".to_string(),
+            ASTFunction {
+                name: "log".to_string(),
+                arguments: 1,
+                op: NodeOp::Log,
+            },
+        );
+        functions.insert(
+            "pow".to_string(),
+            ASTFunction {
+                name: "pow".to_string(),
+                arguments: 2,
+                op: NodeOp::Pow,
             },
         );
         functions.insert(
@@ -852,7 +916,14 @@ impl Visitor for CompileVisitor {
                         loc,
                     ));
                 }
+            } else {
+                return Err(RuntimeError::new(
+                    format!("Unknown function '{}'", name),
+                    loc,
+                ));
             }
+        } else {
+            return Err(RuntimeError::new(format!("Unknown function ''"), loc));
         }
 
         Ok(ASTValue::None)

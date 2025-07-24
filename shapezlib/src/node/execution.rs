@@ -255,15 +255,38 @@ impl Execution {
                 }
                 NodeOp::Sin => {
                     let a = self.stack.pop().unwrap();
-                    self.stack.push(Value::from_float(a.as_float().sin()));
+                    self.stack.push(a.sin());
                 }
                 NodeOp::Cos => {
                     let a = self.stack.pop().unwrap();
-                    self.stack.push(Value::from_float(a.as_float().cos()));
+                    self.stack.push(a.cos());
+                }
+                NodeOp::Normalize => {
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(a.normalize());
                 }
                 NodeOp::Tan => {
                     let a = self.stack.pop().unwrap();
-                    self.stack.push(Value::from_float(a.as_float().tan()));
+                    self.stack.push(a.tan());
+                }
+                NodeOp::Atan => {
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(a.atan());
+                }
+                NodeOp::Atan2 => {
+                    let b = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(a.atan2(b));
+                }
+                NodeOp::Dot => {
+                    let b = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(a.dot(b));
+                }
+                NodeOp::Cross => {
+                    let b = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(a.cross(b));
                 }
                 NodeOp::Floor => {
                     let a = self.stack.pop().unwrap();
@@ -320,6 +343,19 @@ impl Execution {
                     let b: Value = self.stack.pop().unwrap();
                     let a = self.stack.pop().unwrap();
                     self.stack.push(a.clamp(b, c));
+                }
+                NodeOp::Sqrt => {
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(a.sqrt());
+                }
+                NodeOp::Log => {
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(a.log());
+                }
+                NodeOp::Pow => {
+                    let a = self.stack.pop().unwrap();
+                    let b: Value = self.stack.pop().unwrap();
+                    self.stack.push(a.pow(b));
                 }
                 NodeOp::SmoothUnion => {
                     let c: Value = self.stack.pop().unwrap();

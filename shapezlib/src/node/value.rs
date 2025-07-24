@@ -181,4 +181,78 @@ impl Value {
         }
         Value(out)
     }
+
+    #[inline]
+    pub fn pow(self, exp: Self) -> Self {
+        let mut out = [0.0; 3];
+        for i in 0..3 {
+            out[i] = self.0[i].powf(exp.0[i]);
+        }
+        Value(out)
+    }
+
+    #[inline]
+    pub fn sqrt(self) -> Self {
+        Value([self.0[0].sqrt(), self.0[1].sqrt(), self.0[2].sqrt()])
+    }
+
+    #[inline]
+    pub fn log(self) -> Self {
+        Value([self.0[0].ln(), self.0[1].ln(), self.0[2].ln()])
+    }
+
+    #[inline]
+    pub fn dot(self, other: Self) -> Self {
+        let dot = self.0[0] * other.0[0] + self.0[1] * other.0[1] + self.0[2] * other.0[2];
+        Value::from_float(dot)
+    }
+
+    #[inline]
+    pub fn cross(self, other: Self) -> Self {
+        let x = self.0[1] * other.0[2] - self.0[2] * other.0[1];
+        let y = self.0[2] * other.0[0] - self.0[0] * other.0[2];
+        let z = self.0[0] * other.0[1] - self.0[1] * other.0[0];
+        Value([x, y, z])
+    }
+
+    #[inline]
+    pub fn tan(self) -> Self {
+        Value([self.0[0].tan(), self.0[1].tan(), self.0[2].tan()])
+    }
+
+    #[inline]
+    pub fn atan(self) -> Self {
+        Value([self.0[0].atan(), self.0[1].atan(), self.0[2].atan()])
+    }
+
+    #[inline]
+    pub fn atan2(self, other: Self) -> Self {
+        Value([
+            self.0[0].atan2(other.0[0]),
+            self.0[1].atan2(other.0[1]),
+            self.0[2].atan2(other.0[2]),
+        ])
+    }
+
+    #[inline]
+    pub fn normalize(self) -> Self {
+        let len = (self.0[0] * self.0[0] + self.0[1] * self.0[1] + self.0[2] * self.0[2]).sqrt();
+
+        if len != 0.0 {
+            let inv = 1.0 / len;
+            Value([self.0[0] * inv, self.0[1] * inv, self.0[2] * inv])
+        } else {
+            Self::zero()
+        }
+    }
+
+    #[inline]
+    pub fn sin(self) -> Self {
+        Value([self.0[0].sin(), self.0[1].sin(), self.0[2].sin()])
+    }
+
+    #[inline]
+    pub fn cos(self) -> Self {
+        Value([self.0[0].cos(), self.0[1].cos(), self.0[2].cos()])
+    }
 }

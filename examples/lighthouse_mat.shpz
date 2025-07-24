@@ -74,15 +74,11 @@ material Glass {
     transmission {
         1.0;
     }
-
-    // emission {
-    //     2;
-    // }
 }
 
 material White {
     albedo {
-        0.9 + (white_noise() - 0.5) * 0.25;
+        0.8 + (white_noise() - 0.5) * 0.25;
     }
 
     roughness {
@@ -91,5 +87,47 @@ material White {
 
     metallic {
         0.6;
+    }
+}
+
+material Metal {
+    albedo {
+        0.95;
+    }
+
+    roughness {
+        0.5;
+    }
+
+    metallic {
+        1.0;
+    }
+}
+
+material Iron {
+    albedo {
+        vec3(0.56, 0.57, 0.58);
+    }
+
+    roughness {
+        0.2;
+    }
+
+    metallic {
+        1.0;
+    }
+}
+
+material YellowEmissive {
+    albedo {
+        vec3(0.9, 0.9, 0.9);
+    }
+
+    roughness {
+        0.0;
+    }
+
+    emission {
+        vec3(0.9, 0.9, 0.4);
     }
 }
