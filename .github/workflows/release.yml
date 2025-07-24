@@ -47,18 +47,18 @@ jobs:
           cargo build --verbose --release
           mv target/release/shpz.exe shpz.exe
 
-      # - name: Install WiX
-      #   run: nuget install WiX -Version 3.11.2
+      - name: Install WiX
+        run: nuget install WiX -Version 3.11.2
 
-      # - name: Create MSI Installer
-      #   run: |
-      #     ./WiX.*/tools/candle.exe -arch "x64" -ext WixUIExtension -ext WixUtilExtension \
-      #       -out "./Shape-Z.wixobj" "build/windows/wix/Shape-Z.wxs"
-      #     ./WiX.*/tools/light.exe -ext WixUIExtension -ext WixUtilExtension \
-      #       -out "./Shape-Z.msi" -sice:ICE61 -sice:ICE91 \
-      #       "./Shape-Z.wixobj"
+      - name: Create MSI Installer
+        run: |
+          ./WiX.*/tools/candle.exe -arch "x64" -ext WixUIExtension -ext WixUtilExtension \
+            -out "./Shape-Z.wixobj" "build/windows/wix/Shape-Z.wxs"
+          ./WiX.*/tools/light.exe -ext WixUIExtension -ext WixUtilExtension \
+            -out "./Shape-Z.msi" -sice:ICE61 -sice:ICE91 \
+            "./Shape-Z.wixobj"
 
-      # - name: Release
-      #   uses: softprops/action-gh-release@v1
-      #   with:
-      #     files: Shape-Z.msi
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: Shape-Z.msi

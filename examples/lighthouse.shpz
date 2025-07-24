@@ -21,14 +21,11 @@ camera Isometric {
         vec3(0, 1.5, 0);
     }
     scale {
-        60;
+        63;
     }
 }
 
 voxel Rock size = vec3(5, 3, 5) {
-    // let dist = length(local + vec3(0, 4, 0)) - 2.0;
-    // dist = min(dist, length(local + vec3(1, 2, 0)) - 1.0);
-
     let d1 = length(local + vec3(0, 4, 0)) - 2.0;
     let d2 = length(local + vec3(1, 2, 0)) - 1.0;
     let dist = smooth_union(d1, d2, 0.8);
@@ -47,27 +44,50 @@ voxel Rock size = vec3(5, 3, 5) {
     }
 
     if_clear {
-        let water_height = sin(local.x * 4.0 + value_noise(2, 1.0) * 3.0) * 0.1
-                + sin(local.z * 3.0 + value_noise(2, 1.0) * 2.0) * 0.1;
+        let water_height = sin(local.x * 4.0 + value_noise(2, 1.0) * 3.0) * 0.05
+                + sin(local.z * 3.0 + value_noise(2, 1.0) * 2.0) * 0.05;
 
-        //let water_height = 0.0;
         if local.y < water_height {
             Water;
         }
     }
 }
 
-voxel Tower size = vec3(2, 7, 2) {
+voxel Tower size = vec3(3, 10, 3) {
     shape Rect {
-        segment Floor depth = 7 {
-            shape Disc {
-            if inside < 0.2 {
-                    pattern Bricks  {
-                        brick {
-                            LightTowerBody;
+        segment Floor depth = 10 {
+            shape Disc radius = 1.5 {
+                if local.y < 3 {
+                    if inside > 0.3 && inside < 0.5 {
+                        pattern Bricks  {
+                            brick {
+                                LightTowerBody;
+                            }
+                            cement {
+                            }
                         }
-                        cement {
+                    }
+                } else {
+                    if local.y < 3.2 {
+                        if inside >= 0.0 {
+
+                            Rock;
                         }
+                    }
+                    if local.y < 4 {
+                        if inside >= 0.0 && inside < 0.1 {
+
+                            White;
+                        }
+                    }
+                }
+            }
+
+            shape Disc radius = 0.8 {
+                if local.y > 3 {
+
+                    if inside < 0.1 {
+                        Glass;
                     }
                 }
             }
@@ -76,5 +96,5 @@ voxel Tower size = vec3(2, 7, 2) {
 }
 
 place Rock at = vec3(0, 0, 0);
-place Tower at = vec3(0.0, 1, 0.0);
+place Tower at = vec3(0.0, 2, 0.0);
 

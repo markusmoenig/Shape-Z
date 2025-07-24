@@ -1,8 +1,7 @@
 
 material Rock {
     albedo {
-        // mix(vec3(0.5, 0.45, 0.5), vec3(0.6, 0.6, 0.65), hash);
-        mix(vec3(0.5, 0.45, 0.5), vec3(0.6, 0.6, 0.65), hash);
+        mix(vec3(0.7, 0.45, 0.5), vec3(0.6, 0.6, 0.65), hash);
     }
     roughness {
         0.2 + (hash - 0.5) * 0.2;
@@ -45,8 +44,8 @@ material LightTowerBody {
 
 material Water {
     albedo {
-        vec3(0.1, 0.3, 0.4);
-        // vec3(0.0, 0.6, 0.5);
+        // vec3(0.1, 0.3, 0.4);
+        vec3(0.0, 0.6, 0.5);
         // vec3(0.05, 0.1, 0.15);
     }
 
@@ -60,5 +59,37 @@ material Water {
 
     ior {
         1.33;
+    }
+}
+
+material Glass {
+    albedo {
+        1;
+    }
+
+    roughness {
+        0.0;
+    }
+
+    transmission {
+        1.0;
+    }
+
+    // emission {
+    //     2;
+    // }
+}
+
+material White {
+    albedo {
+        0.9 + (white_noise() - 0.5) * 0.25;
+    }
+
+    roughness {
+        1.0;
+    }
+
+    metallic {
+        0.6;
     }
 }
