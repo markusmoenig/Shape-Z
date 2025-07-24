@@ -49,7 +49,7 @@ voxel Rock size = vec3(5, 3, 5) {
         let water_height = sin(local.x * 4.0 + value_noise(2, 1.0) * 3.0) * 0.05
                 + sin(local.z * 3.0 + value_noise(2, 1.0) * 2.0) * 0.05;
 
-        if local.y < water_height {
+        if local.y < water_height -0.5 {
             Water;
         }
     }
@@ -69,7 +69,7 @@ voxel Tower size = vec3(3, 11, 3) {
                 // Main tower body with a bricks pattern
                 if d <= 8 {
                     if inside > 0.3 && inside < 0.5 {
-                        pattern Bricks  {
+                        pattern Bricks gap = 0.025 {
                             brick {
                                 LightTowerBody;
                             }
@@ -86,7 +86,7 @@ voxel Tower size = vec3(3, 11, 3) {
                     } else
                     // Top metal fence
                     if d < 8.9 {
-                        if inside >= 0.0 && inside < 0.05 {
+                        if inside >= 0.05 && inside < 0.1 {
                             if floor(v * 12.0) % 2 == 0 {
                                 Iron;
                             } else
@@ -111,12 +111,12 @@ voxel Tower size = vec3(3, 11, 3) {
                 } else
                 if d >= 10 {
                     let r = inside / 0.8;
-                        let h = sqrt(r * r);
-                        let top = 10.0 + h;
+                    let h = sqrt(r * r);
+                    let top = 10.0 + h;
 
-                        if d <= top {
-                            Iron;
-                        }
+                    if d <= top {
+                        Iron;
+                    }
                 }
             }
         }
