@@ -53,6 +53,50 @@ impl ShapeD {
 }
 
 #[derive(Clone, Debug)]
+pub struct DistanceD {
+    pub name: String,
+    pub params: FxHashMap<String, Box<Expr>>,
+    pub block: Option<Box<Stmt>>,
+
+    pub size: Vec<NodeOp>,
+    pub body: Vec<NodeOp>,
+}
+
+impl DistanceD {
+    pub fn new(name: String, params: FxHashMap<String, Box<Expr>>, block: Box<Stmt>) -> Self {
+        Self {
+            name,
+            params,
+            block: Some(block),
+
+            size: vec![NodeOp::Push(Value::from_components(1.0, 1.0, 1.0))],
+            body: vec![],
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct VolumeD {
+    pub params: FxHashMap<String, Box<Expr>>,
+    pub block: Option<Box<Stmt>>,
+
+    pub size: Vec<NodeOp>,
+    pub body: Vec<NodeOp>,
+}
+
+impl VolumeD {
+    pub fn new(params: FxHashMap<String, Box<Expr>>, block: Box<Stmt>) -> Self {
+        Self {
+            params,
+            block: Some(block),
+
+            size: vec![NodeOp::Push(Value::from_components(1.0, 1.0, 1.0))],
+            body: vec![],
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct SegmentD {
     pub name: String,
     pub params: FxHashMap<String, Box<Expr>>,

@@ -95,7 +95,6 @@ impl Parser {
         if self.match_token(vec![TokenType::Import]) {
             return self.import_statement();
         }
-
         if self.match_token(vec![TokenType::Material]) {
             return self.material_declaration();
         }
@@ -104,6 +103,12 @@ impl Parser {
         }
         if self.match_token(vec![TokenType::Shape]) {
             return self.shape_declaration();
+        }
+        if self.match_token(vec![TokenType::Distance]) {
+            return self.distance_declaration();
+        }
+        if self.match_token(vec![TokenType::Volume]) {
+            return self.volume_declaration();
         }
         if self.match_token(vec![TokenType::Segment]) {
             return self.segment_declaration();
@@ -468,6 +473,95 @@ impl Parser {
 
         Ok(Stmt::Shape(
             ShapeD::new(id, params, Box::new(block)),
+            self.create_loc(line),
+        ))
+    }
+
+    /// Distance declaration
+    fn distance_declaration(&mut self) -> Result<Stmt, ParseError> {
+        let line = self.current_line;
+        self.consume(
+            TokenType::Identifier,
+            "Expected identifier after 'distance''",
+            self.current_line,
+        )?;
+
+        // let valid_shape_ids = vec!["Rect"];
+
+        let id = self.previous().unwrap().lexeme.clone();
+
+        // if !valid_shape_ids.contains(&id.as_str()) {
+        //     return Err(ParseError::new(
+        //         format!("Invalid shape id: {:?}", id),
+        //         line,
+        //         &self.path,
+        //     ));
+        // }
+
+        let mut params = FxHashMap::default();
+
+        while self.match_token(vec![TokenType::Identifier]) {
+            let id = self.previous().unwrap().lexeme.clone();
+
+            self.consume(
+                TokenType::Equal,
+                "Expected '=' after distance parameter",
+                self.current_line,
+            )?;
+
+            let value = self.expression()?;
+            params.insert(id, Box::new(value));
+            if self.tokens[self.current].kind == TokenType::Comma {
+                self.advance();
+            }
+        }
+
+        self.consume(
+            TokenType::LeftBrace,
+            "Expected '{' after distance header",
+            self.current_line,
+        )?;
+
+        let block = self.block()?;
+
+        Ok(Stmt::Distance(
+            DistanceD::new(id, params, Box::new(block)),
+            self.create_loc(line),
+        ))
+    }
+
+    /// Distance declaration
+    fn volume_declaration(&mut self) -> Result<Stmt, ParseError> {
+        let line = self.current_line;
+
+        let mut params = FxHashMap::default();
+
+        while self.match_token(vec![TokenType::Identifier]) {
+            let id = self.previous().unwrap().lexeme.clone();
+
+            self.consume(
+                TokenType::Equal,
+                "Expected '=' after volume parameter",
+                self.current_line,
+            )?;
+
+            let value = self.expression()?;
+            params.insert(id, Box::new(value));
+            if self.tokens[self.current].kind == TokenType::Comma {
+                self.advance();
+            }
+        }
+
+        self.consume(
+            TokenType::LeftBrace,
+            "Expected '{' after volume header",
+            self.current_line,
+        )?;
+
+        let block = self.block()?;
+
+        Ok(Stmt::Volume(
+            VolumeD::new(params, Box::new(block)),
             self.create_loc(line),
         ))
     }

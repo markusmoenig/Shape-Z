@@ -82,6 +82,8 @@ pub enum Stmt {
     Voxel(VoxelD, Location),
     Shape(ShapeD, Location),
     Segment(SegmentD, Location),
+    Distance(DistanceD, Location),
+    Volume(VolumeD, Location),
     Pattern(PatternD, Location),
     Camera(CameraD, Location),
     Place(String, FxHashMap<String, Box<Expr>>, Location),
@@ -299,6 +301,20 @@ pub trait Visitor {
     fn segment(
         &mut self,
         objectd: &SegmentD,
+        loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError>;
+
+    fn distance(
+        &mut self,
+        objectd: &DistanceD,
+        loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError>;
+
+    fn volume(
+        &mut self,
+        objectd: &VolumeD,
         loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError>;
@@ -522,6 +538,8 @@ impl Stmt {
             Stmt::Voxel(objectd, loc) => visitor.voxel(objectd, loc, ctx),
             Stmt::Shape(objectd, loc) => visitor.shape(objectd, loc, ctx),
             Stmt::Segment(objectd, loc) => visitor.segment(objectd, loc, ctx),
+            Stmt::Distance(objectd, loc) => visitor.distance(objectd, loc, ctx),
+            Stmt::Volume(objectd, loc) => visitor.volume(objectd, loc, ctx),
             Stmt::Pattern(objectd, loc) => visitor.pattern(objectd, loc, ctx),
             Stmt::Camera(objectd, loc) => visitor.camera(objectd, loc, ctx),
             Stmt::Place(id, params, loc) => visitor.place(id, params, loc, ctx),

@@ -69,6 +69,8 @@ pub enum TokenType {
     IfClear,
     Config,
     Camera,
+    Distance,
+    Volume,
 
     Let,
     Import,
@@ -165,6 +167,8 @@ impl Scanner {
         keywords.insert("config", TokenType::Config);
         keywords.insert("camera", TokenType::Camera);
         keywords.insert("medium", TokenType::Medium);
+        keywords.insert("distance", TokenType::Distance);
+        keywords.insert("volume", TokenType::Volume);
 
         keywords.insert("if_clear", TokenType::IfClear);
 

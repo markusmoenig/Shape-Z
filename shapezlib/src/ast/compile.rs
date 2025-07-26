@@ -354,11 +354,90 @@ impl Visitor for CompileVisitor {
         Ok(ASTValue::None)
     }
 
+    // Create a Distance
+    fn distance(
+        &mut self,
+        objectd: &DistanceD,
+        loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError> {
+        // Compile params
+        let mut cp = FxHashMap::default();
+        for (name, ast) in &objectd.params {
+            ctx.add_custom_target();
+            _ = ast.accept(self, ctx)?;
+            if let Some(code) = ctx.take_last_custom_target() {
+                cp.insert(name.clone(), code);
+            }
+        }
+
+        // Body
+        ctx.add_custom_target();
+        if let Some(block) = &objectd.block {
+            _ = block.accept(self, ctx)?;
+        }
+        if let Some(code) = ctx.take_last_custom_target() {
+            let at = cp.get("at").cloned().unwrap_or(vec![]);
+            let size = cp.get("size").cloned().unwrap_or(vec![]);
+            let radius = cp.get("radius").cloned().unwrap_or(vec![]);
+            match objectd.name.as_str() {
+                "Sphere" => {
+                    ctx.emit(NodeOp::DistanceSphere(at, radius, code));
+                }
+                "Box" => {
+                    ctx.emit(NodeOp::DistanceBox(
+                        at,
+                        size,
+                        cp.get("rounding").cloned().unwrap_or(vec![]),
+                        code,
+                    ));
+                }
+                other => {
+                    return Err(RuntimeError::new(
+                        format!("Unknown distance: {}", other),
+                        loc,
+                    ));
+                }
+            }
+        }
+
+        Ok(ASTValue::None)
+    }
+
+    // Create a Volume
+    fn volume(
+        &mut self,
+        objectd: &VolumeD,
+        _loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError> {
+        // Compile params
+        // let mut cp = FxHashMap::default();
+        // for (name, ast) in &objectd.params {
+        //     ctx.add_custom_target();
+        //     _ = ast.accept(self, ctx)?;
+        //     if let Some(code) = ctx.take_last_custom_target() {
+        //         cp.insert(name.clone(), code);
+        //     }
+        // }
+
+        // Body
+        ctx.add_custom_target();
+        if let Some(block) = &objectd.block {
+            _ = block.accept(self, ctx)?;
+        }
+        if let Some(code) = ctx.take_last_custom_target() {
+            ctx.emit(NodeOp::Volume(code));
+        }
+
+        Ok(ASTValue::None)
+    }
+
     // Create a segment
     fn segment(
         &mut self,
         objectd: &SegmentD,
-        _loc: &Location,
+        loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
         // Compile params
@@ -388,7 +467,21 @@ impl Visitor for CompileVisitor {
                 "Floor" => {
                     ctx.emit(NodeOp::SegmentFloor(depth, code));
                 }
-                _ => {}
+                "Right" => {
+                    ctx.emit(NodeOp::SegmentRight(depth, code));
+                }
+                "Front" => {
+                    ctx.emit(NodeOp::SegmentFront(depth, code));
+                }
+                "Ceiling" => {
+                    ctx.emit(NodeOp::SegmentCeiling(depth, code));
+                }
+                other => {
+                    return Err(RuntimeError::new(
+                        format!("Unknown segment: {}", other),
+                        loc,
+                    ));
+                }
             }
         }
 

@@ -857,6 +857,73 @@ impl Execution {
                         }
                     }
                 }
+                // Distance Functions
+                NodeOp::DistanceSphere(at, radius, code) => {
+                    let at = if at.is_empty() {
+                        self.point_at(Vec3::zero())
+                    } else {
+                        self.execute(at, program);
+                        let p = self.stack.pop().unwrap().as_vec3();
+                        self.point_at(p)
+                    };
+
+                    let radius = if radius.is_empty() {
+                        0.5
+                    } else {
+                        self.execute(radius, program);
+                        self.stack.pop().unwrap().as_float()
+                    };
+
+                    self.push_state();
+
+                    let sdf = (self.local.as_vec3() - at).magnitude() - radius;
+                    self.sdf = Value::from_float(sdf);
+                    self.inside = Value::from_float(-sdf);
+                    self.execute(code, program);
+
+                    self.pop_state();
+                }
+                NodeOp::DistanceBox(at, radius, rounding, code) => {
+                    let at = if at.is_empty() {
+                        self.point_at(Vec3::zero())
+                    } else {
+                        self.execute(at, program);
+                        let p = self.stack.pop().unwrap().as_vec3();
+                        self.point_at(p)
+                    };
+
+                    let size = if radius.is_empty() {
+                        Vec3::broadcast(0.5)
+                    } else {
+                        self.execute(radius, program);
+                        self.stack.pop().unwrap().as_vec3()
+                    };
+
+                    let rounding = if rounding.is_empty() {
+                        0.0
+                    } else {
+                        self.execute(rounding, program);
+                        self.stack.pop().unwrap().as_float()
+                    };
+
+                    self.push_state();
+
+                    let sdf = self.sdf_box3d(
+                        self.local.as_vec3() - at,
+                        self.size_by_plane(size),
+                        rounding,
+                    );
+                    self.sdf = Value::from_float(sdf);
+                    self.inside = Value::from_float(-sdf);
+                    self.execute(code, program);
+
+                    self.pop_state();
+                }
+                NodeOp::Volume(code) => {
+                    if self.inside.as_float() >= 0.0 {
+                        self.execute(code, program);
+                    }
+                }
                 // Material Write Instructions
                 NodeOp::MaterialAlbedo => {
                     if let Some(top) = self.stack.last() {
@@ -1074,6 +1141,23 @@ impl Execution {
     fn sdf_box(&self, p: Vec2<f32>, b: Vec2<f32>, r: f32) -> f32 {
         let d = p.map(|v| v.abs()) - b + Vec2::broadcast(r);
         d.x.max(d.y).min(0.0) + (d.map(|v| v.max(0.0))).magnitude() - r
+    }
+
+    /// SDF to a 3D box
+    #[inline]
+    fn sdf_box3d(&self, p: Vec3<f32>, b: Vec3<f32>, r: f32) -> f32 {
+        let d = p.map(|v| v.abs()) - b + Vec3::broadcast(r);
+        d.x.max(d.y).max(d.z).min(0.0) + d.map(|v| v.max(0.0)).magnitude() - r
+    }
+
+    /// Reshuffles the size components based on the current plane.
+    fn size_by_plane(&self, size: Vec3<f32>) -> Vec3<f32> {
+        match self.plane {
+            Plane::XY => Vec3::new(size.x, size.y, size.z),
+            Plane::XZ => Vec3::new(size.x, size.z, size.y),
+            Plane::YZ => Vec3::new(size.y, size.z, size.x),
+            Plane::ZY => Vec3::new(size.z, size.y, size.x),
+        }
     }
 
     /// Hash21
