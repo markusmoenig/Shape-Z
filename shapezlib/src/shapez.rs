@@ -49,6 +49,16 @@ impl ShapeZ {
         Ok(module)
     }
 
+    // Parse the source code into a module.
+    pub fn parse_str(&mut self, str: String) -> Result<Module, ParseError> {
+        self.path = PathBuf::from("string_based.shpz");
+
+        let mut parser = Parser::new();
+        let module = parser.compile_module("main".into(), str, self.path.clone())?;
+
+        Ok(module)
+    }
+
     // Compile the source code
     pub fn compile(&mut self, module: &Module) -> Result<(), RuntimeError> {
         let mut visitor = CompileVisitor::new();
@@ -165,13 +175,19 @@ impl ShapeZ {
         println!("OBJ written to: {:?}.", path);
     }
 
-    /// Write the current image to disc.
+    /// Write the image to disc.
     pub fn write_image(&self) {
         let mut path = self.path.clone();
         path.set_extension("png");
 
         let b = self.buffer.lock().unwrap();
         b.save_srgb(path.clone());
+    }
+
+    /// Write the image to an u array.
+    pub fn write_image_to_array(&self) -> Vec<u8> {
+        let b = self.buffer.lock().unwrap();
+        b.as_rgb_bytes()
     }
 
     /// Get the current time in ms.

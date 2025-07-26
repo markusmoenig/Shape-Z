@@ -1,4 +1,6 @@
 use crate::prelude::*;
+use image::{DynamicImage, ImageFormat};
+use std::io::Cursor;
 
 /// A color buffer holding an array of float pixels.
 #[derive(PartialEq, Debug, Clone)]
@@ -218,5 +220,41 @@ impl RenderBuffer {
         }
 
         image.save(path).unwrap();
+    }
+
+    // Save to an u8 array.
+    pub fn as_rgb_bytes(&self) -> Vec<u8> {
+        let gamma = 1.0 / 2.2;
+        let mut img = image::ImageBuffer::new(self.width as u32, self.height as u32);
+
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let i = y * self.width * 4 + x * 4;
+
+                let r = self.pixels[i].max(0.0).powf(gamma);
+                let g = self.pixels[i + 1].max(0.0).powf(gamma);
+                let b = self.pixels[i + 2].max(0.0).powf(gamma);
+
+                img.put_pixel(
+                    x as u32,
+                    y as u32,
+                    image::Rgb([
+                        (r * 255.0).min(255.0) as u8,
+                        (g * 255.0).min(255.0) as u8,
+                        (b * 255.0).min(255.0) as u8,
+                    ]),
+                );
+            }
+        }
+
+        let dyn_img = DynamicImage::ImageRgb8(img);
+        let mut buf = Vec::new();
+        let mut cursor = Cursor::new(&mut buf);
+
+        dyn_img
+            .write_to(&mut cursor, ImageFormat::Png)
+            .expect("failed to write PNG");
+
+        buf
     }
 }

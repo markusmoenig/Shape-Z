@@ -10,11 +10,28 @@ repository = "https://github.com/markusmoenig/Shape-Z.git"
 homepage = "https://shape-z.com"
 
 [dependencies]
+image = { version = "0.25", features = ["png"] }
+indexmap = "2.10.0"
 rayon = "1"
 vek = { version = "0.17.1", default-features = true }
 rand = "0.9"
-num_cpus = "1.16.0"
 rustc-hash = "1.1.0"
-image = "0.25.1"
-indexmap = "2.10.0"
 fast-surface-nets = "0.2.1"
+getrandom = { version = "0.3.3", features = ["wasm_js"] }
+wasm-bindgen = "0.2"
+
+# [lib]
+# crate-type = ["cdylib"]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+console_error_panic_hook = "0.1.7"
+web-sys = { version = "0.3", features = ["Window", "Performance", "console"] }
+
+[target.wasm32-unknown-unknown]
+rustflags = ["--cfg", "getrandom_backend=\"wasm_js\""]
+
+#
+# RUSTFLAGS='--cfg getrandom_backend="wasm_js"' cargo build --target wasm32-unknown-unknown --release
+
+# wasm-bindgen ../target/wasm32-unknown-unknown/release/shapezlib.wasm --out-dir pkg --target web

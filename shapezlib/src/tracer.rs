@@ -1,6 +1,6 @@
 use crate::prelude::*;
+use rayon::prelude::*;
 use std::sync::{Arc, Mutex};
-use std::thread;
 
 pub struct Tracer {}
 
@@ -25,92 +25,44 @@ impl Tracer {
 
         let tiles = self.create_tiles(width, height, tile_size.0, tile_size.1);
         let screen_size = Vec2::new(width as F, height as F);
-        let tiles_mutex = Arc::new(Mutex::new(tiles));
 
-        let num_cpus = num_cpus::get();
-        let _start = self.get_time();
+        let grid_guard = grid.read().unwrap();
+        let material_guard = materials.read().unwrap();
+        let renderer_guard = renderer.read().unwrap();
+        let camera_guard = camera.read().unwrap();
 
-        let grid_arc = Arc::clone(grid);
-        let materials_arc = Arc::clone(materials);
-        let renderer_arc = Arc::clone(renderer);
+        tiles.par_iter().for_each(|tile| {
+            let mut tile_buffer = RenderBuffer::new(tile.width, tile.height);
 
-        // Create threads
-        let mut handles = vec![];
-        for _ in 0..num_cpus {
-            let grid = Arc::clone(&grid_arc);
-            let materials = Arc::clone(&materials_arc);
-            let renderer = Arc::clone(&renderer_arc);
-            let camera = Arc::clone(camera);
+            for h in 0..tile.height {
+                for w in 0..tile.width {
+                    let x = tile.x + w;
+                    let y = tile.y + h;
 
-            let tiles_mutex = Arc::clone(&tiles_mutex);
-            let buffer_mutex = Arc::clone(buffer);
-
-            let handle = thread::spawn(move || {
-                let mut tile_buffer = RenderBuffer::new(tile_size.0, tile_size.1);
-                loop {
-                    // Lock mutex to access tiles
-                    let mut tiles = tiles_mutex.lock().unwrap();
-
-                    // Check if there are remaining tiles
-                    if let Some(tile) = tiles.pop() {
-                        // Release mutex before processing tile
-                        drop(tiles);
-
-                        let grid_guard = grid.read().unwrap();
-                        let grid_ref: &VoxelGrid = &grid_guard;
-                        let material_guard = materials.read().unwrap();
-                        let camera_guard = camera.read().unwrap();
-                        let camera_ref = &camera_guard;
-
-                        // Process tile
-                        for h in 0..tile.height {
-                            for w in 0..tile.width {
-                                let x = tile.x + w;
-                                let y = tile.y + h;
-
-                                if x >= width || y >= height {
-                                    continue;
-                                }
-
-                                let uv = Vec2::new(
-                                    x as F / screen_size.x,
-                                    1.0 - (y as F / screen_size.y),
-                                );
-
-                                let p = renderer.read().unwrap().render(
-                                    uv,
-                                    screen_size,
-                                    grid_ref,
-                                    &material_guard,
-                                    camera_ref,
-                                );
-                                tile_buffer.set(w, h, p.into_array());
-                                // tile_buffer.set(w, h, [uv.x, uv.y, 0.0, 1.0]);
-                            }
-                        }
-                        // Accumulate the tile buffer to the main buffer
-                        buffer_mutex
-                            .lock()
-                            .unwrap()
-                            .accum_from(tile.x, tile.y, &tile_buffer);
-                    } else {
-                        // No remaining tiles, exit loop
-                        break;
+                    if x >= width || y >= height {
+                        continue;
                     }
-                }
-            });
-            handles.push(handle);
-        }
 
-        // Wait for all threads to finish
-        for handle in handles {
-            handle.join().unwrap();
-        }
+                    let uv = Vec2::new(x as F / screen_size.x, 1.0 - (y as F / screen_size.y));
+
+                    let color = renderer_guard.render(
+                        uv,
+                        screen_size,
+                        &grid_guard,
+                        &material_guard,
+                        &camera_guard,
+                    );
+                    tile_buffer.set(w, h, color.into_array());
+                }
+            }
+
+            buffer
+                .lock()
+                .unwrap()
+                .accum_from(tile.x, tile.y, &tile_buffer);
+        });
 
         buffer.lock().unwrap().accum += 1;
-
-        // let _stop = self.get_time();
-        // println!("Shader execution time: {:?} ms.", _stop - _start);
     }
 
     /// Get the current time

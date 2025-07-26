@@ -5,6 +5,9 @@ pub mod shapez;
 pub mod tracer;
 pub mod voxel;
 
+#[cfg(target_arch = "wasm32")]
+pub mod wasm_api;
+
 pub type F = f32;
 pub const F_PI: F = std::f32::consts::PI;
 pub const F_TAU: F = std::f32::consts::TAU;

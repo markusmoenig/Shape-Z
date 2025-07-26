@@ -8,15 +8,18 @@
 
 ## Core Features
 
-At its core, Shape-Z offers a minimal yet powerful syntax to define:
+At its core, **Shape-Z** offers a minimal yet expressive syntax to define:
 
-- **Shapes** like `Rect`, `Disc` that describe distance-based extrusion.
-- Recursive **segments** (e.g., `Floor`, `Left`) that subdivide space and define the UV/extrusion domain for patterns and structured modeling.
-- **Patterns** such as `Bricks`, `Modulo`, which automatically adapt to the current subdomain.
-- Fully programmable **Disney BSDF materials** that can interact with patterns and noise.
-- **Procedural logic** using conditionals, noise functions, and math in a GLSL-like syntax.
+- **Shapes** like `Rect` and `Disc` that define both the foundational volume within the voxel grid **and the coordinate system** (e.g., cartesian for `Rect`, polar for `Disc`), enabling context-aware modeling and pattern placement.
+- Recursive **segments** (e.g., `Floor`, `Left`) that subdivide space and define the UV/extrusion domain for patterns and hierarchical modeling.
+- **Patterns** such as `Bricks` and `Modulo` that automatically adapt to the current subspace and UV layout.
+- **Distance fields** to 3D shapes like `Sphere` and `Box`, enabling precise volumetric modeling within segment-local coordinates.
+- Fully programmable **Disney BSDF materials** that interact with noise, patterns, and lighting.
+- **Procedural logic**, including conditionals, mathematical operations, and noise functions, written in a **GLSL**-like style.
+- Configurable **model density**, allowing output from pixel-art fidelity to dense, smooth geometry.
+- Support for direct **rendering** or **export to .OBJ** for integration into 3D pipelines.
 
-You write code that **describes how space is filled**, using recursive composition, conditional branching, and procedural evaluation. This enables the creation of anything from detailed architecture and terrain to stylized props and abstract geometry—all in a compact text format.
+You write code that **precisely defines how space is filled**, using recursive structure, branching logic, and procedural evaluation. This gives you full control to build efficient, high-resolution geometry with minimal, expressive input.
 
 ## Performance & Flexibility
 
