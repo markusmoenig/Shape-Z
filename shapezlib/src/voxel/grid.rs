@@ -282,17 +282,20 @@ impl VoxelGrid {
                 // lro -= rd * 0.01;
 
                 if !tile.is_empty() {
+                    hit.distance = t;
                     // DDA the tile
                     tile.dda(&Ray::new(lro, rd), &mut hit);
                     if let HitType::Voxel(voxel) = hit.hit {
+                        let dist = t + hit.distance / self.density_f;
+                        hit.distance = dist;
+
                         if self.volumetric.contains(&voxel.material) {
                             hit.volumetric = Some(voxel.material);
                         } else {
                             hit.volumetric = None;
                         }
                         hit.tile_key = key;
-                        hit.hitpoint = ray.at(t + hit.distance / self.density_f);
-                        hit.distance = t;
+                        hit.hitpoint = ray.at(dist);
                         return hit;
                     }
                 };
@@ -304,9 +307,7 @@ impl VoxelGrid {
             i += normal;
         }
 
-        HitRecord {
-            hit: HitType::BBox((t_min, t_max)),
-            ..Default::default()
-        }
+        hit.hit = HitType::BBox((t_min, t_max));
+        hit
     }
 }

@@ -60,6 +60,7 @@ pub enum TokenType {
     Struct,
 
     Material,
+    Medium,
     Voxel,
     Shape,
     Segment,
@@ -163,6 +164,7 @@ impl Scanner {
         keywords.insert("place", TokenType::Place);
         keywords.insert("config", TokenType::Config);
         keywords.insert("camera", TokenType::Camera);
+        keywords.insert("medium", TokenType::Medium);
 
         keywords.insert("if_clear", TokenType::IfClear);
 

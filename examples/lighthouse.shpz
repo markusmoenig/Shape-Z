@@ -50,7 +50,7 @@ voxel Rock size = vec3(5, 3, 5) {
                 + sin(local.z * 3.0 + value_noise(2, 1.0) * 2.0) * 0.05;
 
         if local.y < water_height -0.5 {
-            Water;
+            WaterMedium;
         }
     }
 }

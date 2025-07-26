@@ -132,6 +132,10 @@ impl Tile {
                     hit.local_key = key;
                     return;
                 }
+            } else {
+                if hit.volumetric.is_some() {
+                    hit.volumetric_exit = hit.distance + (t_min + t) / self.density as f32;
+                }
             }
 
             let plane = (Vec3::broadcast(1.0) + srd - 2.0 * (ro - i)) * rdi;

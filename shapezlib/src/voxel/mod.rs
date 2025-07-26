@@ -60,7 +60,11 @@ pub struct HitRecord {
     pub face: Face,
     pub hit: HitType,
 
+    /// Distance from camera to the hitpoint
     pub distance: F,
+    /// Distance when we did exit the volumetric media
+    pub volumetric_exit: F,
+
     pub local_key: Coord,
     pub tile_key: Coord,
 
@@ -82,6 +86,7 @@ impl HitRecord {
             face: Face::NX,
             hit: HitType::Outside,
             distance: 0.0,
+            volumetric_exit: 0.0,
             local_key: (0, 0, 0),
             tile_key: (0, 0, 0),
             volumetric: None,

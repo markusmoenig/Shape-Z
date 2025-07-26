@@ -432,6 +432,11 @@ impl Execution {
                     self.stack
                         .push(Value::from_components(-a.x(), -a.y(), -a.z()));
                 }
+                NodeOp::PointAt => {
+                    let a = self.stack.pop().unwrap();
+                    self.stack
+                        .push(Value::from_vec3(self.point_at(a.as_vec3())));
+                }
                 // Shapes
                 NodeOp::ShapeRect(at, size, body) => {
                     self.push_state();
@@ -461,7 +466,6 @@ impl Execution {
                     anchor.x = anchor.x.clamp(0.0, 1.0);
                     anchor.y = anchor.y.clamp(0.0, 1.0);
 
-                    // --- compute rect min per plane -------------------------------------------
                     match self.plane {
                         Plane::XY => {
                             let plane_min = Vec2::new(self.bbox.min.x, self.bbox.min.y);
@@ -919,6 +923,31 @@ impl Execution {
                         self.material.emission = top.as_vec3();
                     }
                 }
+                NodeOp::MediumAbsorb => {
+                    self.material.medium.role = MediumRole::Absorb;
+                }
+                NodeOp::MediumScatter => {
+                    self.material.medium.role = MediumRole::Scatter;
+                }
+                NodeOp::MediumEmissive => {
+                    self.material.medium.role = MediumRole::Emissive;
+                }
+                NodeOp::MediumDensity => {
+                    if let Some(top) = self.stack.last() {
+                        self.material.medium.density = top.as_float();
+                    }
+                }
+                NodeOp::MediumAnisotropy => {
+                    if let Some(top) = self.stack.last() {
+                        self.material.medium.anisotropy = top.as_float();
+                    }
+                }
+                NodeOp::MediumColor => {
+                    if let Some(top) = self.stack.last() {
+                        self.material.medium.color = top.as_vec3();
+                        self.material.base_color = top.as_vec3();
+                    }
+                }
             }
         }
     }
@@ -1059,6 +1088,35 @@ impl Execution {
         let h = (0.5 + 0.5 * (b - a) / k).clamp(0.0, 1.0);
         let m = b * (1.0 - h) + a * h;
         m - k * h * (1.0 - h)
+    }
+
+    /// Define a point relative to the current segment and shape
+    fn point_at(&self, uvw: Vec3<f32>) -> Vec3<f32> {
+        let size = self.bbox.size();
+        let offset = self.bbox.min;
+
+        match self.plane {
+            Plane::XY => Vec3::new(
+                offset.x + uvw.x * size.w,
+                offset.y + uvw.y * size.h,
+                offset.z + uvw.z * size.d,
+            ),
+            Plane::XZ => Vec3::new(
+                offset.x + uvw.x * size.w,
+                offset.y + uvw.z * size.h,
+                offset.z + uvw.y * size.d,
+            ),
+            Plane::YZ => Vec3::new(
+                offset.x + uvw.z * size.w,
+                offset.y + uvw.x * size.h,
+                offset.z + uvw.y * size.d,
+            ),
+            Plane::ZY => Vec3::new(
+                offset.x + uvw.z * size.w,
+                offset.y + uvw.y * size.h,
+                offset.z + uvw.x * size.d,
+            ),
+        }
     }
 
     #[inline]

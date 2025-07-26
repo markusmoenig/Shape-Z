@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::prelude::*;
 
 /// The context during script and voxel compilation.
@@ -23,6 +25,9 @@ pub struct Context {
 
     /// Holds the grid and the programs NodeOps.
     pub program: Program,
+
+    /// All imported paths, collected so that we can watch them.
+    pub imported_paths: Vec<PathBuf>,
 }
 
 impl Context {
@@ -35,6 +40,7 @@ impl Context {
             materials: IndexMap::default(),
             global_config: FxHashMap::default(),
             camera_config: None,
+            imported_paths: vec![],
         }
     }
 

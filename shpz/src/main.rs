@@ -1,6 +1,7 @@
 use clap::{Command, arg};
 use notify::{Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use shapezlib::prelude::*;
+use std::collections::HashSet;
 use std::{
     path::PathBuf,
     sync::{
@@ -44,7 +45,7 @@ fn run_render(
     iterations: usize,
     running: &AtomicBool,
     rx: &Receiver<notify::Result<notify::Event>>,
-) -> bool {
+) -> (bool, Vec<PathBuf>) {
     let mut shapez = ShapeZ::default();
     if width != 800 || height != 800 {
         shapez.set_resolution(width, height);
@@ -57,14 +58,19 @@ fn run_render(
             }
             Err(e) => {
                 eprintln!("Error compiling module: {e}");
-                return false;
+                return (false, vec![path.clone()]);
             }
         },
         Err(e) => {
             eprintln!("Error parsing module: {e}");
-            return false;
+            return (false, vec![path.clone()]);
         }
     };
+
+    // Collect files to watch: main + imports
+    let mut watched = Vec::new();
+    watched.push(path.clone());
+    watched.extend(shapez.imported_paths().iter().cloned());
 
     let t0 = shapez.get_time();
     shapez.execute();
@@ -77,7 +83,7 @@ fn run_render(
 
     if polygonize {
         shapez.write_obj();
-        return false;
+        return (false, watched);
     }
 
     for i in 0..iterations {
@@ -88,8 +94,8 @@ fn run_render(
         }
 
         if !running.load(Ordering::SeqCst) {
-            println!("Interrupted by file change.");
-            return true; // interrupted
+            println!("File changed. Recompiling ...");
+            return (true, watched);
         }
 
         shapez.sample();
@@ -98,7 +104,7 @@ fn run_render(
         }
     }
 
-    false
+    (false, watched)
 }
 
 /// Watcher
@@ -121,12 +127,29 @@ fn watch_and_render(
         .watch(&path, RecursiveMode::NonRecursive)
         .expect("Failed to watch file");
 
+    // track currently watched files
+    let mut currently_watched: HashSet<PathBuf> = HashSet::from([path.clone()]);
+
     loop {
         // Ensure no stale events remain
         while rx.try_recv().is_ok() {}
 
         let running = Arc::new(AtomicBool::new(true));
-        let interrupted = run_render(&path, polygonize, width, height, iterations, &running, &rx);
+        let (interrupted, watched_files) =
+            run_render(&path, polygonize, width, height, iterations, &running, &rx);
+
+        // Reconfigure watcher set (unwatch removed, watch new)
+        let desired: HashSet<PathBuf> = watched_files.into_iter().collect();
+
+        // Unwatch removed
+        for p in currently_watched.difference(&desired) {
+            let _ = watcher.unwatch(p);
+        }
+        // Watch new
+        for p in desired.difference(&currently_watched) {
+            let _ = watcher.watch(p, RecursiveMode::NonRecursive);
+        }
+        currently_watched = desired;
 
         if interrupted {
             // a change happened during the render – restart immediately
@@ -167,7 +190,7 @@ fn main() {
     } else {
         let running = AtomicBool::new(true);
         let (_tx, dummy_rx) = channel(); // unused without --watch
-        run_render(
+        let _ = run_render(
             &path, polygonize, width, height, iterations, &running, &dummy_rx,
         );
     }

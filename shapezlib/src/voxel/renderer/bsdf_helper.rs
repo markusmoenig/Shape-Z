@@ -29,10 +29,18 @@ pub fn refract(i: Vec3<f32>, n: Vec3<f32>, eta: f32) -> Vec3<f32> {
     }
 }
 
+#[derive(PartialEq, Debug, Clone)]
+pub enum MediumRole {
+    None,
+    Absorb,
+    Scatter,
+    Emissive,
+}
+
 // ---
 #[derive(PartialEq, Debug, Clone)]
 pub struct BSDFMedium {
-    pub type_: i32,
+    pub role: MediumRole,
     pub density: f32,
     pub color: Vec3<f32>,
     pub anisotropy: f32,
@@ -47,7 +55,7 @@ impl Default for BSDFMedium {
 impl BSDFMedium {
     pub fn new() -> Self {
         Self {
-            type_: 0,
+            role: MediumRole::None,
             density: 0.0,
             color: Vec3::zero(),
             anisotropy: 0.0,

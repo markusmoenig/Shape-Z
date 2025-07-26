@@ -85,6 +85,19 @@ material Water {
     }
 }
 
+material WaterMedium {
+    medium Absorb {
+        color {
+            // vec3(0.1, 0.3, 0.4);
+            vec3(0.0, 0.6, 0.5);
+            // vec3(0.05, 0.1, 0.15);
+        }
+        density {
+            0.5;
+        }
+    }
+}
+
 material Glass {
     albedo {
         1;

@@ -58,6 +58,7 @@ impl IdVerifier {
             "white_noise",
             "value_noise",
             "smooth_union",
+            "point_at",
         ];
 
         for func in inbuilt_functions {

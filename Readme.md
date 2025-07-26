@@ -2,7 +2,7 @@
 
 ![Image](/examples/lighthouse.png)
 
-**Shape-Z** is a recursive, voxel-based modeling language inspired by **GLSL** and shader-like workflows. It is designed for the procedural generation of 3D worlds using simple, expressive code. Unlike traditional modeling tools, Shape-Z treats models as programmable entities—built from logical operations, shapes, and materials—executed on a virtual voxel grid.
+**Shape-Z** is a recursive, voxel-based programming language inspired by **GLSL** and shader-like workflows. It is designed for the procedural generation of 3D worlds using simple, expressive code. Unlike traditional modeling tools, Shape-Z treats models as programmable entities—built from logical operations, shapes, and materials—executed on a virtual voxel grid.
 
 > ⚠️ *Shape-Z is in the early phase of development and its syntax and features may change.*
 
@@ -32,7 +32,7 @@ Shape-Z supports configurable **voxel density**, allowing you to repurpose the s
 
 Shape-Z is ideal for game developers, artists, and procedural generation enthusiasts seeking a fast and expressive tool for creative modeling.
 
-# Example
+## Example
 
 ![Bathroom](/examples/bathroom.png)
 

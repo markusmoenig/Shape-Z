@@ -1,5 +1,4 @@
 use crate::prelude::*;
-
 use rand::Rng;
 
 pub struct BSDF {
@@ -71,9 +70,10 @@ impl Renderer for BSDF {
         let mut scatter_sample = BSDFScatterSampleRec::default();
 
         // For medium tracking
-        let mut _in_medium = false;
-        let mut _medium_sampled = false;
+        let mut in_medium = false;
         let mut _surface_scatter = false;
+
+        let mut volumetric_entrance = 0.0;
 
         let mut ray = camera.create_ray(uv, resolution, Vec2::new(rng.random(), rng.random()));
 
@@ -82,12 +82,28 @@ impl Renderer for BSDF {
         for depth in 0..8 {
             let hit = grid.dda(&ray, curr_volumetric_material);
 
-            if hit.hit == HitType::Outside {
-                radiance += self.srgb_to_linear(self.background_color) * throughput;
-                break;
-            } else if matches!(hit.hit, HitType::BBox(_)) {
-                radiance += self.srgb_to_linear(self.background_color) * throughput;
-                break;
+            match hit.hit {
+                HitType::Outside => {
+                    radiance += self.srgb_to_linear(self.background_color) * throughput;
+                    break;
+                }
+                HitType::BBox((_, _)) => {
+                    if in_medium && state.medium.role == MediumRole::Absorb {
+                        let absorb = (-(Vec3::one() - state.medium.color)
+                            * (hit.volumetric_exit - volumetric_entrance)
+                            * state.medium.density)
+                            .map(|c| c.exp());
+                        throughput *= absorb;
+                    } else if state.medium.role == MediumRole::Emissive {
+                        radiance += state.medium.color
+                            * (hit.volumetric_exit - volumetric_entrance)
+                            * state.medium.density
+                            * throughput;
+                    }
+                    radiance += self.srgb_to_linear(self.background_color) * throughput;
+                    break;
+                }
+                _ => {}
             }
 
             if let HitType::Voxel(voxel) = hit.hit {
@@ -100,6 +116,7 @@ impl Renderer for BSDF {
 
                 state.depth = depth;
                 state.mat.clone_from(&execution.material);
+
                 state.mat.base_color = execution.material.base_color_linear();
 
                 state.mat.roughness = state.mat.roughness.max(0.001);
@@ -191,22 +208,49 @@ impl Renderer for BSDF {
                     }
                 }
 
-                // Sample BSDF for color and outgoing direction
-                scatter_sample.f = disney_sample(
-                    &state,
-                    -ray.dir,
-                    state.ffnormal,
-                    &mut scatter_sample.l,
-                    &mut scatter_sample.pdf,
-                    &mut rng,
-                );
-                if scatter_sample.pdf > 0.0 {
-                    throughput *= scatter_sample.f / scatter_sample.pdf;
-                } else {
-                    break;
+                if in_medium {
+                    if state.medium.role == MediumRole::Absorb {
+                        // println!("{} {}", hit.distance, volumetric_entrance);
+                        let absorb = (-(Vec3::one() - state.medium.color)
+                            * (hit.distance - volumetric_entrance)
+                            * state.medium.density)
+                            .map(|c| c.exp());
+
+                        // println!("{} {}", state.mat.base_color, hit.last_hit_distance);
+                        throughput *= absorb;
+                    } else if state.medium.role == MediumRole::Emissive {
+                        radiance += state.medium.color
+                            * (hit.distance - volumetric_entrance)
+                            * state.medium.density
+                            * throughput;
+                    }
                 }
 
-                ray = Ray::new(state.fhp, scatter_sample.l).advanced(0.006);
+                if state.mat.medium.role != MediumRole::None {
+                    state.medium = state.mat.medium.clone();
+                    volumetric_entrance = hit.distance;
+                    in_medium = true;
+                } else {
+                    in_medium = false;
+                }
+
+                if !in_medium {
+                    // Sample BSDF for color and outgoing direction
+                    scatter_sample.f = disney_sample(
+                        &state,
+                        -ray.dir,
+                        state.ffnormal,
+                        &mut scatter_sample.l,
+                        &mut scatter_sample.pdf,
+                        &mut rng,
+                    );
+                    if scatter_sample.pdf > 0.0 {
+                        throughput *= scatter_sample.f / scatter_sample.pdf;
+                    } else {
+                        break;
+                    }
+                    ray = Ray::new(state.fhp, scatter_sample.l).advanced(0.006);
+                }
             }
         }
 

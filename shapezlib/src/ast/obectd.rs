@@ -114,10 +114,28 @@ impl CameraD {
 }
 
 #[derive(Clone, Debug)]
+pub struct MediumD {
+    pub name: String,
+    pub blocks: FxHashMap<String, Box<Stmt>>,
+    pub code: Vec<NodeOp>,
+}
+
+impl MediumD {
+    pub fn new(name: String, blocks: FxHashMap<String, Box<Stmt>>) -> Self {
+        Self {
+            name,
+            blocks,
+            code: vec![],
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct MaterialD {
     pub name: String,
     pub params: FxHashMap<String, Box<Expr>>,
     pub blocks: FxHashMap<String, Box<Stmt>>,
+    pub mediumd: Option<MediumD>,
 
     pub body: Vec<NodeOp>,
 }
@@ -127,12 +145,14 @@ impl MaterialD {
         name: String,
         params: FxHashMap<String, Box<Expr>>,
         blocks: FxHashMap<String, Box<Stmt>>,
+        mediumd: Option<MediumD>,
     ) -> Self {
         Self {
             name,
             params,
             blocks,
             body: vec![],
+            mediumd,
         }
     }
 }

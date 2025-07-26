@@ -217,13 +217,19 @@ impl Parser {
         // -- Read Body Statements
 
         let mut blocks = FxHashMap::default();
+        let mut mediumd = None;
 
-        while self.match_token(vec![TokenType::Identifier]) {
+        while self.match_token(vec![TokenType::Identifier, TokenType::Medium]) {
             let id = self.previous().unwrap().lexeme.clone();
+
+            if self.previous().unwrap().kind == TokenType::Medium {
+                mediumd = Some(self.medium_declaration()?);
+                continue;
+            }
 
             self.consume(
                 TokenType::LeftBrace,
-                "Expected '{' after pattern identifier",
+                "Expected '{' after material identifier",
                 self.current_line,
             )?;
 
@@ -234,16 +240,59 @@ impl Parser {
 
         self.consume(
             TokenType::RightBrace,
-            "Expected '}' after pattern block",
+            "Expected '}' after material block",
             self.current_line,
         )?;
 
         self.materials.insert(id.clone(), BSDFMaterial::default());
 
         Ok(Stmt::Material(
-            MaterialD::new(id, params, blocks),
+            MaterialD::new(id, params, blocks, mediumd),
             self.create_loc(line),
         ))
+    }
+
+    /// Medium declaration
+    fn medium_declaration(&mut self) -> Result<MediumD, ParseError> {
+        self.consume(
+            TokenType::Identifier,
+            "Expected identifier after 'medium''",
+            self.current_line,
+        )?;
+
+        let id = self.previous().unwrap().lexeme.clone();
+
+        self.consume(
+            TokenType::LeftBrace,
+            "Expected '{' after medium header",
+            self.current_line,
+        )?;
+
+        // -- Read Body Statements
+
+        let mut blocks = FxHashMap::default();
+
+        while self.match_token(vec![TokenType::Identifier]) {
+            let id = self.previous().unwrap().lexeme.clone();
+
+            self.consume(
+                TokenType::LeftBrace,
+                "Expected '{' after medium identifier",
+                self.current_line,
+            )?;
+
+            let block = self.block()?;
+
+            blocks.insert(id, Box::new(block));
+        }
+
+        self.consume(
+            TokenType::RightBrace,
+            "Expected '}' after medium block",
+            self.current_line,
+        )?;
+
+        Ok(MediumD::new(id, blocks))
     }
 
     /// Import statement

@@ -183,4 +183,9 @@ impl ShapeZ {
     pub fn stats(&self) -> (String, String) {
         self.context.program.grid.read().unwrap().stats()
     }
+
+    /// Imported paths
+    pub fn imported_paths(&self) -> Vec<PathBuf> {
+        self.context.imported_paths.clone()
+    }
 }

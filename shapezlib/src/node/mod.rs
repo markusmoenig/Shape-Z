@@ -65,6 +65,7 @@ pub enum NodeOp {
     SmoothUnion,
     WhiteNoise,
     ValueNoise,
+    PointAt,
     Eq,
     Ne,
     Lt,
@@ -104,4 +105,10 @@ pub enum NodeOp {
     MaterialIOR,
     MaterialTransmission,
     MaterialEmission,
+    MediumAbsorb,
+    MediumScatter,
+    MediumEmissive,
+    MediumDensity,
+    MediumAnisotropy,
+    MediumColor,
 }

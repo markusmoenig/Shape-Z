@@ -227,6 +227,14 @@ impl Visitor for CompileVisitor {
                 op: NodeOp::SmoothUnion,
             },
         );
+        functions.insert(
+            "point_at".to_string(),
+            ASTFunction {
+                name: "point_at".to_string(),
+                arguments: 1,
+                op: NodeOp::PointAt,
+            },
+        );
 
         Self {
             environment: Environment::default(),
@@ -516,6 +524,41 @@ impl Visitor for CompileVisitor {
             }
         }
 
+        if let Some(mediumd) = &objectd.mediumd {
+            let idx = ctx.materials.len();
+            ctx.program.grid.write().unwrap().volumetric.push(idx as u8);
+
+            match mediumd.name.as_str() {
+                "Absorb" => material_ops.push(NodeOp::MediumAbsorb),
+                "Scatter" => material_ops.push(NodeOp::MediumScatter),
+                "Emissive" => material_ops.push(NodeOp::MediumEmissive),
+                other => {
+                    return Err(RuntimeError::new(format!("Unknown medium: {}", other), loc));
+                }
+            }
+
+            // Compile all blocks
+            for (name, stmts) in &mediumd.blocks {
+                ctx.add_custom_target();
+                _ = stmts.accept(self, ctx)?;
+                if let Some(codes) = ctx.take_last_custom_target() {
+                    material_ops.extend(codes);
+
+                    match name.as_str() {
+                        "density" => material_ops.push(NodeOp::MediumDensity),
+                        "color" => material_ops.push(NodeOp::MediumColor),
+                        "anisotropy" => material_ops.push(NodeOp::MediumAnisotropy),
+                        other => {
+                            return Err(RuntimeError::new(
+                                format!("Unknown medium property: {}", other),
+                                loc,
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+
         ctx.materials.insert(objectd.name.clone(), material_ops);
 
         Ok(ASTValue::None)
@@ -548,6 +591,7 @@ impl Visitor for CompileVisitor {
     ) -> Result<ASTValue, RuntimeError> {
         // Execute the statements in the imported module
         if let Some(module) = module {
+            ctx.imported_paths.push(module.path.clone());
             let mut visitor = CompileVisitor::new();
             for statement in module.stmts.clone() {
                 _ = statement.accept(&mut visitor, ctx);
