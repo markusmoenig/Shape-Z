@@ -7,6 +7,7 @@ const DENSITY: usize = 40;
 pub struct ShapeZ {
     path: PathBuf,
     context: Context,
+    defaults: Option<Module>,
 
     renderer: Arc<RwLock<Box<dyn Renderer>>>,
     buffer: Arc<Mutex<RenderBuffer>>,
@@ -26,6 +27,7 @@ impl ShapeZ {
         Self {
             path: PathBuf::new(),
             context: Context::new(Vec3::zero(), DENSITY, FxHashMap::default()),
+            defaults: None,
 
             renderer: Arc::new(RwLock::new(Box::new(BSDF::new()))),
             buffer: Arc::new(Mutex::new(RenderBuffer::new(800, 800))),
@@ -42,8 +44,17 @@ impl ShapeZ {
     // Parse the source code into a module.
     pub fn parse(&mut self, path: PathBuf) -> Result<Module, ParseError> {
         self.path = path.clone();
-
         let mut parser = Parser::new();
+
+        // Add default materials
+        match parser.defaults() {
+            Ok(module) => {
+                self.defaults = Some(module);
+            }
+            Err(err) => {
+                println!("{}", err.to_string());
+            }
+        }
         let module = parser.compile(path.clone())?;
 
         Ok(module)
@@ -52,8 +63,18 @@ impl ShapeZ {
     // Parse the source code into a module.
     pub fn parse_str(&mut self, str: String) -> Result<Module, ParseError> {
         self.path = PathBuf::from("string_based.shpz");
+        let mut parser: Parser = Parser::new();
 
-        let mut parser = Parser::new();
+        // Add default materials
+        match parser.defaults() {
+            Ok(module) => {
+                self.defaults = Some(module);
+            }
+            Err(err) => {
+                println!("{}", err.to_string());
+            }
+        }
+
         let module = parser.compile_module("main".into(), str, self.path.clone())?;
 
         Ok(module)
@@ -61,8 +82,15 @@ impl ShapeZ {
 
     // Compile the source code
     pub fn compile(&mut self, module: &Module) -> Result<(), RuntimeError> {
-        let mut visitor = CompileVisitor::new();
+        let mut visitor: CompileVisitor = CompileVisitor::new();
         self.context = Context::new(Vec3::zero(), DENSITY, module.variables.clone());
+
+        // Add default materials
+        if let Some(defs) = &self.defaults {
+            for statement in defs.stmts.clone() {
+                _ = statement.accept(&mut visitor, &mut self.context)?;
+            }
+        }
 
         for statement in module.stmts.clone() {
             _ = statement.accept(&mut visitor, &mut self.context)?;
@@ -74,6 +102,29 @@ impl ShapeZ {
     /// Compile the voxels into the VoxelGrid.
     pub fn execute(&mut self) {
         let mut execution = Execution::new(self.context.variables.len());
+
+        // Add the default materials to the context
+
+        // if let Some(bytes) = crate::Embedded::get("default_materials.shpz") {
+        //     if let Ok(source) = std::str::from_utf8(bytes.data.as_ref()) {
+        //         let mut parser = Parser::new();
+        //         match parser.compile_module(
+        //             "default_materials".into(),
+        //             source.to_string(),
+        //             PathBuf::from("defauls.shpz"),
+        //         ) {
+        //             Ok(module) => {
+        //                 let mut visitor: CompileVisitor = CompileVisitor::new();
+        //                 for statement in module.stmts.clone() {
+        //                     _ = statement.accept(&mut visitor, &mut self.context);
+        //                 }
+        //             }
+        //             Err(err) => {
+        //                 println!("{}", err.to_string());
+        //             }
+        //         }
+        //     }
+        // }
 
         // Execute relevant global configs before voxel compilation
 

@@ -1,0 +1,34 @@
+// White: neutral glossy dielectric
+material White {
+    albedo    { vec3(0.90, 0.90, 0.90); }
+    roughness { 0.10 + (white_noise() * 0.02); }
+    metallic  { 0.0; }
+}
+
+// // Very dark matte
+material Black {
+    albedo    { 0.06; }
+    roughness { 1.0; }
+}
+
+// Metal: brushed, not mirror
+material Metal {
+    albedo    { 0.92; }
+    roughness { 0.30 + (white_noise() * 0.05); }
+    metallic  { 1.0; }
+}
+
+// Glass: clear dielectric
+material Glass {
+    albedo       { 1.0; }
+    roughness    { 0.02; }
+    transmission { 1.0; }
+    ior          { 1.5; } 
+}
+
+// Emissive: neutral white light
+material Emissive {
+    albedo    { 1.0; }
+    roughness { 0.0; }
+    emission  { 3.0; } 
+}

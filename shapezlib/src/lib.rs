@@ -8,6 +8,13 @@ pub mod voxel;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_api;
 
+use rust_embed::RustEmbed;
+#[derive(RustEmbed)]
+#[folder = "embedded/"]
+#[exclude = "*.txt"]
+#[exclude = "*.DS_Store"]
+pub struct Embedded;
+
 pub type F = f32;
 pub const F_PI: F = std::f32::consts::PI;
 pub const F_TAU: F = std::f32::consts::TAU;
@@ -20,7 +27,6 @@ pub const F_MAX: F = f32::MAX;
 
 pub type Color = [F; 4];
 
-#[allow(ambiguous_glob_reexports)]
 pub mod prelude {
 
     pub use crate::{Color, F};
@@ -38,7 +44,7 @@ pub mod prelude {
     pub use crate::node::execution::*;
     pub use crate::node::program::*;
     pub use crate::node::value::Value;
-    pub use crate::node::*;
+    pub use crate::node::{NodeOp, Plane};
 
     pub use crate::ast::compile::CompileVisitor;
     pub use crate::ast::context::Context;
@@ -52,19 +58,19 @@ pub mod prelude {
     pub use crate::ast::value::*;
     pub use crate::ast::*;
 
-    pub use crate::voxel::camera::Camera;
     pub use crate::voxel::camera::iso::Iso;
     pub use crate::voxel::camera::orbit::Orbit;
     pub use crate::voxel::camera::pinhole::Pinhole;
+    pub use crate::voxel::camera::Camera;
     pub use crate::voxel::grid::VoxelGrid;
     pub use crate::voxel::ray::Ray;
     pub use crate::voxel::rect::VoxelRect;
     pub use crate::voxel::renderbuffer::RenderBuffer;
-    pub use crate::voxel::renderer::Renderer;
     pub use crate::voxel::renderer::bsdf::BSDF;
     pub use crate::voxel::renderer::bsdf_helper::*;
     pub use crate::voxel::renderer::pbr::PBR;
     pub use crate::voxel::renderer::raw::Raw;
+    pub use crate::voxel::renderer::Renderer;
     pub use crate::voxel::tile::Tile;
     pub use crate::voxel::{Coord, Face, HitRecord, HitType, Voxel};
 }

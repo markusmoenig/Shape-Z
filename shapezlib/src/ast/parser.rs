@@ -12,7 +12,7 @@ pub struct Parser {
     variable_counter: u32,
     variable_map: FxHashMap<String, u32>,
 
-    materials: IndexMap<String, BSDFMaterial>,
+    pub materials: IndexMap<String, BSDFMaterial>,
 }
 
 impl Default for Parser {
@@ -48,6 +48,29 @@ impl Parser {
         } else {
             Err(ParseError::new("Could not read file", 0, &path))
         }
+    }
+
+    /// Parse the default material module.
+    pub fn defaults(&mut self) -> Result<Module, ParseError> {
+        if let Some(bytes) = crate::Embedded::get("default_materials.shpz") {
+            if let Ok(source) = std::str::from_utf8(bytes.data.as_ref()) {
+                let mut parser: Parser = Parser::new();
+                match parser.compile_module(
+                    "default_materials".into(),
+                    source.to_string(),
+                    PathBuf::from("defauls.shpz"),
+                ) {
+                    Ok(module) => {
+                        self.materials.extend(parser.materials);
+                        return Ok(module);
+                    }
+                    Err(err) => {
+                        return Err(err);
+                    }
+                }
+            }
+        }
+        return Err(ParseError::new("Could not read defaults", 0, &self.path));
     }
 
     /// Compile a module with the given name, source code, and path.

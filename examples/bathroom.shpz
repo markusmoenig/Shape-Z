@@ -114,7 +114,7 @@ material Wood {
 }
 
 config density {
-    80;
+    40;
 }
 
 config background {

@@ -518,16 +518,16 @@ impl Visitor for CompileVisitor {
         match objectd.name.as_str() {
             "Modulo" => {
                 let size = cp.get("size").cloned().unwrap_or(vec![]);
-                let even = codes.get("even".into()).cloned();
-                let odd = codes.get("odd".into()).cloned();
+                let even = codes.get("even").cloned();
+                let odd = codes.get("odd").cloned();
                 ctx.emit(NodeOp::PatternModulo(size, even, odd));
             }
             "Bricks" => {
                 let size = cp.get("size").cloned().unwrap_or(vec![]);
                 let gap = cp.get("gap").cloned().unwrap_or(vec![]);
                 let rounding = cp.get("rounding").cloned().unwrap_or(vec![]);
-                let brick = codes.get("brick".into()).cloned();
-                let cement = codes.get("cement".into()).cloned();
+                let brick = codes.get("brick").cloned();
+                let cement = codes.get("cement").cloned();
                 ctx.emit(NodeOp::PatternBricks(size, gap, rounding, brick, cement));
             }
             other => {
