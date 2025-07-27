@@ -187,7 +187,7 @@ impl ShapeZ {
     /// Write the image to an u array.
     pub fn write_image_to_array(&self) -> Vec<u8> {
         let b = self.buffer.lock().unwrap();
-        b.as_rgb_bytes()
+        b.to_u8_vec_gamma()
     }
 
     /// Get the current time in ms.

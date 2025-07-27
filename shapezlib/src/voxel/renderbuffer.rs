@@ -147,6 +147,22 @@ impl RenderBuffer {
         out
     }
 
+    /// Return raw **RGBA8** bytes suitable for JS `ImageData` (sRGB gamma corrected).
+    /// Length is `width * height * 4`.
+    #[inline]
+    pub fn as_rgba_bytes(&self) -> Vec<u8> {
+        // This is exactly what the canvas expects; reuse our gamma path.
+        self.to_u8_vec_gamma()
+    }
+
+    /// Fill the provided buffer with raw **RGBA8** bytes (sRGB gamma corrected).
+    /// `out` must be length `width * height * 4`.
+    #[inline]
+    pub fn write_rgba_to_buffer(&self, out: &mut [u8]) {
+        debug_assert_eq!(out.len(), self.width * self.height * 4);
+        self.to_u8_vec_gamma_buffer(out);
+    }
+
     /// Save the buffer to a file as PNG
     pub fn save(&self, path: std::path::PathBuf) {
         let mut image = image::ImageBuffer::new(self.width as u32, self.height as u32);
@@ -222,8 +238,8 @@ impl RenderBuffer {
         image.save(path).unwrap();
     }
 
-    // Save to an u8 array.
-    pub fn as_rgb_bytes(&self) -> Vec<u8> {
+    // Save to an png in memory
+    pub fn as_png_bytes(&self) -> Vec<u8> {
         let gamma = 1.0 / 2.2;
         let mut img = image::ImageBuffer::new(self.width as u32, self.height as u32);
 
