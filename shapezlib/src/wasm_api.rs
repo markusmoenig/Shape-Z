@@ -1,7 +1,78 @@
 use crate::prelude::*;
+use js_sys::Promise;
 use wasm_bindgen::prelude::*;
+
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::JsCast;
+#[cfg(target_arch = "wasm32")]
 use web_sys::console;
 
+// Safe startup for both main thread and rayon workers
+#[wasm_bindgen(start)]
+pub fn wasm_start() {
+    console_error_panic_hook::set_once();
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        if web_sys::window().is_none() {
+            return;
+        }
+    }
+}
+
+#[wasm_bindgen]
+pub fn main_init() {
+    console_error_panic_hook::set_once();
+}
+
+// Quick environment probe for debugging from JS
+#[wasm_bindgen]
+pub fn is_worker() -> bool {
+    #[cfg(target_arch = "wasm32")]
+    {
+        web_sys::window().is_none()
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        false
+    }
+}
+
+// Expose current number of rayon threads for diagnostics
+#[wasm_bindgen]
+pub fn rayon_thread_count() -> usize {
+    rayon::current_num_threads()
+}
+
+#[wasm_bindgen]
+pub fn init_threads(n: usize) -> Promise {
+    console_error_panic_hook::set_once();
+    wasm_bindgen_rayon::init_thread_pool(n)
+}
+
+#[allow(dead_code)]
+#[cfg(target_arch = "wasm32")]
+fn now_ms() -> f64 {
+    let g = js_sys::global();
+    if let Ok(perf) = js_sys::Reflect::get(&g, &JsValue::from_str("performance")) {
+        if let Some(p) = perf.dyn_ref::<web_sys::Performance>() {
+            return p.now();
+        }
+    }
+    js_sys::Date::now()
+}
+
+#[allow(dead_code)]
+#[cfg(not(target_arch = "wasm32"))]
+fn now_ms() -> f64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as f64
+}
+
+// One-shot compile check
 #[wasm_bindgen]
 pub struct CompileInfo {
     ok: bool,
@@ -31,7 +102,7 @@ pub fn compile_check(code: &str, width: u32, height: u32) -> CompileInfo {
         Ok(module) => match shapez.compile(&module) {
             Ok(()) => CompileInfo {
                 ok: true,
-                message: "OK".into(),
+                message: "Compiled successfully".into(),
             },
             Err(e) => CompileInfo {
                 ok: false,
@@ -45,15 +116,15 @@ pub fn compile_check(code: &str, width: u32, height: u32) -> CompileInfo {
     }
 }
 
-// ---------- Sample-based progressive renderer ----------
+// Progressive renderer: execute once, then accumulate path-trace samples
 #[wasm_bindgen]
 pub struct Renderer {
     width: u32,
     height: u32,
-    accum: Vec<f32>,     // len = w*h*3, linear RGB sum
-    sample_count: u32,   // accumulated SPP
-    target_samples: u32, // desired SPP
-    shapez: ShapeZ,      // your engine instance
+    sample_count: u32,
+    target_samples: u32,
+    executed: bool,
+    shapez: ShapeZ,
 }
 
 #[wasm_bindgen]
@@ -72,21 +143,24 @@ impl Renderer {
             .compile(&module)
             .map_err(|e| JsValue::from_str(&format!("Compile error: {e}")))?;
 
-        // IMPORTANT: build the evaluated scene/voxel/grid before sampling
-        let _t0 = shapez.get_time();
-        shapez.execute();
-        let _ = shapez.stats();
-        let _t1 = shapez.get_time();
-
-        let len = (width as usize) * (height as usize) * 3;
         Ok(Self {
             width,
             height,
-            accum: vec![0.0; len],
             sample_count: 0,
             target_samples: 64,
+            executed: false,
             shapez,
         })
+    }
+
+    /// Prepare heavy scene evaluation once (runs ShapeZ::execute).
+    pub fn prepare(&mut self) -> bool {
+        if !self.executed {
+            self.shapez.execute();
+            let _ = self.shapez.stats();
+            self.executed = true;
+        }
+        true
     }
 
     pub fn set_target_samples(&mut self, target: u32) {
@@ -111,8 +185,11 @@ impl Renderer {
         self.height
     }
 
-    /// Preferred stepping API: add N path-trace samples (SPP)
+    /// Add N path-trace samples (SPP). Returns true if target reached.
     pub fn step_samples(&mut self, n: u32) -> bool {
+        if !self.executed {
+            self.prepare();
+        }
         let n = n.max(1);
         for _ in 0..n {
             self.shapez.sample();
@@ -124,23 +201,24 @@ impl Renderer {
         self.sample_count >= self.target_samples
     }
 
-    /// Fallback name (the playground calls this if `step_samples` is absent)
     pub fn step(&mut self, n: u32) -> bool {
         self.step_samples(n)
     }
 
-    /// Returns a displayable RGBA8 buffer (tonemapped + gamma)
+    /// Returns a displayable RGBA8 buffer (tonemapped + gamma) with len=w*h*4
     pub fn frame_rgba(&self) -> Box<[u8]> {
         let buf = self.shapez.write_image_to_array();
         let expected = (self.width as usize) * (self.height as usize) * 4;
         if buf.len() != expected {
-            // Likely PNG-encoded bytes; return a cleared RGBA frame to prevent exceptions
-            let msg = format!(
-                "frame_rgba: got {} bytes, expected {} (is write_image_to_array() PNG?)",
-                buf.len(),
-                expected
-            );
-            console::log_1(&msg.into());
+            #[cfg(target_arch = "wasm32")]
+            {
+                let msg = format!(
+                    "frame_rgba: got {} bytes, expected {} (is write_image_to_array() PNG?)",
+                    buf.len(),
+                    expected
+                );
+                console::log_1(&msg.into());
+            }
             return vec![0u8; expected].into_boxed_slice();
         }
         buf.into_boxed_slice()
