@@ -50,7 +50,6 @@ pub fn init_threads(n: usize) -> Promise {
     wasm_bindgen_rayon::init_thread_pool(n)
 }
 
-#[allow(dead_code)]
 #[cfg(target_arch = "wasm32")]
 fn now_ms() -> f64 {
     let g = js_sys::global();
@@ -124,6 +123,8 @@ pub struct Renderer {
     sample_count: u32,
     target_samples: u32,
     executed: bool,
+    exec_ms: f64,
+    exec_msg: String,
     shapez: ShapeZ,
 }
 
@@ -149,6 +150,8 @@ impl Renderer {
             sample_count: 0,
             target_samples: 64,
             executed: false,
+            exec_ms: 0.0,
+            exec_msg: String::new(),
             shapez,
         })
     }
@@ -156,11 +159,30 @@ impl Renderer {
     /// Prepare heavy scene evaluation once (runs ShapeZ::execute).
     pub fn prepare(&mut self) -> bool {
         if !self.executed {
+            let t0 = now_ms();
             self.shapez.execute();
-            let _ = self.shapez.stats();
+            let dt = now_ms() - t0;
+            self.exec_ms = dt;
+            // Try to stringify engine stats; falls back to Debug if Display is not implemented.
+            let stats_str = {
+                let (voxels, mem) = self.shapez.stats();
+                format!("Compiled {voxels} voxels ({mem} MB)")
+            };
+            self.exec_msg = format!("{} in {:.2}s", stats_str, dt / 1000.0);
             self.executed = true;
         }
         true
+    }
+
+    /// Returns a human-readable summary for the last `execute()` call, e.g.
+    /// "compiled X voxels in Ys". Empty until `prepare()` runs.
+    #[wasm_bindgen(js_name = exec_summary)]
+    pub fn exec_summary(&self) -> String {
+        if self.exec_msg.is_empty() {
+            "".into()
+        } else {
+            self.exec_msg.clone()
+        }
     }
 
     pub fn set_target_samples(&mut self, target: u32) {
