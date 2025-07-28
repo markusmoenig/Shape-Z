@@ -99,6 +99,7 @@ pub enum Stmt {
     ),
     Return(Box<Expr>, Location),
     Break(Location),
+    Empty,
 }
 
 /// Expressions in the AST
@@ -460,6 +461,7 @@ pub trait Visitor {
     ) -> Result<ASTValue, RuntimeError>;
 
     fn break_stmt(&mut self, loc: &Location, ctx: &mut Context) -> Result<ASTValue, RuntimeError>;
+    fn empty_stmt(&mut self, ctx: &mut Context) -> Result<ASTValue, RuntimeError>;
 
     fn if_stmt(
         &mut self,
@@ -553,6 +555,7 @@ impl Stmt {
                 visitor.func_declaration(name, args, body, returns, export, loc, ctx)
             }
             Stmt::Break(loc) => visitor.break_stmt(loc, ctx),
+            Stmt::Empty => visitor.empty_stmt(ctx),
             Stmt::Return(expr, loc) => visitor.return_stmt(expr, loc, ctx),
         }
     }

@@ -21,9 +21,9 @@ material Metal {
 // Glass: clear dielectric
 material Glass {
     albedo       { 1.0; }
-    roughness    { 0.02; }
+    roughness    { 0.0; }
     transmission { 1.0; }
-    ior          { 1.5; } 
+    ior          { 1.45; } 
 }
 
 // Emissive: neutral white light

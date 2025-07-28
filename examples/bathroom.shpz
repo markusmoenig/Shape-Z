@@ -160,7 +160,7 @@ voxel Box size = vec3(5, 3, 5) {
             }
 
             // Place a round mirror centered on the wall
-            shape Disc at = vec2(0.5, 0.85), radius = 0.75 {
+            shape Disc at = vec2(0.5, 0.85), radius = 0.6 {
                 if d > 0.20 && d < 0.22 {
                     if inside < 0.15 {
                         Metal;
@@ -190,7 +190,23 @@ voxel Box size = vec3(5, 3, 5) {
                 volume {
                     Clear;
                 }
-            }            
+            }    
+
+            // Basin water outlet
+            distance Cylinder from = vec3(0.5, 0.4, 0.35), to = vec3(0.5, 0.5, 0.35), radius = 0.07 {
+                volume {
+                    if u > 0.1 && u < 0.9 {
+                        Metal;
+                    }
+                }
+            }      
+            distance Cylinder from = vec3(0.5, 0.5, 0.35), to = vec3(0.5, 0.5, 0.6), radius = 0.07 {
+                volume {
+                    if u > 0.1 && u < 0.9 {
+                        Metal;
+                    }
+                }
+            }             
         }
     }
 

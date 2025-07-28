@@ -12,6 +12,9 @@ pub struct Parser {
     variable_counter: u32,
     variable_map: FxHashMap<String, u32>,
 
+    profile_offset: Option<Box<Stmt>>,
+    profile_scale: Option<Box<Stmt>>,
+
     pub materials: IndexMap<String, BSDFMaterial>,
 }
 
@@ -32,6 +35,9 @@ impl Parser {
 
             variable_counter: 0,
             variable_map: FxHashMap::default(),
+
+            profile_offset: None,
+            profile_scale: None,
 
             materials: IndexMap::default(),
         }
@@ -147,6 +153,12 @@ impl Parser {
         }
         if self.match_token(vec![TokenType::Camera]) {
             return self.camera_statement();
+        }
+        if self.match_token(vec![TokenType::ProfileOffset]) {
+            return self.profile_offset_declaration();
+        }
+        if self.match_token(vec![TokenType::ProfileScale]) {
+            return self.profile_scale_declaration();
         }
 
         self.statement()
@@ -509,17 +521,7 @@ impl Parser {
             self.current_line,
         )?;
 
-        // let valid_shape_ids = vec!["Rect"];
-
         let id = self.previous().unwrap().lexeme.clone();
-
-        // if !valid_shape_ids.contains(&id.as_str()) {
-        //     return Err(ParseError::new(
-        //         format!("Invalid shape id: {:?}", id),
-        //         line,
-        //         &self.path,
-        //     ));
-        // }
 
         let mut params = FxHashMap::default();
 
@@ -545,12 +547,49 @@ impl Parser {
             self.current_line,
         )?;
 
+        self.profile_offset = None;
+        self.profile_scale = None;
+
         let block = self.block()?;
 
         Ok(Stmt::Distance(
-            DistanceD::new(id, params, Box::new(block)),
+            DistanceD::new(
+                id,
+                params,
+                Box::new(block),
+                self.profile_offset.take(),
+                self.profile_scale.take(),
+            ),
             self.create_loc(line),
         ))
+    }
+
+    /// Profile declaration
+    fn profile_offset_declaration(&mut self) -> Result<Stmt, ParseError> {
+        self.consume(
+            TokenType::LeftBrace,
+            "Expected '{' after profile_offset",
+            self.current_line,
+        )?;
+
+        let block = self.block()?;
+        self.profile_offset = Some(Box::new(block));
+
+        Ok(Stmt::Empty)
+    }
+
+    /// Profile declaration
+    fn profile_scale_declaration(&mut self) -> Result<Stmt, ParseError> {
+        self.consume(
+            TokenType::LeftBrace,
+            "Expected '{' after profile_scale",
+            self.current_line,
+        )?;
+
+        let block = self.block()?;
+        self.profile_scale = Some(Box::new(block));
+
+        Ok(Stmt::Empty)
     }
 
     /// Distance declaration

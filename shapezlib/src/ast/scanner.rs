@@ -71,6 +71,8 @@ pub enum TokenType {
     Camera,
     Distance,
     Volume,
+    ProfileOffset,
+    ProfileScale,
 
     Let,
     Import,
@@ -169,6 +171,8 @@ impl Scanner {
         keywords.insert("medium", TokenType::Medium);
         keywords.insert("distance", TokenType::Distance);
         keywords.insert("volume", TokenType::Volume);
+        keywords.insert("profile_offset", TokenType::ProfileOffset);
+        keywords.insert("profile_scale", TokenType::ProfileScale);
 
         keywords.insert("if_clear", TokenType::IfClear);
 

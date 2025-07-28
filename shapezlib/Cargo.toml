@@ -1,6 +1,6 @@
 [package]
 name = "shapezlib"
-edition = "2024"
+edition = "2021"
 version = "0.1.0"
 license = "MIT OR Apache-2.0"
 authors = ["Markus Moenig"]
@@ -19,6 +19,10 @@ rustc-hash = "1.1.0"
 fast-surface-nets = "0.2.1"
 getrandom = { version = "0.3.3", features = ["wasm_js"] }
 wasm-bindgen = "0.2"
+wasm-bindgen-rayon = { version = "1.3", features = ["no-bundler"] }
+rust-embed = { version = "8", default-features = true, features = [
+    "include-exclude",
+] }
 
 # [lib]
 # crate-type = ["cdylib"]
@@ -27,11 +31,4 @@ wasm-bindgen = "0.2"
 wasm-bindgen = "0.2"
 console_error_panic_hook = "0.1.7"
 web-sys = { version = "0.3", features = ["Window", "Performance", "console"] }
-
-[target.wasm32-unknown-unknown]
-rustflags = ["--cfg", "getrandom_backend=\"wasm_js\""]
-
-#
-# RUSTFLAGS='--cfg getrandom_backend="wasm_js"' cargo build --target wasm32-unknown-unknown --release
-
-# wasm-bindgen ../target/wasm32-unknown-unknown/release/shapezlib.wasm --out-dir pkg --target web
+js-sys = "0.3"

@@ -58,16 +58,27 @@ pub struct DistanceD {
     pub params: FxHashMap<String, Box<Expr>>,
     pub block: Option<Box<Stmt>>,
 
+    pub offset: Option<Box<Stmt>>,
+    pub scale: Option<Box<Stmt>>,
+
     pub size: Vec<NodeOp>,
     pub body: Vec<NodeOp>,
 }
 
 impl DistanceD {
-    pub fn new(name: String, params: FxHashMap<String, Box<Expr>>, block: Box<Stmt>) -> Self {
+    pub fn new(
+        name: String,
+        params: FxHashMap<String, Box<Expr>>,
+        block: Box<Stmt>,
+        offset: Option<Box<Stmt>>,
+        scale: Option<Box<Stmt>>,
+    ) -> Self {
         Self {
             name,
             params,
             block: Some(block),
+            offset,
+            scale,
 
             size: vec![NodeOp::Push(Value::from_components(1.0, 1.0, 1.0))],
             body: vec![],

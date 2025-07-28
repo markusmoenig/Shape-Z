@@ -51,6 +51,7 @@ impl IdVerifier {
             "clamp",
             "sign",
             "atan",
+            "atan2",
             "mod",
             "step",
             "exp",

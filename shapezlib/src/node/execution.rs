@@ -924,103 +924,18 @@ impl Execution {
 
                     self.pop_state();
                 }
-                NodeOp::DistanceCapsule(from, to, radius, code) => {
-                    fn sdf_capsule_with_uvd(
-                        p: Vec3<f32>,
-                        a: Vec3<f32>,
-                        b: Vec3<f32>,
-                        radius: f32,
-                        plane: Plane,
-                    ) -> (f32, f32, f32, f32) {
+                NodeOp::DistanceCapsule(from, to, radius, offset, scale, code) => {
+                    /// Signed distance to a capsule defined by segment a->b with radius r.
+                    #[inline]
+                    fn sdf_capsule(p: Vec3<f32>, a: Vec3<f32>, b: Vec3<f32>, r: f32) -> f32 {
                         let ba = b - a;
-                        let len = ba.magnitude();
-
-                        // Degenerate -> sphere at `a` with plane-aligned basis
-                        if len <= 1e-6 {
-                            let offset = p - a;
-                            let sdf = offset.magnitude() - radius;
-                            let (axis_u, axis_v) = match plane {
-                                Plane::XY => (Vec3::new(1.0, 0.0, 0.0), Vec3::new(0.0, 1.0, 0.0)),
-                                Plane::XZ => (Vec3::new(1.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 1.0)),
-                                Plane::YZ => (Vec3::new(0.0, 1.0, 0.0), Vec3::new(0.0, 0.0, 1.0)),
-                                Plane::ZY => (Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 1.0, 0.0)),
-                            };
-                            let u_raw = offset.dot(axis_u);
-                            let v_raw = offset.dot(axis_v);
-                            let u = ((u_raw + radius) * 0.5).clamp(0.0, radius);
-                            let v = ((v_raw + radius) * 0.5).clamp(0.0, radius);
-                            let d = 0.0;
-                            return (sdf, u, v, d);
+                        let baba = ba.dot(ba);
+                        if baba <= 1e-8 {
+                            return (p - a).magnitude() - r;
                         }
-
-                        let dir = ba / len;
                         let pa = p - a;
-
-                        // Distance along axis in local units (NOT normalized)
-                        let d_along = pa.dot(dir).clamp(0.0, len);
-                        let proj = dir * d_along; // relative to `a`
-                        let offset = pa - proj; // perpendicular vector to axis
-
-                        // Capsule SDF
-                        let sdf = offset.magnitude() - radius;
-
-                        // Plane-aligned preferred axes (segment convention)
-                        let (axis_u, axis_v) = match plane {
-                            Plane::XY => (Vec3::new(1.0, 0.0, 0.0), Vec3::new(0.0, 1.0, 0.0)), // u=X, v=Y
-                            Plane::XZ => (Vec3::new(1.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 1.0)), // u=X, v=Z
-                            Plane::YZ => (Vec3::new(0.0, 1.0, 0.0), Vec3::new(0.0, 0.0, 1.0)), // u=Y, v=Z
-                            Plane::ZY => (Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 1.0, 0.0)), // u=Z, v=Y
-                        };
-
-                        // Build u-basis by projecting axis_u onto the plane perpendicular to `dir`.
-                        let mut u_basis = axis_u - dir * axis_u.dot(dir);
-                        let mut u_len = u_basis.magnitude();
-                        if u_len < 1e-6 {
-                            // If axis_u is collinear with dir, fall back to axis_v
-                            u_basis = axis_v - dir * axis_v.dot(dir);
-                            u_len = u_basis.magnitude();
-                        }
-                        if u_len < 1e-6 {
-                            // As a last resort, pick any perpendicular
-                            let tmp_up = if dir.z.abs() < 0.99 {
-                                Vec3::new(0.0, 0.0, 1.0)
-                            } else {
-                                Vec3::new(0.0, 1.0, 0.0)
-                            };
-                            u_basis = dir.cross(tmp_up);
-                            u_len = u_basis.magnitude();
-                        }
-                        u_basis = u_basis / u_len;
-
-                        // Build v-basis favoring axis_v, orthogonal to both dir and u_basis
-                        let mut v_basis = axis_v - dir * axis_v.dot(dir);
-                        // Remove any component along u_basis to keep orthonormality
-                        v_basis = v_basis - u_basis * v_basis.dot(u_basis);
-                        let mut v_len = v_basis.magnitude();
-                        if v_len < 1e-6 {
-                            v_basis = dir.cross(u_basis);
-                            v_len = v_basis.magnitude();
-                        }
-                        v_basis = v_basis / v_len;
-
-                        // Align signs to match plane axes directions
-                        if u_basis.dot(axis_u) < 0.0 {
-                            u_basis = -u_basis;
-                        }
-                        if v_basis.dot(axis_v) < 0.0 {
-                            v_basis = -v_basis;
-                        }
-
-                        // Oriented side-to-side mapping for u,v:
-                        // map [-radius, radius] -> [0, radius] (no abs mirroring; preserves side orientation)
-                        let u_raw = offset.dot(u_basis);
-                        let v_raw = offset.dot(v_basis);
-                        let u = ((u_raw + radius) * 0.5).clamp(0.0, radius);
-                        let v = ((v_raw + radius) * 0.5).clamp(0.0, radius);
-
-                        let d = d_along; // 0..len in local units
-
-                        (sdf, u, v, d)
+                        let h = (pa.dot(ba) / baba).clamp(0.0, 1.0);
+                        (pa - ba * h).magnitude() - r
                     }
 
                     let from: Vec3<f32> = if from.is_empty() {
@@ -1039,7 +954,7 @@ impl Execution {
                         self.point_at(p)
                     };
 
-                    let radius = if radius.is_empty() {
+                    let mut radius = if radius.is_empty() {
                         0.5
                     } else {
                         self.execute(radius, program);
@@ -1048,34 +963,42 @@ impl Execution {
 
                     self.push_state();
 
-                    let (sdf, _u, _v, _d) =
-                        sdf_capsule_with_uvd(self.local.as_vec3(), from, to, radius, self.plane);
-
-                    self.sdf = Value::from_float(sdf);
-                    self.inside = Value::from_float(-sdf);
-                    // self.u = Value::from_float(u);
-                    // self.v = Value::from_float(v);
-                    // self.d = Value::from_float(d);
-
                     let p = self.local.as_vec3();
-                    let (_ub, _vb, u_raw, v_raw, d_along, len_axis) =
+
+                    let (_ub, _vb, u_raw_pre, v_raw_pre, d_along, len_axis) =
                         self.axial_frame_offsets(p, from, to, self.plane);
                     let t = if len_axis > 0.0 {
                         d_along / len_axis
                     } else {
                         0.0
                     };
-                    let u = (0.5 + u_raw / (2.0 * radius.max(1e-9))).clamp(0.0, 1.0);
-                    let v = (0.5 + v_raw / (2.0 * radius.max(1e-9))).clamp(0.0, 1.0);
 
+                    let old_d = self.d;
+                    self.d = Value::from_float(t);
+                    let s = self.eval_profile_scale(scale, program);
+                    self.d = old_d;
+                    if s != 1.0 {
+                        radius *= s;
+                    }
+
+                    let sdf0 = sdf_capsule(p, from, to, radius);
+
+                    let u = (0.5 + u_raw_pre / (2.0 * radius.max(1e-9))).clamp(0.0, 1.0);
+                    let v = (0.5 + v_raw_pre / (2.0 * radius.max(1e-9))).clamp(0.0, 1.0);
                     self.u = Value::from_float(u);
                     self.v = Value::from_float(v);
                     self.d = Value::from_float(t);
 
+                    let off = self.eval_profile_offset(offset, program);
+                    let sdf = sdf0 - off;
+
+                    self.sdf = Value::from_float(sdf);
+                    self.inside = Value::from_float(-sdf);
                     self.execute(code, program);
+
                     self.pop_state();
                 }
-                NodeOp::DistanceCylinder(from, to, radius, code) => {
+                NodeOp::DistanceCylinder(from, to, radius, offset, scale, code) => {
                     #[inline]
                     fn sdf_capped_cylinder(
                         p: Vec3<f32>,
@@ -1087,23 +1010,19 @@ impl Execution {
                         let pa = p - a;
                         let baba = ba.dot(ba);
 
-                        // Degenerate: fall back to a sphere at `a`
                         if baba <= 1e-8 {
                             return pa.magnitude() - r;
                         }
 
                         let paba = pa.dot(ba);
 
-                        // x = |pa*baba - ba*paba| - r*baba
                         let x = (pa * baba - ba * paba).magnitude() - r * baba;
 
-                        // y = |paba - baba*0.5| - baba*0.5
                         let y = (paba - baba * 0.5).abs() - baba * 0.5;
 
                         let x2 = x * x;
                         let y2 = y * y * baba;
 
-                        // d = (max(x,y) < 0) ? -min(x^2, y^2) : ((x>0?x^2:0) + (y>0?y^2:0))
                         let d = if x.max(y) < 0.0 {
                             -(x2.min(y2))
                         } else {
@@ -1129,7 +1048,7 @@ impl Execution {
                         self.point_at(p)
                     };
 
-                    let radius = if radius.is_empty() {
+                    let mut r = if radius.is_empty() {
                         0.5
                     } else {
                         self.execute(radius, program);
@@ -1137,37 +1056,41 @@ impl Execution {
                     };
 
                     self.push_state();
-
-                    let local = self.local.as_vec3();
-                    let sdf = sdf_capped_cylinder(local, from, to, radius);
-                    // let (u, v, d) = self.uvd_from_points(local, from, to, self.plane, radius);
-
-                    self.sdf = Value::from_float(sdf);
-                    self.inside = Value::from_float(-sdf);
-                    // self.u = Value::from_float(u);
-                    // self.v = Value::from_float(v);
-                    // self.d = Value::from_float(d);
-
                     let p = self.local.as_vec3();
-                    let (_ub, _vb, u_raw, v_raw, d_along, len_axis) =
+
+                    let (_ub, _vb, u_raw_pre, v_raw_pre, d_along, len_axis) =
                         self.axial_frame_offsets(p, from, to, self.plane);
                     let t = if len_axis > 0.0 {
                         d_along / len_axis
                     } else {
                         0.0
                     };
-                    let u = (0.5 + u_raw / (2.0 * radius.max(1e-9))).clamp(0.0, 1.0);
-                    let v = (0.5 + v_raw / (2.0 * radius.max(1e-9))).clamp(0.0, 1.0);
 
+                    let old_d = self.d;
+                    self.d = Value::from_float(t);
+                    let s = self.eval_profile_scale(scale, program);
+                    self.d = old_d;
+                    if s != 1.0 {
+                        r *= s;
+                    }
+
+                    let sdf0 = sdf_capped_cylinder(p, from, to, r);
+
+                    let u = (0.5 + u_raw_pre / (2.0 * r.max(1e-9))).clamp(0.0, 1.0);
+                    let v = (0.5 + v_raw_pre / (2.0 * r.max(1e-9))).clamp(0.0, 1.0);
                     self.u = Value::from_float(u);
                     self.v = Value::from_float(v);
                     self.d = Value::from_float(t);
 
-                    self.execute(code, program);
+                    let off = self.eval_profile_offset(offset, program);
+                    let sdf = sdf0 - off;
 
+                    self.sdf = Value::from_float(sdf);
+                    self.inside = Value::from_float(-sdf);
+                    self.execute(code, program);
                     self.pop_state();
                 }
-                NodeOp::DistanceCone(from, to, radius1, radius2, code) => {
+                NodeOp::DistanceCone(from, to, radius1, radius2, offset, scale, code) => {
                     #[inline]
                     fn sdf_capped_cone(
                         p: Vec3<f32>,
@@ -1235,14 +1158,14 @@ impl Execution {
                         self.point_at(p)
                     };
 
-                    let r1 = if radius1.is_empty() {
+                    let mut r1 = if radius1.is_empty() {
                         0.5
                     } else {
                         self.execute(radius1, program);
                         self.stack.pop().unwrap().as_float()
                     };
 
-                    let r2 = if radius2.is_empty() {
+                    let mut r2 = if radius2.is_empty() {
                         0.25
                     } else {
                         self.execute(radius2, program);
@@ -1250,38 +1173,43 @@ impl Execution {
                     };
 
                     self.push_state();
-
                     let p = self.local.as_vec3();
-                    let sdf = sdf_capped_cone(p, a, b, r1, r2);
 
-                    // Reuse your shared U/V/D construction
-                    // let radius_for_uv = r1.max(r2); // pick your convention for cross-section mapping
-                    // let (u, v, d) = self.uvd_from_points(p, a, b, self.plane, radius_for_uv);
-
-                    self.sdf = Value::from_float(sdf);
-                    self.inside = Value::from_float(-sdf);
-                    // self.u = Value::from_float(u);
-                    // self.v = Value::from_float(v);
-                    // self.d = Value::from_float(d);
-
-                    let (_ub, _vb, u_raw, v_raw, d_along, len_axis) =
+                    let (_ub, _vb, u_raw_pre, v_raw_pre, d_along, len_axis) =
                         self.axial_frame_offsets(p, a, b, self.plane);
                     let t = if len_axis > 0.0 {
                         d_along / len_axis
                     } else {
                         0.0
                     };
+
+                    let old_d = self.d;
+                    self.d = Value::from_float(t);
+                    let s = self.eval_profile_scale(scale, program);
+                    self.d = old_d;
+                    if s != 1.0 {
+                        r1 *= s;
+                        r2 *= s;
+                    }
+
+                    let sdf0 = sdf_capped_cone(p, a, b, r1, r2);
+
                     let r_loc = r1 + (r2 - r1) * t;
-                    let u = (0.5 + u_raw / (2.0 * r_loc.max(1e-9))).clamp(0.0, 1.0);
-                    let v = (0.5 + v_raw / (2.0 * r_loc.max(1e-9))).clamp(0.0, 1.0);
+                    let u = (0.5 + u_raw_pre / (2.0 * r_loc.max(1e-9))).clamp(0.0, 1.0);
+                    let v = (0.5 + v_raw_pre / (2.0 * r_loc.max(1e-9))).clamp(0.0, 1.0);
                     self.u = Value::from_float(u);
                     self.v = Value::from_float(v);
                     self.d = Value::from_float(t);
 
+                    let off = self.eval_profile_offset(offset, program);
+                    let sdf = sdf0 - off;
+
+                    self.sdf = Value::from_float(sdf);
+                    self.inside = Value::from_float(-sdf);
                     self.execute(code, program);
                     self.pop_state();
                 }
-                NodeOp::DistanceVesica(from, to, radius, code) => {
+                NodeOp::DistanceVesica(from, to, radius, offset, scale, code) => {
                     #[inline]
                     fn sdf_vesica_segment(p: Vec3<f32>, a: Vec3<f32>, b: Vec3<f32>, w: f32) -> f32 {
                         // Center and axis
@@ -1334,7 +1262,7 @@ impl Execution {
                         self.point_at(p)
                     };
 
-                    let radius = if radius.is_empty() {
+                    let mut w = if radius.is_empty() {
                         0.5
                     } else {
                         self.execute(radius, program);
@@ -1342,159 +1270,51 @@ impl Execution {
                     };
 
                     self.push_state();
+                    let p = self.local.as_vec3();
 
-                    let local = self.local.as_vec3();
-                    let sdf = sdf_vesica_segment(local, from, to, radius);
-                    // let (u, v, d) = self.uvd_from_points(local, from, to, self.plane, radius);
-
-                    self.sdf = Value::from_float(sdf);
-                    self.inside = Value::from_float(-sdf);
-                    // self.u = Value::from_float(u);
-                    // self.v = Value::from_float(v);
-                    // self.d = Value::from_float(d);
-
-                    let (_ub, _vb, u_raw, v_raw, d_along, len_axis) =
-                        self.axial_frame_offsets(local, from, to, self.plane);
+                    let (_ub, _vb, u_raw_pre, v_raw_pre, d_along, len_axis) =
+                        self.axial_frame_offsets(p, from, to, self.plane);
                     let t = if len_axis > 0.0 {
                         d_along / len_axis
                     } else {
                         0.0
                     };
-                    let u = (0.5 + u_raw / (2.0 * radius.max(1e-9))).clamp(0.0, 1.0);
-                    let v = (0.5 + v_raw / (2.0 * radius.max(1e-9))).clamp(0.0, 1.0);
-                    self.u = Value::from_float(u);
-                    self.v = Value::from_float(v);
+
+                    let old_d = self.d;
                     self.d = Value::from_float(t);
-
-                    self.execute(code, program);
-
-                    self.pop_state();
-                }
-                NodeOp::DistancePyramid(from, to, radius1, radius2, code) => {
-                    /// Exact signed distance to a square pyramid/frustum between `a` and `b`.
-                    /// `ra` = half-size at `a`, `rb` = half-size at `b`.
-                    /// Square is axis-aligned in the local (right, up) frame around the axis a->b.
-                    #[inline]
-                    fn sdf_square_pyramid_between(
-                        p: Vec3<f32>,
-                        a: Vec3<f32>,
-                        b: Vec3<f32>,
-                        ra: f32,
-                        rb: f32,
-                    ) -> f32 {
-                        let ba = b - a;
-                        let len2 = ba.dot(ba);
-                        if len2 <= 1e-8 {
-                            // Degenerate: reduce to box around midpoint with half-size = min(ra, rb)
-                            let c = (a + b) * 0.5;
-                            let q = (p - c).map(|v| v.abs()) - Vec3::broadcast(ra.min(rb));
-                            return q.map(|v| v.max(0.0)).magnitude()
-                                + q.x.max(q.y.max(q.z)).min(0.0);
-                        }
-
-                        let len = len2.sqrt();
-                        let dir = ba / len;
-
-                        // Build orthonormal frame: (right, up, dir)
-                        let tmp_up = if dir.z.abs() < 0.99 {
-                            Vec3::new(0.0, 0.0, 1.0)
-                        } else {
-                            Vec3::new(0.0, 1.0, 0.0)
-                        };
-                        let right = dir.cross(tmp_up).normalized();
-                        let up = right.cross(dir).normalized();
-
-                        // Local coordinates with origin at the midpoint, y = axis
-                        let mid = (a + b) * 0.5;
-                        let rel = p - mid;
-                        let x = rel.dot(right);
-                        let y = rel.dot(dir); // along a->b
-                        let z = rel.dot(up);
-
-                        // Half-height and linear half-size along axis: s(y) = s0 + k*y
-                        let h = 0.5 * len;
-                        let s0 = 0.5 * (ra + rb);
-                        let k = (rb - ra) / (2.0 * h); // slope of half-size vs y
-                        let nscale = (1.0 + k * k).sqrt(); // side plane normal length
-
-                        // Distances to side planes (normalized) and caps
-                        // Positive-x side: x - k*y - s0 <= 0  → distance = (x - k*y - s0)/|N|
-                        let dxp = (x - k * y - s0) / nscale;
-                        let dxn = (-x - k * y - s0) / nscale;
-                        let dzp = (z - k * y - s0) / nscale;
-                        let dzn = (-z - k * y - s0) / nscale;
-
-                        // Caps at y = ±h
-                        let dtop = y - h;
-                        let dbot = -y - h;
-
-                        // SDF of intersection of half-spaces = max of plane distances
-                        dxp.max(dxn).max(dzp).max(dzn).max(dtop).max(dbot)
+                    let s = self.eval_profile_scale(scale, program);
+                    self.d = old_d;
+                    if s != 1.0 {
+                        w *= s;
                     }
 
-                    let a: Vec3<f32> = if from.is_empty() {
-                        self.point_at(Vec3::zero())
-                    } else {
-                        self.execute(from, program);
-                        let p = self.stack.pop().unwrap().as_vec3();
-                        self.point_at(p)
-                    };
+                    let sdf0 = sdf_vesica_segment(p, from, to, w);
 
-                    let b: Vec3<f32> = if to.is_empty() {
-                        self.point_at(Vec3::zero())
-                    } else {
-                        self.execute(to, program);
-                        let p = self.stack.pop().unwrap().as_vec3();
-                        self.point_at(p)
-                    };
-
-                    let r1 = if radius1.is_empty() {
-                        0.5
-                    } else {
-                        self.execute(radius1, program);
-                        self.stack.pop().unwrap().as_float()
-                    };
-
-                    let r2 = if radius2.is_empty() {
-                        0.25
-                    } else {
-                        self.execute(radius2, program);
-                        self.stack.pop().unwrap().as_float()
-                    };
-
-                    self.push_state();
-
-                    let p = self.local.as_vec3();
-                    let sdf = sdf_square_pyramid_between(p, a, b, r1, r2);
-
-                    // Reuse your shared U/V/D construction
-                    // let radius_for_uv = r1.max(r2); // pick your convention for cross-section mapping
-                    // let (u, v, d) = self.uvd_from_points(p, a, b, self.plane, radius_for_uv);
-
-                    self.sdf = Value::from_float(sdf);
-                    self.inside = Value::from_float(-sdf);
-                    // self.u = Value::from_float(u);
-                    // self.v = Value::from_float(v);
-                    // self.d = Value::from_float(d);
-
-                    let (_ub, _vb, u_raw, v_raw, d_along, len_axis) =
-                        self.axial_frame_offsets(p, a, b, self.plane);
-                    let t = if len_axis > 0.0 {
-                        d_along / len_axis
-                    } else {
-                        0.0
-                    };
-                    let s_loc = r1 + (r2 - r1) * t;
-                    let u = (0.5 + u_raw / (2.0 * s_loc.max(1e-9))).clamp(0.0, 1.0);
-                    let v = (0.5 + v_raw / (2.0 * s_loc.max(1e-9))).clamp(0.0, 1.0);
+                    let u = (0.5 + u_raw_pre / (2.0 * w.max(1e-9))).clamp(0.0, 1.0);
+                    let v = (0.5 + v_raw_pre / (2.0 * w.max(1e-9))).clamp(0.0, 1.0);
                     self.u = Value::from_float(u);
                     self.v = Value::from_float(v);
                     self.d = Value::from_float(t);
 
+                    let off = self.eval_profile_offset(offset, program);
+                    let sdf = sdf0 - off;
+
+                    self.sdf = Value::from_float(sdf);
+                    self.inside = Value::from_float(-sdf);
                     self.execute(code, program);
                     self.pop_state();
                 }
-                NodeOp::DistanceNgonFrustum(from, to, sides, base, top, phase, code) => {
+                NodeOp::DistanceNgonFrustum(
+                    from,
+                    to,
+                    sides,
+                    base,
+                    top,
+                    phase,
+                    offset,
+                    scale,
+                    code,
+                ) => {
                     #[inline]
                     fn sdf_ngon_frustum_between(
                         p: Vec3<f32>,
@@ -1579,19 +1399,17 @@ impl Execution {
                         4
                     } else {
                         self.execute(sides, program);
-                        let v = self.stack.pop().unwrap().as_float();
-                        (v as i32).max(3)
+                        (self.stack.pop().unwrap().as_float() as i32).max(3)
                     };
 
-                    let ra = if base.is_empty() {
+                    let mut ra = if base.is_empty() {
                         0.5
                     } else {
                         self.execute(base, program);
                         self.stack.pop().unwrap().as_float()
                     };
-
-                    let rb = if top.is_empty() {
-                        0.0 // pyramid by default
+                    let mut rb = if top.is_empty() {
+                        0.0
                     } else {
                         self.execute(top, program);
                         self.stack.pop().unwrap().as_float()
@@ -1605,35 +1423,52 @@ impl Execution {
                     };
 
                     self.push_state();
-
                     let p = self.local.as_vec3();
-                    let sdf = sdf_ngon_frustum_between(p, a, b, ra, rb, n_sides, phase_val);
-                    // let (u, v, d) = self.uvd_from_points(p, a, b, self.plane, ra.max(rb));
 
-                    self.sdf = Value::from_float(sdf);
-                    self.inside = Value::from_float(-sdf);
-                    // self.u = Value::from_float(u);
-                    // self.v = Value::from_float(v);
-                    // self.d = Value::from_float(d);
-
-                    let (_ub, _vb, u_raw, v_raw, d_along, len_axis) =
+                    let (_ub, _vb, u_raw_pre, v_raw_pre, d_along, len_axis) =
                         self.axial_frame_offsets(p, a, b, self.plane);
                     let t = if len_axis > 0.0 {
                         d_along / len_axis
                     } else {
                         0.0
                     };
+
+                    let old_d = self.d;
+                    self.d = Value::from_float(t);
+                    let s = self.eval_profile_scale(scale, program);
+                    self.d = old_d;
+                    if s != 1.0 {
+                        ra *= s;
+                        rb *= s;
+                    }
+
+                    let sdf0 = sdf_ngon_frustum_between(p, a, b, ra, rb, n_sides, phase_val);
+
                     let s_loc = ra + (rb - ra) * t;
-                    let u = (0.5 + u_raw / (2.0 * s_loc.max(1e-9))).clamp(0.0, 1.0);
-                    let v = (0.5 + v_raw / (2.0 * s_loc.max(1e-9))).clamp(0.0, 1.0);
+                    let u = (0.5 + u_raw_pre / (2.0 * s_loc.max(1e-9))).clamp(0.0, 1.0);
+                    let v = (0.5 + v_raw_pre / (2.0 * s_loc.max(1e-9))).clamp(0.0, 1.0);
                     self.u = Value::from_float(u);
                     self.v = Value::from_float(v);
                     self.d = Value::from_float(t);
 
+                    let off = self.eval_profile_offset(offset, program);
+                    let sdf = sdf0 - off;
+
+                    self.sdf = Value::from_float(sdf);
+                    self.inside = Value::from_float(-sdf);
                     self.execute(code, program);
                     self.pop_state();
                 }
-                NodeOp::DistanceBoxBetween(from, to, base_wh, top_wh, angle, code) => {
+                NodeOp::DistanceBoxBetween(
+                    from,
+                    to,
+                    base_wh,
+                    top_wh,
+                    angle,
+                    offset,
+                    scale,
+                    code,
+                ) => {
                     /// Signed distance to a rectangular frustum between `a` and `b`.
                     #[inline]
                     fn sdf_rect_frustum_between(
@@ -1725,7 +1560,6 @@ impl Execution {
                         self.point_at(p)
                     };
 
-                    // FULL sizes (width, height) in local units
                     let base_wh_val: Vec2<f32> = if base_wh.is_empty() {
                         Vec2::new(1.0, 1.0)
                     } else {
@@ -1740,7 +1574,6 @@ impl Execution {
                         self.stack.pop().unwrap().as_vec2()
                     };
 
-                    // Angle is already in radians
                     let angle_rad: f32 = if angle.is_empty() {
                         0.0
                     } else {
@@ -1749,38 +1582,47 @@ impl Execution {
                     };
 
                     // Convert to half-sizes for SDF
-                    let ra = base_wh_val * 0.5;
-                    let rb = top_wh_val * 0.5;
+                    let mut ra = base_wh_val * 0.5;
+                    let mut rb = top_wh_val * 0.5;
 
                     self.push_state();
 
                     let p = self.local.as_vec3();
-                    let sdf = sdf_rect_frustum_between(p, a, b, ra, rb, angle_rad);
 
-                    // U/V/D mapping
-                    // let radius_for_uv = ra.x.max(ra.y).max(rb.x.max(rb.y));
-                    // let (u, v, d) = self.uvd_from_points(p, a, b, self.plane, radius_for_uv);
-
-                    self.sdf = Value::from_float(sdf);
-                    self.inside = Value::from_float(-sdf);
-                    // self.u = Value::from_float(u);
-                    // self.v = Value::from_float(v);
-                    // self.d = Value::from_float(d);
-
-                    let (_ub, _vb, u_raw, v_raw, d_along, len_axis) =
+                    let (_ub, _vb, u_raw_pre, v_raw_pre, d_along, len_axis) =
                         self.axial_frame_offsets(p, a, b, self.plane);
                     let t = if len_axis > 0.0 {
                         d_along / len_axis
                     } else {
                         0.0
                     };
+
+                    let old_d = self.d;
+                    self.d = Value::from_float(t);
+                    let s = self.eval_profile_scale(scale, program);
+                    self.d = old_d;
+
+                    if s != 1.0 {
+                        ra *= s;
+                        rb *= s;
+                    }
+
+                    let sdf0 = sdf_rect_frustum_between(p, a, b, ra, rb, angle_rad);
+
                     let hx = ra.x + (rb.x - ra.x) * t;
                     let hz = ra.y + (rb.y - ra.y) * t;
-                    let u = (0.5 + u_raw / (2.0 * hx.max(1e-9))).clamp(0.0, 1.0);
-                    let v = (0.5 + v_raw / (2.0 * hz.max(1e-9))).clamp(0.0, 1.0);
+                    let u = (0.5 + u_raw_pre / (2.0 * hx.max(1e-9))).clamp(0.0, 1.0);
+                    let v = (0.5 + v_raw_pre / (2.0 * hz.max(1e-9))).clamp(0.0, 1.0);
+
                     self.u = Value::from_float(u);
                     self.v = Value::from_float(v);
                     self.d = Value::from_float(t);
+
+                    let off = self.eval_profile_offset(offset, program);
+                    let sdf = sdf0 - off;
+
+                    self.sdf = Value::from_float(sdf);
+                    self.inside = Value::from_float(-sdf);
 
                     self.execute(code, program);
                     self.pop_state();
@@ -2162,98 +2004,7 @@ impl Execution {
         (u_basis, v_basis, u_raw, v_raw, d_along, len)
     }
 
-    /// Compute (u, v, d) in local space
-    fn _uvd_from_points(
-        &self,
-        p: Vec3<f32>,
-        a: Vec3<f32>,
-        b: Vec3<f32>,
-        plane: Plane,
-        radius: f32,
-    ) -> (f32, f32, f32) {
-        let ba = b - a;
-        let len = ba.magnitude();
-
-        // Degenerate: treat as sphere centered at `a` with plane-aligned basis
-        if len <= 1e-6 {
-            let offset = p - a;
-            let (axis_u, axis_v) = match plane {
-                Plane::XY => (Vec3::new(1.0, 0.0, 0.0), Vec3::new(0.0, 1.0, 0.0)),
-                Plane::XZ => (Vec3::new(1.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 1.0)),
-                Plane::YZ => (Vec3::new(0.0, 1.0, 0.0), Vec3::new(0.0, 0.0, 1.0)),
-                Plane::ZY => (Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 1.0, 0.0)),
-            };
-            let u_raw = offset.dot(axis_u);
-            let v_raw = offset.dot(axis_v);
-            let u = ((u_raw + radius) * 0.5).clamp(0.0, radius);
-            let v = ((v_raw + radius) * 0.5).clamp(0.0, radius);
-            let d = 0.0;
-            return (u, v, d);
-        }
-
-        let dir = ba / len;
-        let pa = p - a;
-
-        // Distance along the axis in local units (0..len)
-        let d_along = pa.dot(dir).clamp(0.0, len);
-        let proj = dir * d_along; // relative to `a`
-        let offset = pa - proj; // perpendicular to axis
-
-        // Preferred plane-aligned axes for stable orientation
-        let (axis_u, axis_v) = match plane {
-            Plane::XY => (Vec3::new(1.0, 0.0, 0.0), Vec3::new(0.0, 1.0, 0.0)), // u=X, v=Y
-            Plane::XZ => (Vec3::new(1.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 1.0)), // u=X, v=Z
-            Plane::YZ => (Vec3::new(0.0, 1.0, 0.0), Vec3::new(0.0, 0.0, 1.0)), // u=Y, v=Z
-            Plane::ZY => (Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 1.0, 0.0)), // u=Z, v=Y
-        };
-
-        // Project plane axes onto the cross-section plane (perpendicular to `dir`) and orthonormalize
-        let mut u_basis = axis_u - dir * axis_u.dot(dir);
-        let mut u_len = u_basis.magnitude();
-        if u_len < 1e-6 {
-            // axis_u nearly collinear with dir → try axis_v
-            u_basis = axis_v - dir * axis_v.dot(dir);
-            u_len = u_basis.magnitude();
-        }
-        if u_len < 1e-6 {
-            // fallback: any perpendicular
-            let tmp_up = if dir.z.abs() < 0.99 {
-                Vec3::new(0.0, 0.0, 1.0)
-            } else {
-                Vec3::new(0.0, 1.0, 0.0)
-            };
-            u_basis = dir.cross(tmp_up);
-            u_len = u_basis.magnitude();
-        }
-        u_basis = u_basis / u_len;
-
-        let mut v_basis = axis_v - dir * axis_v.dot(dir);
-        // Gram-Schmidt to remove any component along u_basis
-        v_basis = v_basis - u_basis * v_basis.dot(u_basis);
-        let mut v_len = v_basis.magnitude();
-        if v_len < 1e-6 {
-            v_basis = dir.cross(u_basis);
-            v_len = v_basis.magnitude();
-        }
-        v_basis = v_basis / v_len;
-
-        // Align basis directions with the plane axes for consistent orientation
-        if u_basis.dot(axis_u) < 0.0 {
-            u_basis = -u_basis;
-        }
-        if v_basis.dot(axis_v) < 0.0 {
-            v_basis = -v_basis;
-        }
-
-        // Map side-to-side: [-radius, radius] → [0, radius] (no abs mirroring)
-        let u_raw = offset.dot(u_basis);
-        let v_raw = offset.dot(v_basis);
-        let u = ((u_raw + radius) * 0.5).clamp(0.0, radius);
-        let v = ((v_raw + radius) * 0.5).clamp(0.0, radius);
-
-        (u, v, d_along)
-    }
-
+    // White noise, the hash is not good enough, should be replaced.
     #[inline]
     fn white_noise(&self) -> f32 {
         let p = self.local.as_vec3();
@@ -2330,6 +2081,42 @@ impl Execution {
             a *= 0.5;
         }
         v
+    }
+
+    /// Profile offset evaluation
+    #[inline]
+    fn eval_profile_offset(&mut self, body: &Vec<NodeOp>, program: &mut Program) -> f32 {
+        if !body.is_empty() {
+            let sp = self.stack.len();
+            self.execute(body, program);
+            let mut out = 0.0;
+            while self.stack.len() > sp {
+                out = self.stack.pop().unwrap().as_float();
+            }
+            out
+        } else {
+            0.0
+        }
+    }
+
+    /// Profile scale evaluation
+    #[inline]
+    fn eval_profile_scale(&mut self, body: &Vec<NodeOp>, program: &mut Program) -> f32 {
+        if !body.is_empty() {
+            let sp = self.stack.len();
+            self.execute(body, program);
+            let mut out = 0.0;
+            while self.stack.len() > sp {
+                out = self.stack.pop().unwrap().as_float();
+            }
+            if out.is_finite() {
+                out.max(0.0)
+            } else {
+                1.0
+            }
+        } else {
+            1.0
+        }
     }
 
     // Push the current segmentation state.

@@ -387,6 +387,24 @@ impl Visitor for CompileVisitor {
             }
         }
 
+        let mut offset = vec![];
+        if let Some(off) = &objectd.offset {
+            ctx.add_custom_target();
+            _ = off.accept(self, ctx)?;
+            if let Some(code) = ctx.take_last_custom_target() {
+                offset = code;
+            }
+        }
+
+        let mut scale = vec![];
+        if let Some(scal) = &objectd.scale {
+            ctx.add_custom_target();
+            _ = scal.accept(self, ctx)?;
+            if let Some(code) = ctx.take_last_custom_target() {
+                scale = code;
+            }
+        }
+
         // Body
         ctx.add_custom_target();
         if let Some(block) = &objectd.block {
@@ -411,10 +429,14 @@ impl Visitor for CompileVisitor {
                     ));
                 }
                 "Capsule" => {
-                    ctx.emit(NodeOp::DistanceCapsule(from, to, radius, code));
+                    ctx.emit(NodeOp::DistanceCapsule(
+                        from, to, radius, offset, scale, code,
+                    ));
                 }
                 "Cylinder" => {
-                    ctx.emit(NodeOp::DistanceCylinder(from, to, radius, code));
+                    ctx.emit(NodeOp::DistanceCylinder(
+                        from, to, radius, offset, scale, code,
+                    ));
                 }
                 "Cone" => {
                     ctx.emit(NodeOp::DistanceCone(
@@ -422,6 +444,8 @@ impl Visitor for CompileVisitor {
                         to,
                         cp.get("base").cloned().unwrap_or(vec![]),
                         cp.get("top").cloned().unwrap_or(vec![]),
+                        offset,
+                        scale,
                         code,
                     ));
                 }
@@ -430,15 +454,8 @@ impl Visitor for CompileVisitor {
                         from,
                         to,
                         cp.get("width").cloned().unwrap_or(vec![]),
-                        code,
-                    ));
-                }
-                "Pyramid" => {
-                    ctx.emit(NodeOp::DistancePyramid(
-                        from,
-                        to,
-                        cp.get("base").cloned().unwrap_or(vec![]),
-                        cp.get("top").cloned().unwrap_or(vec![]),
+                        offset,
+                        scale,
                         code,
                     ));
                 }
@@ -450,6 +467,8 @@ impl Visitor for CompileVisitor {
                         cp.get("base").cloned().unwrap_or(vec![]),
                         cp.get("top").cloned().unwrap_or(vec![]),
                         cp.get("phase").cloned().unwrap_or(vec![]),
+                        offset,
+                        scale,
                         code,
                     ));
                 }
@@ -460,6 +479,8 @@ impl Visitor for CompileVisitor {
                         cp.get("base").cloned().unwrap_or(vec![]),
                         cp.get("top").cloned().unwrap_or(vec![]),
                         cp.get("angle").cloned().unwrap_or(vec![]),
+                        offset,
+                        scale,
                         code,
                     ));
                 }
@@ -1418,11 +1439,10 @@ impl Visitor for CompileVisitor {
         _loc: &Location,
         _ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        // if let Some(d) = self.break_depth.last() {
-        //     let instr = format!("(br {})", d);
-        //     ctx.add_wat(&instr);
-        // }
+        Ok(ASTValue::None)
+    }
 
+    fn empty_stmt(&mut self, _ctx: &mut Context) -> Result<ASTValue, RuntimeError> {
         Ok(ASTValue::None)
     }
 
