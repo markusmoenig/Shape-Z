@@ -174,6 +174,15 @@ impl Value {
     }
 
     #[inline]
+    pub fn step(self, edge: Self) -> Self {
+        let mut out = [0.0; 3];
+        for i in 0..3 {
+            out[i] = if self.0[i] < edge.0[i] { 0.0 } else { 1.0 };
+        }
+        Value(out)
+    }
+
+    #[inline]
     pub fn clamp(self, min: Self, max: Self) -> Self {
         let mut out = [0.0; 3];
         for i in 0..3 {

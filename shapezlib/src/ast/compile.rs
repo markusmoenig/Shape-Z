@@ -188,6 +188,22 @@ impl Visitor for CompileVisitor {
             },
         );
         functions.insert(
+            "step".to_string(),
+            ASTFunction {
+                name: "step".to_string(),
+                arguments: 2,
+                op: NodeOp::Smoothstep,
+            },
+        );
+        functions.insert(
+            "mod".to_string(),
+            ASTFunction {
+                name: "mod".to_string(),
+                arguments: 2,
+                op: NodeOp::Mod,
+            },
+        );
+        functions.insert(
             "clamp".to_string(),
             ASTFunction {
                 name: "clamp".to_string(),
@@ -380,6 +396,8 @@ impl Visitor for CompileVisitor {
             let at = cp.get("at").cloned().unwrap_or(vec![]);
             let size = cp.get("size").cloned().unwrap_or(vec![]);
             let radius = cp.get("radius").cloned().unwrap_or(vec![]);
+            let from = cp.get("from").cloned().unwrap_or(vec![]);
+            let to = cp.get("to").cloned().unwrap_or(vec![]);
             match objectd.name.as_str() {
                 "Sphere" => {
                     ctx.emit(NodeOp::DistanceSphere(at, radius, code));
@@ -389,6 +407,59 @@ impl Visitor for CompileVisitor {
                         at,
                         size,
                         cp.get("rounding").cloned().unwrap_or(vec![]),
+                        code,
+                    ));
+                }
+                "Capsule" => {
+                    ctx.emit(NodeOp::DistanceCapsule(from, to, radius, code));
+                }
+                "Cylinder" => {
+                    ctx.emit(NodeOp::DistanceCylinder(from, to, radius, code));
+                }
+                "Cone" => {
+                    ctx.emit(NodeOp::DistanceCone(
+                        from,
+                        to,
+                        cp.get("base").cloned().unwrap_or(vec![]),
+                        cp.get("top").cloned().unwrap_or(vec![]),
+                        code,
+                    ));
+                }
+                "Vesica" => {
+                    ctx.emit(NodeOp::DistanceVesica(
+                        from,
+                        to,
+                        cp.get("width").cloned().unwrap_or(vec![]),
+                        code,
+                    ));
+                }
+                "Pyramid" => {
+                    ctx.emit(NodeOp::DistancePyramid(
+                        from,
+                        to,
+                        cp.get("base").cloned().unwrap_or(vec![]),
+                        cp.get("top").cloned().unwrap_or(vec![]),
+                        code,
+                    ));
+                }
+                "NgonFrustum" => {
+                    ctx.emit(NodeOp::DistanceNgonFrustum(
+                        from,
+                        to,
+                        cp.get("sides").cloned().unwrap_or(vec![]),
+                        cp.get("base").cloned().unwrap_or(vec![]),
+                        cp.get("top").cloned().unwrap_or(vec![]),
+                        cp.get("phase").cloned().unwrap_or(vec![]),
+                        code,
+                    ));
+                }
+                "RectFrustum" => {
+                    ctx.emit(NodeOp::DistanceBoxBetween(
+                        from,
+                        to,
+                        cp.get("base").cloned().unwrap_or(vec![]),
+                        cp.get("top").cloned().unwrap_or(vec![]),
+                        cp.get("angle").cloned().unwrap_or(vec![]),
                         code,
                     ));
                 }
