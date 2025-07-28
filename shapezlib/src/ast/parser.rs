@@ -169,10 +169,14 @@ impl Parser {
         let var_name = self
             .consume(TokenType::Identifier, "Expect variable name", line)?
             .lexeme;
+
         _ = self.verifier.define_var(&var_name, false)?;
-        self.variable_map
-            .insert(var_name.clone(), self.variable_counter);
-        self.variable_counter += 1;
+
+        if !self.variable_map.contains_key(&var_name) {
+            self.variable_map
+                .insert(var_name.clone(), self.variable_counter);
+            self.variable_counter += 1;
+        }
 
         let mut initializer = None;
         if self.match_token(vec![TokenType::Equal]) {
