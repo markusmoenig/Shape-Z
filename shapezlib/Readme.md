@@ -1,6 +1,6 @@
 # Shape-Z: Shape Prozessing Language
 
-![Image](/examples/lighthouse.png)
+![Image](images/lighthouse.png)
 
 **Shape-Z** is a recursive, voxel-based programming language inspired by **GLSL** and shader-like workflows. It is designed for the procedural generation of 3D worlds using simple, expressive code. Unlike traditional modeling tools, Shape-Z treats models as programmable entities—built from logical operations, shapes, and materials—executed on a virtual voxel grid.
 
@@ -47,3 +47,5 @@ Shape-Z is dual-licensed under the same terms as Rust:
 - **Apache License (Version 2.0)**
 
 You may choose either license to use Shape-Z according to your needs.
+
+![Image](images/bathroom.png)
