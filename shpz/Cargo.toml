@@ -10,6 +10,7 @@ repository = "https://github.com/markusmoenig/Shape-Z.git"
 homepage = "https://shape-z.com"
 
 [dependencies]
-shapezlib = { version = "0.1.0", path = "../shapezlib" }
+shapezlib = { version = "0.1.0" }
+#shapezlib = { version = "0.1.0", path = "../shapezlib" }
 clap = "4.1.5"
 notify = "8.1.0"
