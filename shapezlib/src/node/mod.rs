@@ -93,8 +93,21 @@ pub enum NodeOp {
         Option<Vec<NodeOp>>,
         Option<Vec<NodeOp>>,
     ),
-    DistanceSphere(Vec<NodeOp>, Vec<NodeOp>, Vec<NodeOp>),
-    DistanceBox(Vec<NodeOp>, Vec<NodeOp>, Vec<NodeOp>, Vec<NodeOp>),
+    DistanceSphere(
+        Vec<NodeOp>,
+        Vec<NodeOp>,
+        Vec<NodeOp>,
+        Vec<NodeOp>,
+        Vec<NodeOp>,
+    ),
+    DistanceBox(
+        Vec<NodeOp>,
+        Vec<NodeOp>,
+        Vec<NodeOp>,
+        Vec<NodeOp>,
+        Vec<NodeOp>,
+        Vec<NodeOp>,
+    ),
     DistanceCapsule(
         Vec<NodeOp>,
         Vec<NodeOp>,
@@ -139,7 +152,7 @@ pub enum NodeOp {
         Vec<NodeOp>,
         Vec<NodeOp>,
     ),
-    DistanceBoxBetween(
+    DistanceRectFrustum(
         Vec<NodeOp>,
         Vec<NodeOp>,
         Vec<NodeOp>,

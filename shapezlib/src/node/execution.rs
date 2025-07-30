@@ -863,7 +863,7 @@ impl Execution {
                     }
                 }
                 // Distance Functions
-                NodeOp::DistanceSphere(at, radius, code) => {
+                NodeOp::DistanceSphere(at, radius, offset, scale, code) => {
                     let at = if at.is_empty() {
                         self.point_at(Vec3::zero())
                     } else {
@@ -872,7 +872,7 @@ impl Execution {
                         self.point_at(p)
                     };
 
-                    let radius = if radius.is_empty() {
+                    let mut radius = if radius.is_empty() {
                         0.5
                     } else {
                         self.execute(radius, program);
@@ -881,14 +881,22 @@ impl Execution {
 
                     self.push_state();
 
-                    let sdf = (self.local.as_vec3() - at).magnitude() - radius;
+                    let s = self.eval_profile_scale(scale, program);
+                    if s != 1.0 {
+                        radius *= s;
+                    }
+
+                    let sdf0 = (self.local.as_vec3() - at).magnitude() - radius;
+                    let off = self.eval_profile_offset(offset, program);
+                    let sdf = sdf0 - off;
+
                     self.sdf = Value::from_float(sdf);
                     self.inside = Value::from_float(-sdf);
                     self.execute(code, program);
 
                     self.pop_state();
                 }
-                NodeOp::DistanceBox(at, radius, rounding, code) => {
+                NodeOp::DistanceBox(at, radius, rounding, offset, scale, code) => {
                     let at = if at.is_empty() {
                         self.point_at(Vec3::zero())
                     } else {
@@ -913,11 +921,16 @@ impl Execution {
 
                     self.push_state();
 
-                    let sdf = self.sdf_box3d(
-                        self.local.as_vec3() - at,
-                        self.size_by_plane(size),
-                        rounding,
-                    );
+                    let mut half = self.size_by_plane(size);
+                    let s = self.eval_profile_scale(scale, program);
+                    if s != 1.0 {
+                        half *= Vec3::broadcast(s);
+                    }
+
+                    let sdf0 = self.sdf_box3d(self.local.as_vec3() - at, half, rounding);
+                    let off = self.eval_profile_offset(offset, program);
+                    let sdf = sdf0 - off;
+
                     self.sdf = Value::from_float(sdf);
                     self.inside = Value::from_float(-sdf);
                     self.execute(code, program);
@@ -1459,7 +1472,7 @@ impl Execution {
                     self.execute(code, program);
                     self.pop_state();
                 }
-                NodeOp::DistanceBoxBetween(
+                NodeOp::DistanceRectFrustum(
                     from,
                     to,
                     base_wh,

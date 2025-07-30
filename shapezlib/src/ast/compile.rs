@@ -418,13 +418,15 @@ impl Visitor for CompileVisitor {
             let to = cp.get("to").cloned().unwrap_or(vec![]);
             match objectd.name.as_str() {
                 "Sphere" => {
-                    ctx.emit(NodeOp::DistanceSphere(at, radius, code));
+                    ctx.emit(NodeOp::DistanceSphere(at, radius, offset, scale, code));
                 }
                 "Box" => {
                     ctx.emit(NodeOp::DistanceBox(
                         at,
                         size,
                         cp.get("rounding").cloned().unwrap_or(vec![]),
+                        offset,
+                        scale,
                         code,
                     ));
                 }
@@ -473,7 +475,7 @@ impl Visitor for CompileVisitor {
                     ));
                 }
                 "RectFrustum" => {
-                    ctx.emit(NodeOp::DistanceBoxBetween(
+                    ctx.emit(NodeOp::DistanceRectFrustum(
                         from,
                         to,
                         cp.get("base").cloned().unwrap_or(vec![]),
