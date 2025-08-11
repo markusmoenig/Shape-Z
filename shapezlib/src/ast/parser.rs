@@ -12,6 +12,8 @@ pub struct Parser {
     variable_counter: u32,
     variable_map: FxHashMap<String, u32>,
 
+    function_names: FxHashSet<String>,
+
     profile_offset: Option<Box<Stmt>>,
     profile_scale: Option<Box<Stmt>>,
 
@@ -35,6 +37,8 @@ impl Parser {
 
             variable_counter: 0,
             variable_map: FxHashMap::default(),
+
+            function_names: FxHashSet::default(),
 
             profile_offset: None,
             profile_scale: None,
@@ -159,6 +163,9 @@ impl Parser {
         }
         if self.match_token(vec![TokenType::ProfileScale]) {
             return self.profile_scale_declaration();
+        }
+        if self.match_token(vec![TokenType::Fn]) {
+            return self.fn_declaration();
         }
 
         self.statement()
@@ -375,6 +382,11 @@ impl Parser {
                     self.materials.insert(name, mat);
                 }
 
+                // Add imported function names to the parser
+                for name in parser.function_names {
+                    self.function_names.insert(name);
+                }
+
                 // Import variables
                 for (name, mat) in parser.variable_map {
                     self.variable_map.insert(name, mat + self.variable_counter);
@@ -419,6 +431,68 @@ impl Parser {
         let block = self.block()?;
 
         Ok(Stmt::Config(id, Box::new(block), self.create_loc(line)))
+    }
+
+    /// Function declaration
+    fn fn_declaration(&mut self) -> Result<Stmt, ParseError> {
+        let line = self.current_line;
+        self.consume(
+            TokenType::Identifier,
+            "Expected identifier after 'fn''",
+            self.current_line,
+        )?;
+
+        let id = self.previous().unwrap().lexeme.clone();
+
+        self.consume(
+            TokenType::LeftParen,
+            "Expected `(` after function name",
+            self.current_line,
+        )?;
+
+        let mut params = IndexMap::default();
+
+        while self.match_token(vec![TokenType::Identifier]) {
+            let id = self.previous().unwrap().lexeme.clone();
+
+            let mut param_value = None;
+
+            if self.tokens[self.current].kind == TokenType::Equal {
+                self.consume(
+                    TokenType::Equal,
+                    "Expected '=' after parameter identifier",
+                    self.current_line,
+                )?;
+
+                param_value = Some(Box::new(self.expression()?));
+            }
+            params.insert(id, param_value);
+
+            if self.tokens[self.current].kind == TokenType::Comma {
+                self.advance();
+            }
+        }
+
+        self.consume(
+            TokenType::RightParen,
+            "Expected ')' after function parameters",
+            self.current_line,
+        )?;
+
+        self.consume(
+            TokenType::LeftBrace,
+            "Expected '{' after function header",
+            self.current_line,
+        )?;
+
+        let block = self.block()?;
+
+        self.function_names.insert(id.clone());
+
+        Ok(Stmt::FunctionDeclaration(
+            FunctionD::new(id, params, Box::new(block)),
+            self.create_loc(line),
+        ))
     }
 
     /// Voxel declaration
@@ -1239,6 +1313,7 @@ impl Parser {
                 field_path = self.get_field_path_at_current();
             }
         }*/
+
         Ok(Expr::FunctionCall(
             Box::new(callee),
             swizzle,
@@ -1439,6 +1514,13 @@ impl Parser {
                         self.create_loc(token.line),
                     ))
                 } else if let Some(_) = self.verifier.get_var_name(&token.lexeme) {
+                    Ok(Expr::Variable(
+                        token.lexeme,
+                        swizzle,
+                        field_path,
+                        self.create_loc(token.line),
+                    ))
+                } else if self.function_names.contains(&token.lexeme) {
                     Ok(Expr::Variable(
                         token.lexeme,
                         swizzle,

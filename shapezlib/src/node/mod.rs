@@ -22,6 +22,7 @@ pub enum NodeOp {
     IfClear(Vec<NodeOp>),
     Place(String, Vec<NodeOp>),
     Push(Value),
+    FunctionCall(u8, Vec<NodeOp>),
     Clear,
     Dup,
     World,

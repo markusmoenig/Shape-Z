@@ -52,7 +52,7 @@ pub mod prelude {
     pub use crate::ast::error::{ParseError, RuntimeError};
     pub use crate::ast::idverifier::IdVerifier;
     pub use crate::ast::module::Module;
-    pub use crate::ast::obectd::*;
+    pub use crate::ast::objectd::*;
     pub use crate::ast::parser::Parser;
     pub use crate::ast::scanner::{Scanner, Token, TokenType};
     pub use crate::ast::value::*;

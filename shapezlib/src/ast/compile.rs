@@ -978,6 +978,8 @@ impl Visitor for CompileVisitor {
             ctx.emit(NodeOp::Clear);
         } else if self.functions.contains_key(&name) {
             rc = ASTValue::Function(name.clone(), vec![], Box::new(ASTValue::None));
+        } else if ctx.program.functions.contains_key(&name) {
+            rc = ASTValue::Function(name.clone(), vec![], Box::new(ASTValue::None));
         } else {
             if let Some(index) = ctx.variables.get(&name) {
                 ctx.emit(NodeOp::Load(*index as usize));
@@ -1147,6 +1149,12 @@ impl Visitor for CompileVisitor {
                         loc,
                     ));
                 }
+            } else if let Some((_params, body)) = ctx.program.functions.get(&name) {
+                let body = body.clone();
+                for arg in args {
+                    _ = arg.accept(self, ctx)?;
+                }
+                ctx.emit(NodeOp::FunctionCall(args.len() as u8, body));
             } else {
                 return Err(RuntimeError::new(
                     format!("Unknown function '{}'", name),
@@ -1184,17 +1192,34 @@ impl Visitor for CompileVisitor {
         Ok(ASTValue::None)
     }
 
-    fn func_declaration(
+    /// Create a voxel box
+    fn function_declaration(
         &mut self,
-        _name: &str,
-        _args: &[ASTValue],
-        _body: &[Box<Stmt>],
-        _returns: &ASTValue,
-        _export: &bool,
+        objectd: &FunctionD,
         _loc: &Location,
-        _ctx: &mut Context,
+        ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        // Keeping this around for possible later function support
+        // Compile params
+        let mut cp: IndexMap<String, Option<Vec<NodeOp>>> = IndexMap::default();
+        for (name, ast) in &objectd.params {
+            let mut param: Option<Vec<NodeOp>> = None;
+            if let Some(ast) = ast {
+                ctx.add_custom_target();
+                _ = ast.accept(self, ctx)?;
+                if let Some(code) = ctx.take_last_custom_target() {
+                    param = Some(code);
+                }
+            }
+            cp.insert(name.clone(), param);
+        }
+
+        ctx.add_custom_target();
+        objectd.block.accept(self, ctx)?;
+        if let Some(codes) = ctx.take_last_custom_target() {
+            ctx.program
+                .functions
+                .insert(objectd.name.clone(), (cp, codes));
+        }
 
         Ok(ASTValue::None)
     }

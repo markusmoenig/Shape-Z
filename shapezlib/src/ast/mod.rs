@@ -4,7 +4,7 @@ pub mod environment;
 pub mod error;
 pub mod idverifier;
 pub mod module;
-pub mod obectd;
+pub mod objectd;
 pub mod parser;
 pub mod scanner;
 pub mod value;
@@ -80,6 +80,7 @@ pub enum Stmt {
     Config(String, Box<Stmt>, Location),
     Import(Option<Module>, Location),
     Voxel(VoxelD, Location),
+    FunctionDeclaration(FunctionD, Location),
     Shape(ShapeD, Location),
     Segment(SegmentD, Location),
     Distance(DistanceD, Location),
@@ -89,14 +90,6 @@ pub enum Stmt {
     Place(String, FxHashMap<String, Box<Expr>>, Location),
     VarDeclaration(String, ASTValue, Box<Expr>, Location),
     StructDeclaration(String, Vec<(String, ASTValue)>, Location),
-    FunctionDeclaration(
-        String,
-        Vec<ASTValue>,
-        Vec<Box<Stmt>>,
-        ASTValue,
-        bool,
-        Location,
-    ),
     Return(Box<Expr>, Location),
     Break(Location),
     Empty,
@@ -292,6 +285,13 @@ pub trait Visitor {
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError>;
 
+    fn function_declaration(
+        &mut self,
+        objectd: &FunctionD,
+        loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError>;
+
     fn shape(
         &mut self,
         objectd: &ShapeD,
@@ -441,18 +441,6 @@ pub trait Visitor {
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError>;
 
-    #[allow(clippy::too_many_arguments)]
-    fn func_declaration(
-        &mut self,
-        name: &str,
-        args: &[ASTValue],
-        body: &[Box<Stmt>],
-        returns: &ASTValue,
-        export: &bool,
-        loc: &Location,
-        ctx: &mut Context,
-    ) -> Result<ASTValue, RuntimeError>;
-
     fn return_stmt(
         &mut self,
         expr: &Expr,
@@ -538,6 +526,9 @@ impl Stmt {
             Stmt::Config(id, block, loc) => visitor.config(id, block, loc, ctx),
             Stmt::Import(module, loc) => visitor.import(module, loc, ctx),
             Stmt::Voxel(objectd, loc) => visitor.voxel(objectd, loc, ctx),
+            Stmt::FunctionDeclaration(objectd, loc) => {
+                visitor.function_declaration(objectd, loc, ctx)
+            }
             Stmt::Shape(objectd, loc) => visitor.shape(objectd, loc, ctx),
             Stmt::Segment(objectd, loc) => visitor.segment(objectd, loc, ctx),
             Stmt::Distance(objectd, loc) => visitor.distance(objectd, loc, ctx),
@@ -550,9 +541,6 @@ impl Stmt {
             }
             Stmt::StructDeclaration(name, fields, loc) => {
                 visitor.struct_declaration(name, fields, loc, ctx)
-            }
-            Stmt::FunctionDeclaration(name, args, body, returns, export, loc) => {
-                visitor.func_declaration(name, args, body, returns, export, loc, ctx)
             }
             Stmt::Break(loc) => visitor.break_stmt(loc, ctx),
             Stmt::Empty => visitor.empty_stmt(ctx),

@@ -13,7 +13,7 @@ pub struct Program {
     pub globals: Vec<NodeOp>,
     pub custom: Vec<NodeOp>,
     pub voxels: FxHashMap<String, VoxelD>,
-    pub functions: FxHashMap<String, Vec<NodeOp>>,
+    pub functions: IndexMap<String, (IndexMap<String, Option<Vec<NodeOp>>>, Vec<NodeOp>)>,
 
     /// The output grid
     pub grid: Arc<RwLock<VoxelGrid>>,
@@ -28,7 +28,7 @@ impl Program {
             globals: Vec::new(),
             custom: Vec::new(),
             voxels: FxHashMap::default(),
-            functions: FxHashMap::default(),
+            functions: IndexMap::default(),
 
             grid: Arc::new(RwLock::new(VoxelGrid::new(
                 [size.x as F, size.y as F, size.z as F],

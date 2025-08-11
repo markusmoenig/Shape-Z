@@ -161,6 +161,12 @@ impl Execution {
                 }
                 NodeOp::Push(v) => self.stack.push(*v),
                 NodeOp::Clear => _ = self.stack.pop(),
+                NodeOp::FunctionCall(_arity, code) => {
+                    self.execute(code, program);
+                    if let Some(val) = self.stack.last() {
+                        println!("{:?}", val);
+                    }
+                }
                 NodeOp::Pack2 => {
                     let y = self.stack.pop().unwrap();
                     let x = self.stack.pop().unwrap();
