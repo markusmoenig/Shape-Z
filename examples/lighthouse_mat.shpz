@@ -98,6 +98,7 @@ material WaterMedium {
     }
 }
 
+/*
 material Glass {
     albedo {
         1;
@@ -110,7 +111,11 @@ material Glass {
     transmission {
         1.0;
     }
-}
+
+    ior {
+        1.45;
+    }
+}*/
 
 material White {
     albedo {

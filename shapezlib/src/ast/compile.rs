@@ -11,6 +11,9 @@ pub struct ASTFunction {
 pub struct CompileVisitor {
     pub environment: Environment,
     functions: FxHashMap<String, ASTFunction>,
+
+    /// List of local variables which are in scope (inside functions)
+    locals: IndexSet<String>,
 }
 
 impl Visitor for CompileVisitor {
@@ -255,6 +258,7 @@ impl Visitor for CompileVisitor {
         Self {
             environment: Environment::default(),
             functions,
+            locals: IndexSet::default(),
         }
     }
 
@@ -746,7 +750,9 @@ impl Visitor for CompileVisitor {
             }
         }
 
-        ctx.materials.insert(objectd.name.clone(), material_ops);
+        if !ctx.materials.contains_key(&objectd.name) {
+            ctx.materials.insert(objectd.name.clone(), material_ops);
+        }
 
         Ok(ASTValue::None)
     }
@@ -837,8 +843,10 @@ impl Visitor for CompileVisitor {
     ) -> Result<ASTValue, RuntimeError> {
         _ = expression.accept(self, ctx)?;
 
-        if let Some(index) = ctx.variables.get(name) {
-            ctx.emit(NodeOp::Store(*index as usize));
+        if let Some(index) = self.locals.get_index_of(name) {
+            ctx.emit(NodeOp::StoreLocal(index));
+        } else if let Some(index) = ctx.globals.get(name) {
+            ctx.emit(NodeOp::StoreGlobal(*index as usize));
         }
 
         // self.environment.define(name.to_string(), v);
@@ -856,85 +864,180 @@ impl Visitor for CompileVisitor {
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        _ = expression.accept(self, ctx)?; // RHS is now on stack
+        // NOTE: We intentionally DO NOT evaluate `expression` up-front for swizzled
+        // compound assignments, because we need the target value on the stack
+        // first to preserve order for SetComponents.
 
-        if let Some(&index) = ctx.variables.get(&name) {
+        if let Some(index) = self.locals.get_index_of(&name) {
             let index = index as usize;
             if swizzle.is_empty() {
-                // Non-swizzled assignment
+                // Non-swizzled assignment to a local
                 match op {
                     AssignmentOperator::Assign => {
-                        ctx.emit(NodeOp::Store(index));
+                        _ = expression.accept(self, ctx)?; // RHS
+                        ctx.emit(NodeOp::StoreLocal(index));
                     }
                     AssignmentOperator::AddAssign => {
-                        ctx.emit(NodeOp::Load(index));
-                        ctx.emit(NodeOp::Swap);
+                        _ = expression.accept(self, ctx)?; // RHS
+                        ctx.emit(NodeOp::LoadLocal(index));
+                        ctx.emit(NodeOp::Swap); // [lhs, rhs] → [rhs, lhs] → then Add uses (lhs + rhs)?
                         ctx.emit(NodeOp::Add);
-                        ctx.emit(NodeOp::Store(index));
+                        ctx.emit(NodeOp::StoreLocal(index));
                     }
                     AssignmentOperator::SubtractAssign => {
-                        ctx.emit(NodeOp::Load(index));
+                        _ = expression.accept(self, ctx)?; // RHS
+                        ctx.emit(NodeOp::LoadLocal(index));
                         ctx.emit(NodeOp::Swap);
                         ctx.emit(NodeOp::Sub);
-                        ctx.emit(NodeOp::Store(index));
+                        ctx.emit(NodeOp::StoreLocal(index));
                     }
                     AssignmentOperator::MultiplyAssign => {
-                        ctx.emit(NodeOp::Load(index));
+                        _ = expression.accept(self, ctx)?; // RHS
+                        ctx.emit(NodeOp::LoadLocal(index));
                         ctx.emit(NodeOp::Swap);
                         ctx.emit(NodeOp::Mul);
-                        ctx.emit(NodeOp::Store(index));
+                        ctx.emit(NodeOp::StoreLocal(index));
                     }
                     AssignmentOperator::DivideAssign => {
-                        ctx.emit(NodeOp::Load(index));
+                        _ = expression.accept(self, ctx)?; // RHS
+                        ctx.emit(NodeOp::LoadLocal(index));
                         ctx.emit(NodeOp::Swap);
                         ctx.emit(NodeOp::Div);
-                        ctx.emit(NodeOp::Store(index));
+                        ctx.emit(NodeOp::StoreLocal(index));
                     }
                 }
             } else {
-                // Swizzled assignment
+                // Swizzled assignment to a local
                 match op {
                     AssignmentOperator::Assign => {
-                        ctx.emit(NodeOp::Load(index));
-                        ctx.emit(NodeOp::Swap);
-                        ctx.emit(NodeOp::SetComponents(swizzle.into()));
-                        ctx.emit(NodeOp::Store(index));
+                        _ = expression.accept(self, ctx)?; // RHS
+                        ctx.emit(NodeOp::LoadLocal(index)); // target
+                        ctx.emit(NodeOp::Swap); // [target, rhs]
+                        ctx.emit(NodeOp::SetComponents(swizzle.to_vec()));
+                        ctx.emit(NodeOp::StoreLocal(index));
                     }
                     AssignmentOperator::AddAssign => {
-                        ctx.emit(NodeOp::Load(index));
-                        ctx.emit(NodeOp::Dup);
-                        ctx.emit(NodeOp::GetComponents(swizzle.to_vec()));
-                        ctx.emit(NodeOp::Swap);
-                        ctx.emit(NodeOp::Add);
-                        ctx.emit(NodeOp::SetComponents(swizzle.to_vec()));
-                        ctx.emit(NodeOp::Store(index));
+                        // Want: t.swizzle = t.swizzle + rhs
+                        ctx.emit(NodeOp::LoadLocal(index)); // t
+                        ctx.emit(NodeOp::Dup); // t, t
+                        ctx.emit(NodeOp::GetComponents(swizzle.to_vec())); // t, a
+                        _ = expression.accept(self, ctx)?; // t, a, rhs
+                        ctx.emit(NodeOp::Add); // t, (a+rhs)
+                        ctx.emit(NodeOp::SetComponents(swizzle.to_vec())); // t'
+                        ctx.emit(NodeOp::StoreLocal(index));
                     }
                     AssignmentOperator::SubtractAssign => {
-                        ctx.emit(NodeOp::Load(index));
+                        ctx.emit(NodeOp::LoadLocal(index));
                         ctx.emit(NodeOp::Dup);
-                        ctx.emit(NodeOp::GetComponents(swizzle.into()));
-                        ctx.emit(NodeOp::Swap);
-                        ctx.emit(NodeOp::Sub);
-                        ctx.emit(NodeOp::SetComponents(swizzle.into()));
-                        ctx.emit(NodeOp::Store(index));
+                        ctx.emit(NodeOp::GetComponents(swizzle.to_vec())); // t, a
+                        _ = expression.accept(self, ctx)?; // t, a, rhs
+                        ctx.emit(NodeOp::Sub); // t, (a-rhs)
+                        ctx.emit(NodeOp::SetComponents(swizzle.to_vec())); // t'
+                        ctx.emit(NodeOp::StoreLocal(index));
                     }
                     AssignmentOperator::MultiplyAssign => {
-                        ctx.emit(NodeOp::Load(index));
+                        ctx.emit(NodeOp::LoadLocal(index));
                         ctx.emit(NodeOp::Dup);
-                        ctx.emit(NodeOp::GetComponents(swizzle.into()));
-                        ctx.emit(NodeOp::Swap);
-                        ctx.emit(NodeOp::Mul);
-                        ctx.emit(NodeOp::SetComponents(swizzle.into()));
-                        ctx.emit(NodeOp::Store(index));
+                        ctx.emit(NodeOp::GetComponents(swizzle.to_vec())); // t, a
+                        _ = expression.accept(self, ctx)?; // t, a, rhs
+                        ctx.emit(NodeOp::Mul); // t, (a*rhs)
+                        ctx.emit(NodeOp::SetComponents(swizzle.to_vec())); // t'
+                        ctx.emit(NodeOp::StoreLocal(index));
                     }
                     AssignmentOperator::DivideAssign => {
-                        ctx.emit(NodeOp::Load(index));
+                        ctx.emit(NodeOp::LoadLocal(index));
                         ctx.emit(NodeOp::Dup);
-                        ctx.emit(NodeOp::GetComponents(swizzle.into()));
+                        ctx.emit(NodeOp::GetComponents(swizzle.to_vec())); // t, a
+                        _ = expression.accept(self, ctx)?; // t, a, rhs
+                        ctx.emit(NodeOp::Div); // t, (a/rhs)
+                        ctx.emit(NodeOp::SetComponents(swizzle.to_vec())); // t'
+                        ctx.emit(NodeOp::StoreLocal(index));
+                    }
+                }
+            }
+        } else if let Some(&index) = ctx.globals.get(&name) {
+            let index = index as usize;
+            if swizzle.is_empty() {
+                // Non-swizzled assignment to a global
+                match op {
+                    AssignmentOperator::Assign => {
+                        _ = expression.accept(self, ctx)?; // RHS
+                        ctx.emit(NodeOp::StoreGlobal(index));
+                    }
+                    AssignmentOperator::AddAssign => {
+                        _ = expression.accept(self, ctx)?; // RHS
+                        ctx.emit(NodeOp::LoadGlobal(index));
+                        ctx.emit(NodeOp::Swap);
+                        ctx.emit(NodeOp::Add);
+                        ctx.emit(NodeOp::StoreGlobal(index));
+                    }
+                    AssignmentOperator::SubtractAssign => {
+                        _ = expression.accept(self, ctx)?; // RHS
+                        ctx.emit(NodeOp::LoadGlobal(index));
+                        ctx.emit(NodeOp::Swap);
+                        ctx.emit(NodeOp::Sub);
+                        ctx.emit(NodeOp::StoreGlobal(index));
+                    }
+                    AssignmentOperator::MultiplyAssign => {
+                        _ = expression.accept(self, ctx)?; // RHS
+                        ctx.emit(NodeOp::LoadGlobal(index));
+                        ctx.emit(NodeOp::Swap);
+                        ctx.emit(NodeOp::Mul);
+                        ctx.emit(NodeOp::StoreGlobal(index));
+                    }
+                    AssignmentOperator::DivideAssign => {
+                        _ = expression.accept(self, ctx)?; // RHS
+                        ctx.emit(NodeOp::LoadGlobal(index));
                         ctx.emit(NodeOp::Swap);
                         ctx.emit(NodeOp::Div);
-                        ctx.emit(NodeOp::SetComponents(swizzle.into()));
-                        ctx.emit(NodeOp::Store(index));
+                        ctx.emit(NodeOp::StoreGlobal(index));
+                    }
+                }
+            } else {
+                // Swizzled assignment to a global
+                match op {
+                    AssignmentOperator::Assign => {
+                        _ = expression.accept(self, ctx)?; // RHS
+                        ctx.emit(NodeOp::LoadGlobal(index));
+                        ctx.emit(NodeOp::Swap); // [target, rhs]
+                        ctx.emit(NodeOp::SetComponents(swizzle.to_vec()));
+                        ctx.emit(NodeOp::StoreGlobal(index));
+                    }
+                    AssignmentOperator::AddAssign => {
+                        ctx.emit(NodeOp::LoadGlobal(index)); // t
+                        ctx.emit(NodeOp::Dup); // t, t
+                        ctx.emit(NodeOp::GetComponents(swizzle.to_vec())); // t, a
+                        _ = expression.accept(self, ctx)?; // t, a, rhs
+                        ctx.emit(NodeOp::Add); // t, (a+rhs)
+                        ctx.emit(NodeOp::SetComponents(swizzle.to_vec())); // t'
+                        ctx.emit(NodeOp::StoreGlobal(index));
+                    }
+                    AssignmentOperator::SubtractAssign => {
+                        ctx.emit(NodeOp::LoadGlobal(index));
+                        ctx.emit(NodeOp::Dup);
+                        ctx.emit(NodeOp::GetComponents(swizzle.to_vec())); // t, a
+                        _ = expression.accept(self, ctx)?; // t, a, rhs
+                        ctx.emit(NodeOp::Sub); // t, (a-rhs)
+                        ctx.emit(NodeOp::SetComponents(swizzle.to_vec())); // t'
+                        ctx.emit(NodeOp::StoreGlobal(index));
+                    }
+                    AssignmentOperator::MultiplyAssign => {
+                        ctx.emit(NodeOp::LoadGlobal(index));
+                        ctx.emit(NodeOp::Dup);
+                        ctx.emit(NodeOp::GetComponents(swizzle.to_vec())); // t, a
+                        _ = expression.accept(self, ctx)?; // t, a, rhs
+                        ctx.emit(NodeOp::Mul); // t, (a*rhs)
+                        ctx.emit(NodeOp::SetComponents(swizzle.to_vec())); // t'
+                        ctx.emit(NodeOp::StoreGlobal(index));
+                    }
+                    AssignmentOperator::DivideAssign => {
+                        ctx.emit(NodeOp::LoadGlobal(index));
+                        ctx.emit(NodeOp::Dup);
+                        ctx.emit(NodeOp::GetComponents(swizzle.to_vec())); // t, a
+                        _ = expression.accept(self, ctx)?; // t, a, rhs
+                        ctx.emit(NodeOp::Div); // t, (a/rhs)
+                        ctx.emit(NodeOp::SetComponents(swizzle.to_vec())); // t'
+                        ctx.emit(NodeOp::StoreGlobal(index));
                     }
                 }
             }
@@ -942,6 +1045,7 @@ impl Visitor for CompileVisitor {
 
         Ok(ASTValue::None)
     }
+
     fn variable(
         &mut self,
         name: String,
@@ -980,9 +1084,11 @@ impl Visitor for CompileVisitor {
             rc = ASTValue::Function(name.clone(), vec![], Box::new(ASTValue::None));
         } else if ctx.program.functions.contains_key(&name) {
             rc = ASTValue::Function(name.clone(), vec![], Box::new(ASTValue::None));
+        } else if let Some(index) = self.locals.get_index_of(&name) {
+            ctx.emit(NodeOp::LoadLocal(index));
         } else {
-            if let Some(index) = ctx.variables.get(&name) {
-                ctx.emit(NodeOp::Load(*index as usize));
+            if let Some(index) = ctx.globals.get(&name) {
+                ctx.emit(NodeOp::LoadGlobal(*index as usize));
                 if !swizzle.is_empty() {
                     ctx.emit(NodeOp::GetComponents(swizzle.to_vec()));
                 }
@@ -1145,16 +1251,38 @@ impl Visitor for CompileVisitor {
                     ctx.emit(func.op.clone());
                 } else {
                     return Err(RuntimeError::new(
-                        format!("Wrong amount of arguments for '{}'", name),
+                        format!(
+                            "Wrong amount of arguments for '{}', expected '{}' got '{}'",
+                            name,
+                            func.arguments as usize,
+                            args.len(),
+                        ),
                         loc,
                     ));
                 }
-            } else if let Some((_params, body)) = ctx.program.functions.get(&name) {
+            } else if let Some((arity, params, body)) = ctx.program.functions.get(&name) {
+                let total_locals = params.len();
+                if *arity != args.len() {
+                    return Err(RuntimeError::new(
+                        format!(
+                            "Wrong amount of arguments for '{}', expected '{}' got '{}'",
+                            name,
+                            arity,
+                            args.len()
+                        ),
+                        loc,
+                    ));
+                }
+
                 let body = body.clone();
                 for arg in args {
                     _ = arg.accept(self, ctx)?;
                 }
-                ctx.emit(NodeOp::FunctionCall(args.len() as u8, body));
+                ctx.emit(NodeOp::FunctionCall(
+                    args.len() as u8,
+                    total_locals as u8,
+                    body,
+                ));
             } else {
                 return Err(RuntimeError::new(
                     format!("Unknown function '{}'", name),
@@ -1199,18 +1327,21 @@ impl Visitor for CompileVisitor {
         _loc: &Location,
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        // Compile params
+        self.locals.clear();
+
+        // Compile locals (and their optional default values)
         let mut cp: IndexMap<String, Option<Vec<NodeOp>>> = IndexMap::default();
-        for (name, ast) in &objectd.params {
-            let mut param: Option<Vec<NodeOp>> = None;
+        for (name, ast) in &objectd.locals {
+            let mut def: Option<Vec<NodeOp>> = None;
             if let Some(ast) = ast {
                 ctx.add_custom_target();
                 _ = ast.accept(self, ctx)?;
                 if let Some(code) = ctx.take_last_custom_target() {
-                    param = Some(code);
+                    def = Some(code);
                 }
             }
-            cp.insert(name.clone(), param);
+            cp.insert(name.clone(), def);
+            self.locals.insert(name.clone());
         }
 
         ctx.add_custom_target();
@@ -1218,8 +1349,10 @@ impl Visitor for CompileVisitor {
         if let Some(codes) = ctx.take_last_custom_target() {
             ctx.program
                 .functions
-                .insert(objectd.name.clone(), (cp, codes));
+                .insert(objectd.name.clone(), (objectd.arity, cp, codes));
         }
+
+        self.locals.clear();
 
         Ok(ASTValue::None)
     }

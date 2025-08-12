@@ -2,6 +2,12 @@ use crate::prelude::*;
 use crate::zero_expr_float;
 use std::path::{Path, PathBuf};
 
+#[derive(PartialEq, Debug)]
+enum VariableScope {
+    Global,
+    Local,
+}
+
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
@@ -9,8 +15,13 @@ pub struct Parser {
     path: PathBuf,
     verifier: IdVerifier,
 
-    variable_counter: u32,
-    variable_map: FxHashMap<String, u32>,
+    scope: VariableScope,
+
+    // Store the indices of the global variables.
+    globals_map: FxHashMap<String, u32>,
+
+    // Store the indices of the local variables inside a fn.
+    locals_map: IndexMap<String, Option<Box<Expr>>>,
 
     function_names: FxHashSet<String>,
 
@@ -35,8 +46,10 @@ impl Parser {
             path: PathBuf::new(),
             verifier: IdVerifier::default(),
 
-            variable_counter: 0,
-            variable_map: FxHashMap::default(),
+            scope: VariableScope::Global,
+
+            globals_map: FxHashMap::default(),
+            locals_map: IndexMap::default(),
 
             function_names: FxHashSet::default(),
 
@@ -118,7 +131,7 @@ impl Parser {
             source,
             self.path.clone(),
             statements,
-            self.variable_map.clone(),
+            self.globals_map.clone(),
         );
 
         Ok(module)
@@ -177,12 +190,16 @@ impl Parser {
             .consume(TokenType::Identifier, "Expect variable name", line)?
             .lexeme;
 
-        _ = self.verifier.define_var(&var_name, false)?;
-
-        if !self.variable_map.contains_key(&var_name) {
-            self.variable_map
-                .insert(var_name.clone(), self.variable_counter);
-            self.variable_counter += 1;
+        if self.scope == VariableScope::Global {
+            _ = self.verifier.define_var(&var_name, false)?;
+            if !self.globals_map.contains_key(&var_name) {
+                self.globals_map
+                    .insert(var_name.clone(), self.globals_map.len() as u32);
+            }
+        } else {
+            if !self.locals_map.contains_key(&var_name) {
+                self.locals_map.insert(var_name.clone(), None);
+            }
         }
 
         let mut initializer = None;
@@ -250,7 +267,7 @@ impl Parser {
 
             self.consume(
                 TokenType::Equal,
-                "Expected '=' after voxel identifier",
+                "Expected '=' after material parameter",
                 self.current_line,
             )?;
 
@@ -388,9 +405,9 @@ impl Parser {
                 }
 
                 // Import variables
-                for (name, mat) in parser.variable_map {
-                    self.variable_map.insert(name, mat + self.variable_counter);
-                    self.variable_counter += 1;
+                for (name, mat) in parser.globals_map {
+                    self.globals_map
+                        .insert(name, mat + self.globals_map.len() as u32);
                 }
 
                 module = Some(m);
@@ -450,12 +467,11 @@ impl Parser {
             self.current_line,
         )?;
 
-        let mut params = IndexMap::default();
+        self.locals_map = IndexMap::default();
 
         while self.match_token(vec![TokenType::Identifier]) {
             let id = self.previous().unwrap().lexeme.clone();
-
-            let mut param_value = None;
+            let mut param_value: Option<Box<Expr>> = None;
 
             if self.tokens[self.current].kind == TokenType::Equal {
                 self.consume(
@@ -466,7 +482,7 @@ impl Parser {
 
                 param_value = Some(Box::new(self.expression()?));
             }
-            params.insert(id, param_value);
+            self.locals_map.insert(id, param_value);
 
             if self.tokens[self.current].kind == TokenType::Comma {
                 self.advance();
@@ -485,12 +501,16 @@ impl Parser {
             self.current_line,
         )?;
 
+        let arity = self.locals_map.len();
+
+        self.scope = VariableScope::Local;
         let block = self.block()?;
+        self.scope = VariableScope::Global;
 
         self.function_names.insert(id.clone());
 
         Ok(Stmt::FunctionDeclaration(
-            FunctionD::new(id, params, Box::new(block)),
+            FunctionD::new(id, arity, self.locals_map.clone(), Box::new(block)),
             self.create_loc(line),
         ))
     }
@@ -1513,7 +1533,18 @@ impl Parser {
                         token.lexeme.clone(),
                         self.create_loc(token.line),
                     ))
-                } else if let Some(_) = self.verifier.get_var_name(&token.lexeme) {
+                }
+                // Local variables in functions
+                else if self.locals_map.contains_key(&token.lexeme) {
+                    Ok(Expr::Variable(
+                        token.lexeme,
+                        swizzle,
+                        field_path,
+                        self.create_loc(token.line),
+                    ))
+                }
+                // Verifier contains global variables and global functions
+                else if let Some(_) = self.verifier.get_var_name(&token.lexeme) {
                     Ok(Expr::Variable(
                         token.lexeme,
                         swizzle,

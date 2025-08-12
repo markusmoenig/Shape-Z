@@ -11,8 +11,8 @@ pub struct Context {
     /// Custom targets needed for recursive nesting.
     pub custom_targets: Vec<Vec<NodeOp>>,
 
-    /// Holds the variable names and their indices into the global / flat array.
-    pub variables: FxHashMap<String, u32>,
+    /// Holds the global variable names and their indices into the global / flat array.
+    pub globals: FxHashMap<String, u32>,
 
     /// Holds all declared materials and their code which gets executed by the renderer on hit.
     pub materials: IndexMap<String, Vec<NodeOp>>,
@@ -31,12 +31,12 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(size: Vec3<i32>, density: usize, variables: FxHashMap<String, u32>) -> Self {
+    pub fn new(size: Vec3<i32>, density: usize, globals: FxHashMap<String, u32>) -> Self {
         Self {
             current_target: OutputTarget::Globals,
             custom_targets: vec![],
             program: Program::new(size, density),
-            variables,
+            globals,
             materials: IndexMap::default(),
             global_config: FxHashMap::default(),
             camera_config: None,

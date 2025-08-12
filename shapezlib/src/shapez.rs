@@ -83,7 +83,7 @@ impl ShapeZ {
     // Compile the source code
     pub fn compile(&mut self, module: &Module) -> Result<(), RuntimeError> {
         let mut visitor: CompileVisitor = CompileVisitor::new();
-        self.context = Context::new(Vec3::zero(), DENSITY, module.variables.clone());
+        self.context = Context::new(Vec3::zero(), DENSITY, module.globals.clone());
 
         // Add default materials
         if let Some(defs) = &self.defaults {
@@ -101,7 +101,7 @@ impl ShapeZ {
 
     /// Compile the voxels into the VoxelGrid.
     pub fn execute(&mut self) {
-        let mut execution = Execution::new(self.context.variables.len());
+        let mut execution = Execution::new(self.context.globals.len());
 
         // Add the default materials to the context
 

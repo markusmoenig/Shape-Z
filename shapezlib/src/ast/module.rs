@@ -7,7 +7,7 @@ pub struct Module {
     pub source: String,
     pub path: PathBuf,
 
-    pub variables: FxHashMap<String, u32>,
+    pub globals: FxHashMap<String, u32>,
     pub stmts: Vec<Box<Stmt>>,
 }
 
@@ -17,14 +17,14 @@ impl Module {
         source: String,
         path: PathBuf,
         stmts: Vec<Box<Stmt>>,
-        variables: FxHashMap<String, u32>,
+        globals: FxHashMap<String, u32>,
     ) -> Self {
         Self {
             name,
             source,
             path,
             stmts,
-            variables,
+            globals,
         }
     }
 }

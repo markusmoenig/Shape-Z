@@ -13,7 +13,7 @@ pub struct Program {
     pub globals: Vec<NodeOp>,
     pub custom: Vec<NodeOp>,
     pub voxels: FxHashMap<String, VoxelD>,
-    pub functions: IndexMap<String, (IndexMap<String, Option<Vec<NodeOp>>>, Vec<NodeOp>)>,
+    pub functions: IndexMap<String, (usize, IndexMap<String, Option<Vec<NodeOp>>>, Vec<NodeOp>)>,
 
     /// The output grid
     pub grid: Arc<RwLock<VoxelGrid>>,

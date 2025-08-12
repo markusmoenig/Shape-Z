@@ -215,7 +215,8 @@ impl MaterialD {
 #[derive(Clone, Debug)]
 pub struct FunctionD {
     pub name: String,
-    pub params: IndexMap<String, Option<Box<Expr>>>,
+    pub arity: usize,
+    pub locals: IndexMap<String, Option<Box<Expr>>>,
     pub block: Box<Stmt>,
     pub body: Vec<NodeOp>,
 }
@@ -223,12 +224,14 @@ pub struct FunctionD {
 impl FunctionD {
     pub fn new(
         name: String,
-        params: IndexMap<String, Option<Box<Expr>>>,
+        arity: usize,
+        locals: IndexMap<String, Option<Box<Expr>>>,
         block: Box<Stmt>,
     ) -> Self {
         Self {
             name,
-            params,
+            arity,
+            locals,
             block: block,
 
             body: vec![],

@@ -36,7 +36,7 @@ pub mod prelude {
 
     pub use vek::{Aabb, Vec2, Vec3, Vec4};
 
-    pub use indexmap::IndexMap;
+    pub use indexmap::{IndexMap, IndexSet};
 
     pub use crate::shapez::ShapeZ;
     pub use crate::tracer::Tracer;

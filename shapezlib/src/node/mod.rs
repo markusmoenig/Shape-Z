@@ -13,8 +13,10 @@ pub enum Plane {
 
 #[derive(Debug, Clone)]
 pub enum NodeOp {
-    Load(usize),
-    Store(usize),
+    LoadGlobal(usize),
+    StoreGlobal(usize),
+    LoadLocal(usize),
+    StoreLocal(usize),
     Swap,
     GetComponents(Vec<u8>),
     SetComponents(Vec<u8>),
@@ -22,7 +24,7 @@ pub enum NodeOp {
     IfClear(Vec<NodeOp>),
     Place(String, Vec<NodeOp>),
     Push(Value),
-    FunctionCall(u8, Vec<NodeOp>),
+    FunctionCall(u8, u8, Vec<NodeOp>),
     Clear,
     Dup,
     World,
