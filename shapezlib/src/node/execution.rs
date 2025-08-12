@@ -55,6 +55,9 @@ pub struct Execution {
 
     /// The execution stack.
     pub stack: Vec<Value>,
+
+    /// Function return value.
+    return_value: Option<Value>,
 }
 
 impl Execution {
@@ -79,6 +82,7 @@ impl Execution {
             },
             material: BSDFMaterial::default(),
             stack: Vec::with_capacity(32),
+            return_value: None,
         }
     }
 
@@ -103,11 +107,16 @@ impl Execution {
             },
             material: BSDFMaterial::default(),
             stack: Vec::with_capacity(32),
+            return_value: None,
         }
     }
 
     pub fn execute(&mut self, code: &[NodeOp], program: &mut Program) {
         for op in code {
+            // Unwind if return is set
+            if self.return_value.is_some() {
+                break;
+            }
             match op {
                 NodeOp::LoadGlobal(index) => {
                     self.stack.push(self.globals[*index]);
@@ -178,7 +187,7 @@ impl Execution {
                 }
                 NodeOp::Push(v) => self.stack.push(*v),
                 NodeOp::Clear => _ = self.stack.pop(),
-                NodeOp::FunctionCall(arity, total_locals, code) => {
+                NodeOp::FunctionCall(arity, total_locals, index) => {
                     self.push_locals_state();
                     self.locals = vec![Value::zero(); *total_locals as usize];
 
@@ -189,12 +198,45 @@ impl Execution {
                         }
                     }
 
-                    self.execute(code, program);
-                    if let Some(val) = self.stack.last() {
-                        println!("{:?}", val);
+                    // Save the stack position
+                    let stack_base = self.stack.len();
+
+                    // Execute the function body
+                    let body = program.user_functions[*index].clone(); // Arc clone
+                    self.execute(&body, program);
+
+                    // Retrieve the return value. A function always returns exactly one value.
+                    let ret = if self.return_value.is_some() {
+                        self.return_value.take().unwrap_or(Value::zero())
+                    } else if self.stack.len() > stack_base {
+                        self.stack.pop().unwrap()
+                    } else {
+                        Value::zero()
+                    };
+
+                    // Clean up temporaries
+                    while self.stack.len() > stack_base {
+                        _ = self.stack.pop();
                     }
 
                     self.pop_locals_state();
+
+                    // Push the return value
+                    self.stack.push(ret);
+                }
+                NodeOp::Return => {
+                    // Prefer the top of stack as the explicit return expression.
+                    // If nothing was pushed (e.g., miscompiled branch), fall back to an
+                    // existing return_value (from a deeper recursive call), else zero.
+                    let v = if let Some(top) = self.stack.pop() {
+                        top
+                    } else if let Some(prev) = self.return_value.take() {
+                        prev
+                    } else {
+                        Value::zero()
+                    };
+                    self.return_value = Some(v);
+                    break;
                 }
                 NodeOp::Pack2 => {
                     let y = self.stack.pop().unwrap();
@@ -476,6 +518,10 @@ impl Execution {
                     let a = self.stack.pop().unwrap();
                     self.stack
                         .push(Value::from_vec3(self.point_at(a.as_vec3())));
+                }
+                NodeOp::Print => {
+                    let a = self.stack.pop().unwrap();
+                    println!("print: {:?}", a);
                 }
                 // Shapes
                 NodeOp::ShapeRect(at, size, body) => {

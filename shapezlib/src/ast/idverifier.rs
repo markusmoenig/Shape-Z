@@ -60,6 +60,7 @@ impl IdVerifier {
             "value_noise",
             "smooth_union",
             "point_at",
+            "print",
         ];
 
         for func in inbuilt_functions {

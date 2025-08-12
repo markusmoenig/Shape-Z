@@ -12,6 +12,8 @@ pub struct CompileVisitor {
     pub environment: Environment,
     functions: FxHashMap<String, ASTFunction>,
 
+    user_functions: IndexMap<String, (usize, IndexMap<String, Option<Vec<NodeOp>>>, usize)>,
+
     /// List of local variables which are in scope (inside functions)
     locals: IndexSet<String>,
 }
@@ -254,10 +256,19 @@ impl Visitor for CompileVisitor {
                 op: NodeOp::PointAt,
             },
         );
+        functions.insert(
+            "print".to_string(),
+            ASTFunction {
+                name: "print".to_string(),
+                arguments: 1,
+                op: NodeOp::Print,
+            },
+        );
 
         Self {
             environment: Environment::default(),
             functions,
+            user_functions: IndexMap::default(),
             locals: IndexSet::default(),
         }
     }
@@ -1082,7 +1093,7 @@ impl Visitor for CompileVisitor {
             ctx.emit(NodeOp::Clear);
         } else if self.functions.contains_key(&name) {
             rc = ASTValue::Function(name.clone(), vec![], Box::new(ASTValue::None));
-        } else if ctx.program.functions.contains_key(&name) {
+        } else if self.user_functions.contains_key(&name) {
             rc = ASTValue::Function(name.clone(), vec![], Box::new(ASTValue::None));
         } else if let Some(index) = self.locals.get_index_of(&name) {
             ctx.emit(NodeOp::LoadLocal(index));
@@ -1260,7 +1271,8 @@ impl Visitor for CompileVisitor {
                         loc,
                     ));
                 }
-            } else if let Some((arity, params, body)) = ctx.program.functions.get(&name) {
+            } else if let Some((arity, params, index)) = self.user_functions.get(&name) {
+                let func_index = *index;
                 let total_locals = params.len();
                 if *arity != args.len() {
                     return Err(RuntimeError::new(
@@ -1274,14 +1286,13 @@ impl Visitor for CompileVisitor {
                     ));
                 }
 
-                let body = body.clone();
                 for arg in args {
                     _ = arg.accept(self, ctx)?;
                 }
                 ctx.emit(NodeOp::FunctionCall(
                     args.len() as u8,
                     total_locals as u8,
-                    body,
+                    func_index,
                 ));
             } else {
                 return Err(RuntimeError::new(
@@ -1345,11 +1356,17 @@ impl Visitor for CompileVisitor {
         }
 
         ctx.add_custom_target();
+
+        let index = ctx.program.user_functions.len();
+
+        self.user_functions
+            .insert(objectd.name.clone(), (objectd.arity, cp.clone(), index));
+
         objectd.block.accept(self, ctx)?;
         if let Some(codes) = ctx.take_last_custom_target() {
             ctx.program
-                .functions
-                .insert(objectd.name.clone(), (objectd.arity, cp, codes));
+                .user_functions
+                .push(Arc::from(codes.into_boxed_slice()));
         }
 
         self.locals.clear();
@@ -1359,11 +1376,12 @@ impl Visitor for CompileVisitor {
 
     fn return_stmt(
         &mut self,
-        _expr: &Expr,
+        expr: &Expr,
         _loc: &Location,
-        _ctx: &mut Context,
+        ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError> {
-        // let rc = expr.accept(self, ctx)?;
+        _ = expr.accept(self, ctx)?;
+        ctx.emit(NodeOp::Return);
 
         Ok(ASTValue::None)
     }

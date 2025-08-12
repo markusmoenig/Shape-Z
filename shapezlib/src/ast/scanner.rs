@@ -50,7 +50,7 @@ pub enum TokenType {
     If,
     Void,
     Or,
-    Print,
+    // Print,
     Return,
     True,
     While,
@@ -136,7 +136,7 @@ impl Scanner {
         keywords.insert("fn", TokenType::Fn);
         keywords.insert("if", TokenType::If);
         keywords.insert("void", TokenType::Void);
-        keywords.insert("print", TokenType::Print);
+        // keywords.insert("print", TokenType::Print);
         keywords.insert("return", TokenType::Return);
         keywords.insert("true", TokenType::True);
         keywords.insert("while", TokenType::While);

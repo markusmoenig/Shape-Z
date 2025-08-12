@@ -502,12 +502,11 @@ impl Parser {
         )?;
 
         let arity = self.locals_map.len();
+        self.function_names.insert(id.clone());
 
         self.scope = VariableScope::Local;
         let block = self.block()?;
         self.scope = VariableScope::Global;
-
-        self.function_names.insert(id.clone());
 
         Ok(Stmt::FunctionDeclaration(
             FunctionD::new(id, arity, self.locals_map.clone(), Box::new(block)),
@@ -848,6 +847,8 @@ impl Parser {
             self.ifclear_statement()
         } else if self.match_token(vec![TokenType::LeftBrace]) {
             self.block()
+        } else if self.match_token(vec![TokenType::Return]) {
+            self.return_statement()
         } else {
             self.expression_statement()
         }
@@ -1279,6 +1280,13 @@ impl Parser {
         }
 
         self.call()
+    }
+
+    fn return_statement(&mut self) -> Result<Stmt, ParseError> {
+        let value = self.expression()?;
+        let line = self.current_line;
+        self.consume(TokenType::Semicolon, "Expect ';' after return value", line)?;
+        Ok(Stmt::Return(Box::new(value), self.create_loc(line)))
     }
 
     fn call(&mut self) -> Result<Expr, ParseError> {

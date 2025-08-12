@@ -1,0 +1,13 @@
+fn fib(n) {
+    // Recursive Fibonacci
+    if n <= 1 {
+        return n;
+    } else {
+        return fib(n - 1) + fib(n - 2);
+    }
+}
+
+print(fib(27)); // 196418
+
+fn fact(n){ if n<=1 { vec3(1); } else { n*fact(n-1); } }
+print(fact(6)); // 720
