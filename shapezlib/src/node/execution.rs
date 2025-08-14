@@ -58,6 +58,9 @@ pub struct Execution {
 
     /// Function return value.
     return_value: Option<Value>,
+
+    /// Heightmap of the current terrain shape (for slope evaluation)
+    terrain_heightmap: Option<Arc<Vec<NodeOp>>>,
 }
 
 impl Execution {
@@ -83,6 +86,7 @@ impl Execution {
             material: BSDFMaterial::default(),
             stack: Vec::with_capacity(32),
             return_value: None,
+            terrain_heightmap: None,
         }
     }
 
@@ -108,6 +112,7 @@ impl Execution {
             material: BSDFMaterial::default(),
             stack: Vec::with_capacity(32),
             return_value: None,
+            terrain_heightmap: None,
         }
     }
 
@@ -623,8 +628,10 @@ impl Execution {
 
                     self.pop_state();
                 }
-                NodeOp::ShapeTerrain(at, size, body, heightmap) => {
+                NodeOp::ShapeTerrain(at, heightmap, body) => {
                     self.push_state();
+
+                    self.plane = Plane::XZ;
 
                     let bb_size = self.bbox.size();
                     let bbox_size = match self.plane {
@@ -634,12 +641,7 @@ impl Execution {
                         Plane::ZY => Vec2::new(bb_size.d, bb_size.h),
                     };
 
-                    // Evaluate rect size
-                    let mut dims = bbox_size;
-                    if !size.is_empty() {
-                        self.execute(size, program);
-                        dims = self.stack.pop().unwrap().as_vec2();
-                    }
+                    let dims = bbox_size;
 
                     // Evaluate anchor (at)
                     let mut anchor = Vec2::broadcast(0.5);
@@ -694,24 +696,27 @@ impl Execution {
                     if self.bbox.contains_point(self.local.as_vec3()) {
                         let local = self.local.as_vec3();
 
-                        let p = match self.plane {
-                            Plane::XY => Vec2::new(
-                                local.x - (self.bbox.min.x + dims.x * 0.5),
-                                local.y - (self.bbox.min.y + dims.y * 0.5),
-                            ),
-                            Plane::XZ => Vec2::new(
-                                local.x - (self.bbox.min.x + dims.x * 0.5),
-                                local.z - (self.bbox.min.z + dims.y * 0.5),
-                            ),
-                            Plane::YZ => Vec2::new(
-                                local.y - (self.bbox.min.y + dims.x * 0.5),
-                                local.z - (self.bbox.min.z + dims.y * 0.5),
-                            ),
-                            Plane::ZY => Vec2::new(
-                                local.z - (self.bbox.min.z + dims.x * 0.5),
-                                local.y - (self.bbox.min.y + dims.y * 0.5),
-                            ),
-                        };
+                        // let p = match self.plane {
+                        //     Plane::XY => Vec2::new(
+                        //         local.x - (self.bbox.min.x + dims.x * 0.5),
+                        //         local.y - (self.bbox.min.y + dims.y * 0.5),
+                        //     ),
+                        //     Plane::XZ => Vec2::new(
+                        //         local.x - (self.bbox.min.x + dims.x * 0.5),
+                        //         local.z - (self.bbox.min.z + dims.y * 0.5),
+                        //     ),
+                        //     Plane::YZ => Vec2::new(
+                        //         local.y - (self.bbox.min.y + dims.x * 0.5),
+                        //         local.z - (self.bbox.min.z + dims.y * 0.5),
+                        //     ),
+                        //     Plane::ZY => Vec2::new(
+                        //         local.z - (self.bbox.min.z + dims.x * 0.5),
+                        //         local.y - (self.bbox.min.y + dims.y * 0.5),
+                        //     ),
+                        // };
+
+                        self.u = Value::from_float(local.x - self.bbox.min.x);
+                        self.v = Value::from_float(local.z - self.bbox.min.z);
 
                         self.execute(&heightmap, program);
 
@@ -721,20 +726,97 @@ impl Execution {
                         }
 
                         let d = local.y - h;
-
-                        let u = p.x;
-                        let v = p.y;
-
                         self.d = Value::from_float(d);
-                        self.u = Value::from_float(u);
-                        self.v = Value::from_float(v);
                         self.sdf = self.d;
                         self.inside = Value::from_float(-d);
 
+                        self.terrain_heightmap = Some(heightmap.clone());
                         self.execute(body, program);
+                        self.terrain_heightmap = None;
                     }
 
                     self.pop_state();
+                }
+                NodeOp::Slope => {
+                    let eps = self.stack.pop().unwrap().as_float() * 1.0
+                        / program.grid.read().unwrap().density_f;
+
+                    // If no heightmap is active
+                    if self.terrain_heightmap.is_none() {
+                        self.stack.push(Value::from_float(0.0));
+                        continue;
+                    }
+
+                    let pos = self.local.as_vec3();
+                    // Compute four offset positions in the current plane
+                    let (px1, px0, py1, py0) = match self.plane {
+                        Plane::XY => (
+                            Vec3::new(pos.x + eps, pos.y, pos.z),
+                            Vec3::new(pos.x - eps, pos.y, pos.z),
+                            Vec3::new(pos.x, pos.y + eps, pos.z),
+                            Vec3::new(pos.x, pos.y - eps, pos.z),
+                        ),
+                        Plane::XZ => (
+                            Vec3::new(pos.x + eps, pos.y, pos.z),
+                            Vec3::new(pos.x - eps, pos.y, pos.z),
+                            Vec3::new(pos.x, pos.y, pos.z + eps),
+                            Vec3::new(pos.x, pos.y, pos.z - eps),
+                        ),
+                        Plane::YZ => (
+                            Vec3::new(pos.x, pos.y + eps, pos.z),
+                            Vec3::new(pos.x, pos.y - eps, pos.z),
+                            Vec3::new(pos.x, pos.y, pos.z + eps),
+                            Vec3::new(pos.x, pos.y, pos.z - eps),
+                        ),
+                        Plane::ZY => (
+                            Vec3::new(pos.x, pos.y, pos.z + eps),
+                            Vec3::new(pos.x, pos.y, pos.z - eps),
+                            Vec3::new(pos.x, pos.y + eps, pos.z),
+                            Vec3::new(pos.x, pos.y - eps, pos.z),
+                        ),
+                    };
+
+                    let old_local = self.local;
+                    let mut hx1: f32 = 0.0;
+                    let mut hx0: f32 = 0.0;
+                    let mut hy1: f32 = 0.0;
+                    let mut hy0: f32 = 0.0;
+
+                    if let Some(heightmap) = &self.terrain_heightmap.clone() {
+                        let code = &heightmap;
+                        // Sample at (pos + eps in x)
+                        self.local = Value::from_vec3(px1);
+                        self.execute(code, program);
+                        if let Some(height) = self.stack.pop() {
+                            hx1 = height.as_float();
+                        }
+                        // Sample at (pos - eps in x)
+                        self.local = Value::from_vec3(px0);
+                        self.execute(code, program);
+                        if let Some(height) = self.stack.pop() {
+                            hx0 = height.as_float();
+                        }
+                        // Sample at (pos + eps in y)
+                        self.local = Value::from_vec3(py1);
+                        self.execute(code, program);
+                        if let Some(height) = self.stack.pop() {
+                            hy1 = height.as_float();
+                        }
+                        // Sample at (pos - eps in y)
+                        self.local = Value::from_vec3(py0);
+                        self.execute(code, program);
+                        if let Some(height) = self.stack.pop() {
+                            hy0 = height.as_float();
+                        }
+                    }
+
+                    self.local = old_local;
+
+                    let dx = (hx1 - hx0) / (2.0 * eps);
+                    let dy = (hy1 - hy0) / (2.0 * eps);
+                    let tan_theta = (dx * dx + dy * dy).sqrt();
+
+                    self.stack.push(Value::from_float(tan_theta));
                 }
                 NodeOp::ShapeDisc(at, radius, body) => {
                     self.push_state();

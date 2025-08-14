@@ -264,6 +264,14 @@ impl Visitor for CompileVisitor {
                 op: NodeOp::Print,
             },
         );
+        functions.insert(
+            "slope".to_string(),
+            ASTFunction {
+                name: "slope".to_string(),
+                arguments: 1,
+                op: NodeOp::Slope,
+            },
+        );
 
         Self {
             environment: Environment::default(),
@@ -385,9 +393,8 @@ impl Visitor for CompileVisitor {
                         if let Some(heightmap) = ctx.take_last_custom_target() {
                             ctx.emit(NodeOp::ShapeTerrain(
                                 cp.get("at").cloned().unwrap_or(vec![]),
-                                cp.get("size").cloned().unwrap_or(vec![]),
+                                Arc::new(heightmap),
                                 code,
-                                heightmap,
                             ));
                         }
                     }

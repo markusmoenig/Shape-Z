@@ -61,6 +61,7 @@ impl IdVerifier {
             "smooth_union",
             "point_at",
             "print",
+            "slope",
         ];
 
         for func in inbuilt_functions {
