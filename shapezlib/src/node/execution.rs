@@ -535,20 +535,20 @@ impl Execution {
                         Plane::ZY => Vec2::new(bb_size.d, bb_size.h),
                     };
 
-                    // --- evaluate rect size ----------------------------------------------------
+                    // Evaluate rect size
                     let mut dims = bbox_size;
                     if !size.is_empty() {
                         self.execute(size, program);
                         dims = self.stack.pop().unwrap().as_vec2();
                     }
 
-                    // --- evaluate anchor (at); default = centre (0.5, 0.5) ---------------------
+                    // Evaluate anchor (at)
                     let mut anchor = Vec2::broadcast(0.5);
                     if !at.is_empty() {
                         self.execute(at, program);
                         anchor = self.stack.pop().unwrap().as_vec2();
                     }
-                    // (optional) clamp to [0,1] so weird values don’t shove the rect outside
+
                     anchor.x = anchor.x.clamp(0.0, 1.0);
                     anchor.y = anchor.y.clamp(0.0, 1.0);
 
@@ -617,6 +617,119 @@ impl Execution {
                         let sdf = self.sdf_box(p, dims * 0.5, 0.0);
                         self.sdf = Value::from_float(sdf);
                         self.inside = Value::from_float(-sdf);
+
+                        self.execute(body, program);
+                    }
+
+                    self.pop_state();
+                }
+                NodeOp::ShapeTerrain(at, size, body, heightmap) => {
+                    self.push_state();
+
+                    let bb_size = self.bbox.size();
+                    let bbox_size = match self.plane {
+                        Plane::XY => Vec2::new(bb_size.w, bb_size.h),
+                        Plane::XZ => Vec2::new(bb_size.w, bb_size.d),
+                        Plane::YZ => Vec2::new(bb_size.h, bb_size.d),
+                        Plane::ZY => Vec2::new(bb_size.d, bb_size.h),
+                    };
+
+                    // Evaluate rect size
+                    let mut dims = bbox_size;
+                    if !size.is_empty() {
+                        self.execute(size, program);
+                        dims = self.stack.pop().unwrap().as_vec2();
+                    }
+
+                    // Evaluate anchor (at)
+                    let mut anchor = Vec2::broadcast(0.5);
+                    if !at.is_empty() {
+                        self.execute(at, program);
+                        anchor = self.stack.pop().unwrap().as_vec2();
+                    }
+
+                    anchor.x = anchor.x.clamp(0.0, 1.0);
+                    anchor.y = anchor.y.clamp(0.0, 1.0);
+
+                    match self.plane {
+                        Plane::XY => {
+                            let plane_min = Vec2::new(self.bbox.min.x, self.bbox.min.y);
+                            let rect_min = plane_min + anchor * (bbox_size - dims);
+
+                            self.bbox.min.x = rect_min.x;
+                            self.bbox.min.y = rect_min.y;
+                            self.bbox.max.x = rect_min.x + dims.x;
+                            self.bbox.max.y = rect_min.y + dims.y;
+                        }
+                        Plane::XZ => {
+                            let plane_min = Vec2::new(self.bbox.min.x, self.bbox.min.z);
+                            let rect_min = plane_min + anchor * (bbox_size - dims);
+
+                            self.bbox.min.x = rect_min.x;
+                            self.bbox.min.z = rect_min.y;
+                            self.bbox.max.x = rect_min.x + dims.x;
+                            self.bbox.max.z = rect_min.y + dims.y;
+                        }
+                        Plane::YZ => {
+                            let plane_min = Vec2::new(self.bbox.min.y, self.bbox.min.z);
+                            let rect_min = plane_min + anchor * (bbox_size - dims);
+
+                            self.bbox.min.y = rect_min.x;
+                            self.bbox.min.z = rect_min.y;
+                            self.bbox.max.y = rect_min.x + dims.x;
+                            self.bbox.max.z = rect_min.y + dims.y;
+                        }
+                        Plane::ZY => {
+                            let plane_min = Vec2::new(self.bbox.min.z, self.bbox.min.y);
+                            let rect_min = plane_min + anchor * (bbox_size - dims);
+
+                            self.bbox.min.z = rect_min.x;
+                            self.bbox.min.y = rect_min.y;
+                            self.bbox.max.z = rect_min.x + dims.x;
+                            self.bbox.max.y = rect_min.y + dims.y;
+                        }
+                    }
+
+                    // Execute body if local point is within new bbox
+                    if self.bbox.contains_point(self.local.as_vec3()) {
+                        let local = self.local.as_vec3();
+
+                        let p = match self.plane {
+                            Plane::XY => Vec2::new(
+                                local.x - (self.bbox.min.x + dims.x * 0.5),
+                                local.y - (self.bbox.min.y + dims.y * 0.5),
+                            ),
+                            Plane::XZ => Vec2::new(
+                                local.x - (self.bbox.min.x + dims.x * 0.5),
+                                local.z - (self.bbox.min.z + dims.y * 0.5),
+                            ),
+                            Plane::YZ => Vec2::new(
+                                local.y - (self.bbox.min.y + dims.x * 0.5),
+                                local.z - (self.bbox.min.z + dims.y * 0.5),
+                            ),
+                            Plane::ZY => Vec2::new(
+                                local.z - (self.bbox.min.z + dims.x * 0.5),
+                                local.y - (self.bbox.min.y + dims.y * 0.5),
+                            ),
+                        };
+
+                        self.execute(&heightmap, program);
+
+                        let mut h = 0.0;
+                        if let Some(height) = self.stack.pop() {
+                            h = height.x();
+                        }
+
+                        let d = local.y - h;
+
+                        let u = p.x;
+                        let v = p.y;
+
+                        self.d = Value::from_float(d);
+                        self.u = Value::from_float(u);
+                        self.v = Value::from_float(v);
+                        self.sdf = self.d;
+                        self.inside = Value::from_float(-d);
 
                         self.execute(body, program);
                     }

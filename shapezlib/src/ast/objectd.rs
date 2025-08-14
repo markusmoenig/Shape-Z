@@ -33,6 +33,7 @@ pub struct ShapeD {
     pub name: String,
     pub params: FxHashMap<String, Box<Expr>>,
     pub block: Option<Box<Stmt>>,
+    pub mods: FxHashMap<String, Box<Stmt>>,
 
     pub size: Vec<NodeOp>,
 
@@ -40,11 +41,17 @@ pub struct ShapeD {
 }
 
 impl ShapeD {
-    pub fn new(name: String, params: FxHashMap<String, Box<Expr>>, block: Box<Stmt>) -> Self {
+    pub fn new(
+        name: String,
+        params: FxHashMap<String, Box<Expr>>,
+        block: Box<Stmt>,
+        mods: FxHashMap<String, Box<Stmt>>,
+    ) -> Self {
         Self {
             name,
             params,
             block: Some(block),
+            mods,
 
             size: vec![NodeOp::Push(Value::from_components(1.0, 1.0, 1.0))],
             body: vec![],

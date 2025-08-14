@@ -73,6 +73,7 @@ pub enum TokenType {
     Volume,
     ProfileOffset,
     ProfileScale,
+    Heightmap,
 
     Let,
     Import,
@@ -173,6 +174,7 @@ impl Scanner {
         keywords.insert("volume", TokenType::Volume);
         keywords.insert("profile_offset", TokenType::ProfileOffset);
         keywords.insert("profile_scale", TokenType::ProfileScale);
+        keywords.insert("heightmap", TokenType::Heightmap);
 
         keywords.insert("if_clear", TokenType::IfClear);
 

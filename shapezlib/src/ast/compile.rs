@@ -378,6 +378,20 @@ impl Visitor for CompileVisitor {
                         code,
                     ));
                 }
+                "Terrain" => {
+                    ctx.add_custom_target();
+                    if let Some(ast) = objectd.mods.get("heightmap") {
+                        _ = ast.accept(self, ctx)?;
+                        if let Some(heightmap) = ctx.take_last_custom_target() {
+                            ctx.emit(NodeOp::ShapeTerrain(
+                                cp.get("at").cloned().unwrap_or(vec![]),
+                                cp.get("size").cloned().unwrap_or(vec![]),
+                                code,
+                                heightmap,
+                            ));
+                        }
+                    }
+                }
                 _ => {}
             }
         }

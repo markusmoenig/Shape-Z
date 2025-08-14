@@ -84,6 +84,7 @@ pub enum NodeOp {
     Neg,
     ShapeRect(Vec<NodeOp>, Vec<NodeOp>, Vec<NodeOp>),
     ShapeDisc(Vec<NodeOp>, Vec<NodeOp>, Vec<NodeOp>),
+    ShapeTerrain(Vec<NodeOp>, Vec<NodeOp>, Vec<NodeOp>, Vec<NodeOp>),
     SegmentLeft(Vec<NodeOp>, Vec<NodeOp>),
     SegmentBack(Vec<NodeOp>, Vec<NodeOp>),
     SegmentFloor(Vec<NodeOp>, Vec<NodeOp>),

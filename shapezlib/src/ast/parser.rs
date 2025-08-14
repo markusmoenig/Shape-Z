@@ -23,12 +23,16 @@ pub struct Parser {
     // Store the indices of the local variables inside a fn.
     locals_map: IndexMap<String, Option<Box<Expr>>>,
 
+    /// User defined function names
     function_names: FxHashSet<String>,
 
+    /// Materials
+    pub materials: IndexMap<String, BSDFMaterial>,
+
+    /// Programmable subs
     profile_offset: Option<Box<Stmt>>,
     profile_scale: Option<Box<Stmt>>,
-
-    pub materials: IndexMap<String, BSDFMaterial>,
+    heightmap: Option<Box<Stmt>>,
 }
 
 impl Default for Parser {
@@ -53,10 +57,11 @@ impl Parser {
 
             function_names: FxHashSet::default(),
 
+            materials: IndexMap::default(),
+
             profile_offset: None,
             profile_scale: None,
-
-            materials: IndexMap::default(),
+            heightmap: None,
         }
     }
 
@@ -176,6 +181,9 @@ impl Parser {
         }
         if self.match_token(vec![TokenType::ProfileScale]) {
             return self.profile_scale_declaration();
+        }
+        if self.match_token(vec![TokenType::Heightmap]) {
+            return self.heightmap_declaration();
         }
         if self.match_token(vec![TokenType::Fn]) {
             return self.fn_declaration();
@@ -565,7 +573,7 @@ impl Parser {
             self.current_line,
         )?;
 
-        let valid_shape_ids = vec!["Rect", "Disc"];
+        let valid_shape_ids = vec!["Rect", "Disc", "Terrain"];
 
         let id = self.previous().unwrap().lexeme.clone();
 
@@ -601,10 +609,17 @@ impl Parser {
             self.current_line,
         )?;
 
+        self.heightmap = None;
+
         let block = self.block()?;
 
+        let mut mods: FxHashMap<String, Box<Stmt>> = FxHashMap::default();
+        if let Some(h) = self.heightmap.take() {
+            mods.insert("heightmap".into(), h);
+        }
+
         Ok(Stmt::Shape(
-            ShapeD::new(id, params, Box::new(block)),
+            ShapeD::new(id, params, Box::new(block), mods),
             self.create_loc(line),
         ))
     }
@@ -685,6 +700,20 @@ impl Parser {
 
         let block = self.block()?;
         self.profile_scale = Some(Box::new(block));
+
+        Ok(Stmt::Empty)
+    }
+
+    /// Heightmap
+    fn heightmap_declaration(&mut self) -> Result<Stmt, ParseError> {
+        self.consume(
+            TokenType::LeftBrace,
+            "Expected '{' after heightmap",
+            self.current_line,
+        )?;
+
+        let block = self.block()?;
+        self.heightmap = Some(Box::new(block));
 
         Ok(Stmt::Empty)
     }
