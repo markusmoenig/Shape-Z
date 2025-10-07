@@ -37,7 +37,7 @@ Shape-Z is ideal for game developers, artists, and procedural generation enthusi
 
 ## Examples
 
-For examples and documentation please visit the [Website](https://shapez-z.com).
+For examples and documentation please visit the [Website](https://shape-z.com).
 
 ## License
 
