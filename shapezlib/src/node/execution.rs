@@ -229,6 +229,20 @@ impl Execution {
                     // Push the return value
                     self.stack.push(ret);
                 }
+                NodeOp::Recursive(depth, body) => {
+                    let mut max_depth = 1;
+                    if depth.is_empty() {
+                        self.execute(depth, program);
+                        if let Some(value) = self.stack.last() {
+                            max_depth = value.as_float() as i32;
+                        }
+                    }
+                    self.push_state();
+                    for level in 0..max_depth {
+                        self.execute(body, program);
+                    }
+                    self.pop_state();
+                }
                 NodeOp::Return => {
                     // Prefer the top of stack as the explicit return expression.
                     // If nothing was pushed (e.g., miscompiled branch), fall back to an

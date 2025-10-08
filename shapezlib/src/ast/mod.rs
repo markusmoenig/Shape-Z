@@ -86,6 +86,7 @@ pub enum Stmt {
     Distance(DistanceD, Location),
     Volume(VolumeD, Location),
     Pattern(PatternD, Location),
+    Recursive(RecursiveD, Location),
     Camera(CameraD, Location),
     Place(String, FxHashMap<String, Box<Expr>>, Location),
     VarDeclaration(String, ASTValue, Box<Expr>, Location),
@@ -327,6 +328,13 @@ pub trait Visitor {
         ctx: &mut Context,
     ) -> Result<ASTValue, RuntimeError>;
 
+    fn recursive(
+        &mut self,
+        objectd: &RecursiveD,
+        loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError>;
+
     fn camera(
         &mut self,
         objectd: &CameraD,
@@ -534,6 +542,7 @@ impl Stmt {
             Stmt::Distance(objectd, loc) => visitor.distance(objectd, loc, ctx),
             Stmt::Volume(objectd, loc) => visitor.volume(objectd, loc, ctx),
             Stmt::Pattern(objectd, loc) => visitor.pattern(objectd, loc, ctx),
+            Stmt::Recursive(objectd, loc) => visitor.recursive(objectd, loc, ctx),
             Stmt::Camera(objectd, loc) => visitor.camera(objectd, loc, ctx),
             Stmt::Place(id, params, loc) => visitor.place(id, params, loc, ctx),
             Stmt::VarDeclaration(name, static_type, initializer, loc) => {

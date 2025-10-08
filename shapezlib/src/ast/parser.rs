@@ -878,6 +878,8 @@ impl Parser {
             self.block()
         } else if self.match_token(vec![TokenType::Return]) {
             self.return_statement()
+        } else if self.match_token(vec![TokenType::Recursive]) {
+            self.recursive_statement()
         } else {
             self.expression_statement()
         }
@@ -938,7 +940,7 @@ impl Parser {
 
             self.consume(
                 TokenType::Equal,
-                "Expected '=' after voxel identifier",
+                "Expected '=' after pattern parameter",
                 self.current_line,
             )?;
 
@@ -981,6 +983,47 @@ impl Parser {
 
         Ok(Stmt::Pattern(
             PatternD::new(id, params, blocks),
+            self.create_loc(line),
+        ))
+    }
+
+    fn recursive_statement(&mut self) -> Result<Stmt, ParseError> {
+        let line = self.current_line;
+
+        let mut params = FxHashMap::default();
+
+        while self.match_token(vec![TokenType::Identifier]) {
+            let id = self.previous().unwrap().lexeme.clone();
+
+            self.consume(
+                TokenType::Equal,
+                "Expected '=' after recursive parameter",
+                self.current_line,
+            )?;
+
+            let value = self.expression()?;
+            params.insert(id, Box::new(value));
+            if self.tokens[self.current].kind == TokenType::Comma {
+                self.advance();
+            }
+        }
+
+        self.consume(
+            TokenType::LeftBrace,
+            "Expected '{' after recursive header",
+            self.current_line,
+        )?;
+
+        let block = self.block()?;
+
+        self.consume(
+            TokenType::RightBrace,
+            "Expected '}' after recursive block",
+            self.current_line,
+        )?;
+
+        Ok(Stmt::Recursive(
+            RecursiveD::new(params, Box::new(block)),
             self.create_loc(line),
         ))
     }

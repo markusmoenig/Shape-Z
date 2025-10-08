@@ -406,6 +406,37 @@ impl Visitor for CompileVisitor {
         Ok(ASTValue::None)
     }
 
+    /// Create a recursive block
+    fn recursive(
+        &mut self,
+        objectd: &RecursiveD,
+        _loc: &Location,
+        ctx: &mut Context,
+    ) -> Result<ASTValue, RuntimeError> {
+        // Compile params
+        let mut cp = FxHashMap::default();
+        for (name, ast) in &objectd.params {
+            ctx.add_custom_target();
+            _ = ast.accept(self, ctx)?;
+            if let Some(code) = ctx.take_last_custom_target() {
+                cp.insert(name.clone(), code);
+            }
+        }
+
+        // Body
+        ctx.add_custom_target();
+        objectd.block.accept(self, ctx)?;
+
+        if let Some(code) = ctx.take_last_custom_target() {
+            ctx.emit(NodeOp::Recursive(
+                cp.get("depth").cloned().unwrap_or(vec![]),
+                code,
+            ));
+        }
+
+        Ok(ASTValue::None)
+    }
+
     // Create a Distance
     fn distance(
         &mut self,

@@ -245,3 +245,15 @@ impl FunctionD {
         }
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct RecursiveD {
+    pub params: FxHashMap<String, Box<Expr>>,
+    pub block: Box<Stmt>,
+}
+
+impl RecursiveD {
+    pub fn new(params: FxHashMap<String, Box<Expr>>, block: Box<Stmt>) -> Self {
+        Self { params, block }
+    }
+}

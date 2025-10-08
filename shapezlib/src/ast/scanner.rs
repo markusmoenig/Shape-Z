@@ -74,6 +74,7 @@ pub enum TokenType {
     ProfileOffset,
     ProfileScale,
     Heightmap,
+    Recursive,
 
     Let,
     Import,
@@ -175,6 +176,7 @@ impl Scanner {
         keywords.insert("profile_offset", TokenType::ProfileOffset);
         keywords.insert("profile_scale", TokenType::ProfileScale);
         keywords.insert("heightmap", TokenType::Heightmap);
+        keywords.insert("recursive", TokenType::Recursive);
 
         keywords.insert("if_clear", TokenType::IfClear);
 

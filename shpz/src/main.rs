@@ -1,13 +1,13 @@
-use clap::{Command, arg};
+use clap::{arg, Command};
 use notify::{Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use shapezlib::prelude::*;
 use std::collections::HashSet;
 use std::{
     path::PathBuf,
     sync::{
-        Arc,
         atomic::{AtomicBool, Ordering},
-        mpsc::{Receiver, channel},
+        mpsc::{channel, Receiver},
+        Arc,
     },
     time::Duration,
 };

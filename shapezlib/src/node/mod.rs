@@ -25,6 +25,7 @@ pub enum NodeOp {
     Place(String, Vec<NodeOp>),
     Push(Value),
     FunctionCall(u8, u8, usize),
+    Recursive(Vec<NodeOp>, Vec<NodeOp>),
     Return,
     Clear,
     Dup,

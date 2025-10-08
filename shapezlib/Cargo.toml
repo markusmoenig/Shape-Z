@@ -15,7 +15,7 @@ indexmap = "2.10.0"
 rayon = "1"
 vek = { version = "0.17.1", default-features = true }
 rand = "0.9"
-rustc-hash = "1.1.0"
+rustc-hash = "2.1.1"
 fast-surface-nets = "0.2.1"
 getrandom = { version = "0.3.3", features = ["wasm_js"] }
 wasm-bindgen = "0.2"
